@@ -848,7 +848,7 @@
           </div>
           <div class="edu-card">
             <h4>Canais de Informação ao Consumidor</h4>
-            <p>Contratos com taxas superiores à média de mercado podem ser questionados via <strong>Procon, Bacen Consumidor (0800 979 2345)</strong> ou judicialmente por dano financeiro comprovado. O relatório desta ferramenta tem finalidade exclusivamente educativa e informativa.</p>
+            <p>Contratos com taxas superDúvidas sobre contratos de crédito podem ser esclarecidas no <strong>Procon</strong> ou no canal <strong>Bacen Consumidor (0800 979 2345)</strong>. Consulte sempre um profissional habilitado.</p>
           </div>
         </div>
       </div>
@@ -1268,7 +1268,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
     alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> Sua operação está ${fmtPct(diff)} a.m. acima da média Bacen para ${bacen.nome}. Para referência: a média Bacen para esta modalidade é de . Consulte um profissional para análise contratual.`;
   } else if (diff > 0.5) {
     alertSit.className = 'alert show alert-warn';
-    alertSit.innerHTML = `<strong>⚡ Taxa ligeiramente acima da média.</strong> Há espaço para negociação. Com o relatório desta ferramenta em mãos, compare propostas de portabilidade.`;
+    alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> A taxa calculada está acima da média Bacen para esta modalidade. Esta informação tem caráter exclusivamente educativo.`;
   } else if (diff <= 0) {
     alertSit.className = 'alert show alert-success';
     alertSit.innerHTML = `<strong>✓ Ótima condição!</strong> A taxa da sua operação está igual ou abaixo da média Bacen para esta modalidade.`;
@@ -1432,7 +1432,7 @@ function gerarPDF() {
   doc.setTextColor(180, 180, 180);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Relatório Técnico de Análise de Crédito', lm, 23);
+  doc.text('Relatório de Análise de Crédito', lm, 23);
   doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + ' — Taxa Bacen ref.: Mai/2026', lm, 29);
   doc.setFillColor(212, 240, 60);
   doc.rect(lm, 34, pw, 1, 'F');
@@ -1505,7 +1505,7 @@ function gerarPDF() {
     situacaoTxt = 'SITUAÇÃO: Taxa calculada significativamente acima da média Bacen para esta modalidade.';
     situacaoColor = [200, 50, 50];
   } else if (diff > 0.5) {
-    situacaoTxt = 'SITUAÇÃO: Taxa ligeiramente acima da média — há margem para negociação.';
+    situacaoTxt = 'SITUAÇÃO: Taxa calculada acima da média Bacen para esta modalidade.';
     situacaoColor = [180, 120, 0];
   } else {
     situacaoTxt = 'SITUAÇÃO: Taxa dentro ou abaixo da média de mercado Bacen.';
@@ -1579,7 +1579,7 @@ function gerarPDF() {
     '• Portabilidade de crédito: Resolução CMN nº 4.292/2013 — direito de transferir dívida para outro banco com taxa menor.',
     '• Quitação antecipada com redução de juros: Art. 52 §2º do CDC — sem multa, com desconto proporcional dos juros vincendos.',
     '• CET obrigatório: Resolução CMN nº 3.517/2007 — toda oferta de crédito deve informar o Custo Efetivo Total.',
-    '• Canais de denúncia: Procon estadual | Bacen Consumidor: 0800 979 2345 | Consumidor.gov.br',
+    '• Para dúvidas sobre contratos: Bacen Consumidor: 0800 979 2345 | Consumidor.gov.br',
   ];
   direitos.forEach(d => {
     const lines = doc.splitTextToSize(d, pw - 4);
@@ -1598,7 +1598,7 @@ function gerarPDF() {
   const disclaimer = 'AVISO LEGAL: Este relatório tem fins exclusivamente educativos e informativos. Os cálculos são baseados nos dados fornecidos pelo usuário e nas taxas médias oficiais do Banco Central do Brasil (ref.: Mai/2026). Não constitui consultoria jurídica, financeira ou assessoria de investimentos. As taxas Bacen são atualizadas mensalmente.';
   doc.text(doc.splitTextToSize(disclaimer, pw - 4), lm + 2, y + 5);
 
-  doc.save('MinhaTaxaReal-Relatorio-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  doc.save('MinhaTaxaReal-Simulacao-' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ════════════════════════════════════════════
