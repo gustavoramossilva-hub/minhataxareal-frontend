@@ -806,7 +806,7 @@
 
       <!-- Simulação de antecipação -->
       <div class="antec-section animate-in delay-4" id="antec-section">
-        <div class="section-heading">Simulação de Antecipação (CDC)</div>
+        <div class="section-heading">Simulação de Antecipação de Parcelas</div>
         <div class="antec-controls">
           <div class="form-group" style="margin:0">
             <label class="form-label">A partir da parcela</label>
@@ -826,7 +826,7 @@
         </div>
         <div class="antec-result" id="antec-result"></div>
         <p style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6">
-          Conforme <strong style="color:var(--text2)">Art. 52 § 2º do CDC</strong> e a <strong style="color:var(--text2)">Resolução CMN nº 4.965/2021</strong>, a antecipação de parcelas garante redução proporcional dos juros. A quitação antecipada reduz o montante devido com desconto dos juros vincendos.
+          A simulação projeta matematicamente o impacto financeiro da antecipação de parcelas com redução proporcional dos juros vincendos. Os valores são estimativas baseadas nos dados informados e têm finalidade exclusivamente educativa.
         </p>
       </div>
 
@@ -836,19 +836,19 @@
         <div class="edu-grid">
           <div class="edu-card">
             <h4>Portabilidade de Crédito</h4>
-            <p>Regulada pela <strong>Resolução CMN nº 4.292/2013</strong>, a portabilidade permite transferir sua dívida para outra instituição com taxa menor, sem custo ou multa. Você tem direito de exigir a proposta de portabilidade por escrito.</p>
+            <p>A portabilidade de crédito é um mecanismo regulado que permite ao tomador solicitar a transferência de operação entre instituições financeiras. Para informações sobre condições e procedimentos, consulte seu banco ou o site do Banco Central.</p>
           </div>
           <div class="edu-card">
             <h4>Quitação Antecipada</h4>
-            <p>Garantida pelo <strong>Art. 52 do CDC</strong>, a quitação antecipada deve ser feita com <em>redução proporcional dos juros</em>. O banco não pode cobrar juros de parcelas futuras já pagas. Exija a carta de quitação em até 5 dias.</p>
+            <p>A quitação antecipada é uma modalidade de encerramento de contratos de crédito antes do prazo original. Para conhecer as condições aplicáveis ao seu contrato específico, consulte sua instituição financeira.</p>
           </div>
           <div class="edu-card">
             <h4>CET — Custo Efetivo Total</h4>
-            <p>Por lei (<strong>Resolução CMN nº 3.517/2007</strong>), toda operação de crédito deve informar o CET, que inclui juros + tarifas + seguros. Exija o CET antes de assinar. A taxa nominal pode ser muito menor que o CET real.</p>
+            <p>O Custo Efetivo Total (CET) é um indicador que expressa o custo global de uma operação de crédito, incluindo encargos e despesas. As instituições financeiras são obrigadas a informar o CET em suas propostas comerciais.</p>
           </div>
           <div class="edu-card">
-            <h4>Cláusulas Abusivas</h4>
-            <p>Contratos com taxas superiores à média de mercado podem ser questionados via <strong>Procon, Bacen Consumidor (0800 979 2345)</strong> ou judicialmente por dano financeiro comprovado. O relatório desta ferramenta serve de base para a contestação.</p>
+            <h4>Canais de Informação ao Consumidor</h4>
+            <p>Contratos com taxas superiores à média de mercado podem ser questionados via <strong>Procon, Bacen Consumidor (0800 979 2345)</strong> ou judicialmente por dano financeiro comprovado. O relatório desta ferramenta tem finalidade exclusivamente educativa e informativa.</p>
           </div>
         </div>
       </div>
@@ -1302,7 +1302,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
     <span class="diff-text">
       Diferença de <strong>${fmtPct(Math.abs(diff))} a.m.</strong> 
       (${fmtPct(Math.abs(difAnual))} a.a.) em relação à média ${bacen.nome}.<br>
-      ${diff > 0 ? 'Custo extra estimado: <strong>' + fmtBRL(Math.max(0, extraJuros)) + '</strong> em juros adicionais.' : 'Você está pagando abaixo da média de mercado.'}
+      ${diff > 0 ? 'Diferença projetada no custo total em relação à média Bacen: <strong>' + fmtBRL(Math.max(0, extraJuros)) + '</strong>.' : 'A taxa calculada está abaixo ou igual à média Bacen para esta modalidade.'}
     </span>
     <span class="diff-badge ${diff > 0 ? 'diff-bad' : 'diff-ok'}">
       ${diff >= 0 ? '+' : ''}${fmtPct(diff)} a.m.
@@ -1502,7 +1502,7 @@ function gerarPDF() {
   y += 4;
   let situacaoTxt, situacaoColor;
   if (diff > 2) {
-    situacaoTxt = 'SITUAÇÃO: Taxa muito acima da média — avalie portabilidade de crédito.';
+    situacaoTxt = 'SITUAÇÃO: Taxa calculada significativamente acima da média Bacen para esta modalidade.';
     situacaoColor = [200, 50, 50];
   } else if (diff > 0.5) {
     situacaoTxt = 'SITUAÇÃO: Taxa ligeiramente acima da média — há margem para negociação.';

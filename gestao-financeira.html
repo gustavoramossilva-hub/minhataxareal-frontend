@@ -414,7 +414,7 @@ function renderIndicadores(){
 
   const tip = document.getElementById('tip-saude');
   if(comprometimento > 40){
-    tip.className='tip-box tip-box warn'; tip.textContent='O comprometimento de renda está elevado. Mais de 40% da renda líquida alocada em dívidas pode dificultar a manutenção financeira em cenários de crise.';
+    tip.className='tip-box tip-box warn'; tip.textContent='O percentual de comprometimento de renda está acima do parâmetro de referência de 40%. Esta simulação tem caráter educativo — consulte um profissional para análise personalizada.';
   } else if(margem < 0){
     tip.className='tip-box tip-box'; tip.style.background='var(--red-dim)'; tip.style.color='var(--red)';
     tip.textContent='⚠ A soma das dívidas e gastos fixos supera a renda. É necessário revisar o orçamento com urgência.';
