@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinhaTaxaReal — Saúde Financeira</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;
+    --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+    --text:#f0ede8;--text2:#8a8880;--text3:#545250;
+    --accent:#d4f03c;--accent2:#a8c42e;
+    --accent-dim:rgba(212,240,60,.1);--accent-dim2:rgba(212,240,60,.18);
+    --red:#f05252;--red-dim:rgba(240,82,82,.12);
+    --green:#4cde8a;--green-dim:rgba(76,222,138,.1);
+    --amber:#f5a623;--amber-dim:rgba(245,166,35,.12);
+    --blue:#60a5fa;--blue-dim:rgba(96,165,250,.1);
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(14,15,17,.92);backdrop-filter:blur(12px);z-index:100}
+  .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
+  .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}
+  .nav-tabs{display:flex;gap:6px}
+  .nav-tab{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:7px 16px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;text-decoration:none;transition:all .15s}
+  .nav-tab.active,.nav-tab:hover{background:var(--accent-dim2);border-color:var(--accent);color:var(--accent)}
+  .main{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 61px)}
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:28px;overflow-y:auto}
+  .content{padding:36px;overflow-y:auto}
+  .panel-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:20px}
+  .form-group{margin-bottom:16px}
+  .form-label{display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+  .form-hint{color:var(--text3);font-size:11px;font-family:'DM Mono',monospace}
+  input[type=text],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim2)}
+  .pfx-wrap{position:relative}.pfx{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-family:'DM Mono',monospace;font-size:13px;pointer-events:none}
+  .pfx-wrap input{padding-left:30px}
+  .sfx-wrap{position:relative}.sfx{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-family:'DM Mono',monospace;font-size:12px;pointer-events:none}
+  .sfx-wrap input{padding-right:44px}
+  .divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+  .calc-btn{width:100%;background:var(--accent);color:#0e0f11;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:14px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;margin-top:6px}
+  .calc-btn:hover{background:var(--accent2)}
+  .section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px}
+  .section-heading{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+  .section-heading::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px}
+  .metrics-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .metrics-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .metric-card{background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px;border:1px solid transparent}
+  .metric-card.ok{border-color:var(--green);background:var(--green-dim)}
+  .metric-card.warn{border-color:var(--amber);background:var(--amber-dim)}
+  .metric-card.bad{border-color:var(--red);background:var(--red-dim)}
+  .mc-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+  .mc-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1.2}
+  .mc-sub{font-size:11px;color:var(--text3);margin-top:3px}
+  .mc-val.ok{color:var(--green)}.mc-val.warn{color:var(--amber)}.mc-val.bad{color:var(--red)}.mc-val.accent{color:var(--accent)}
+  canvas{display:block;border-radius:var(--radius-sm)}
+  .canvas-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .canvas-wrap{background:var(--surface2);border-radius:var(--radius);padding:16px}
+  .canvas-title{font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:500}
+  .scenario-tabs{display:flex;gap:8px;margin-bottom:16px}
+  .sc-tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.04em;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;text-transform:uppercase}
+  .sc-tab.active{background:var(--accent-dim2);border-color:var(--accent);color:var(--accent)}
+  .timeline-wrap{overflow-x:auto;padding-bottom:8px}
+  .timeline{display:flex;gap:0;min-width:600px}
+  .tl-item{flex:1;text-align:center;position:relative}
+  .tl-item::before{content:'';position:absolute;top:10px;left:0;right:0;height:2px;background:var(--border2);z-index:0}
+  .tl-item:first-child::before{left:50%}
+  .tl-item:last-child::before{right:50%}
+  .tl-dot{width:20px;height:20px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);margin:0 auto 8px;position:relative;z-index:1;transition:all .3s}
+  .tl-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}
+  .tl-dot.past{background:var(--green);border-color:var(--green)}
+  .tl-dot.future{background:var(--surface2);border-color:var(--amber)}
+  .tl-label{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+  .tl-value{font-size:10px;color:var(--text2);margin-top:2px}
+  .goal-list{display:flex;flex-direction:column;gap:8px}
+  .goal-item{background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:12px;border:1px solid var(--border)}
+  .goal-icon{width:32px;height:32px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .goal-info{flex:1}
+  .goal-name{font-size:13px;font-weight:500}
+  .goal-sub{font-size:11px;color:var(--text2);margin-top:2px}
+  .goal-bar-wrap{background:var(--bg);border-radius:99px;height:4px;margin-top:6px}
+  .goal-bar{height:100%;border-radius:99px;background:var(--accent);transition:width .5s}
+  .goal-pct{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)}
+  .tip-box{border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;line-height:1.6;margin-top:10px;display:flex;gap:8px}
+  .tip-info{background:var(--blue-dim);color:var(--blue)}
+  .tip-ok{background:var(--green-dim);color:var(--green)}
+  .tip-warn{background:var(--amber-dim);color:var(--amber)}
+  .add-goal-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:12px;align-items:flex-end}
+  .add-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--accent);font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:11px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:all .15s}
+  .add-btn:hover{background:var(--accent-dim2);border-color:var(--accent)}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:14px;color:var(--text3);text-align:center}
+  .empty-icon{width:60px;height:60px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:24px}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .animate-in{animation:fadeUp .3s ease forwards}
+  .pdf-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:9px 16px;border-radius:var(--radius-sm);cursor:pointer;letter-spacing:.04em;transition:all .15s;display:flex;align-items:center;gap:6px}
+  .pdf-btn:hover{border-color:var(--accent);color:var(--accent)}
+  @media(max-width:900px){.main{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}.metrics-4{grid-template-columns:1fr 1fr}.canvas-row{grid-template-columns:1fr}.add-goal-form{grid-template-columns:1fr}.add-btn{width:100%}}
+</style>
+
+<script>
+// ══════════════════════════════════════════
+//  AUTH GUARD — verifica sessão ativa
+//  Se não autenticado → redireciona para auth.html
+// ══════════════════════════════════════════
+(function() {
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://minhataxareal-backend.onrender.com';
+
+  function getToken() { return localStorage.getItem('mtr_token'); }
+
+  async function verificarAcesso() {
+    const token = getToken();
+    if (!token) { window.location.href = 'auth.html'; return; }
+    try {
+      const res = await fetch(API_URL + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error('unauthorized');
+      const me = await res.json();
+      // Atualiza dados locais
+      localStorage.setItem('mtr_user', JSON.stringify(me));
+      // Verifica plano ativo
+      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+      if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
+        window.location.href = 'auth.html?reason=expired'; return;
+      }
+      // Injeta nome do usuário no header se existir
+      const nameEl = document.getElementById('user-header-name');
+      if (nameEl) nameEl.textContent = me.name;
+      const planEl = document.getElementById('user-header-plan');
+      if (planEl) planEl.textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
+    } catch (e) {
+      localStorage.removeItem('mtr_token');
+      localStorage.removeItem('mtr_user');
+      window.location.href = 'auth.html';
+    }
+  }
+
+  // Verifica assim que o DOM carrega
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verificarAcesso);
+  } else {
+    verificarAcesso();
+  }
+})();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span>MinhaTaxaReal</div>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab">Simulador</a>
+    <a href="#" class="nav-tab active">Saúde Financeira</a>
+  </div>
+</header>
+
+<div class="main">
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+    <p class="panel-title">Dados Financeiros Pessoais</p>
+
+    <div class="form-group">
+      <label class="form-label">Renda mensal líquida <span class="form-hint">R$</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="renda" placeholder="5.000,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Total de dívidas ativas <span class="form-hint">soma</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="total-dividas" placeholder="35.000,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Parcela mensal total <span class="form-hint">R$</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="parcela-total" placeholder="1.200,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Gastos fixos mensais <span class="form-hint">excl. dívidas</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="gastos-fixos" placeholder="2.000,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Reserva de emergência atual <span class="form-hint">R$</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="reserva" placeholder="3.000,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <p class="panel-title">Cenário de Sensibilidade</p>
+
+    <div class="form-group">
+      <label class="form-label">Simular redução de renda <span class="form-hint">cenário adverso</span></label>
+      <div class="sfx-wrap">
+        <input type="number" id="reducao-renda" value="20" min="0" max="90" step="5" oninput="calcLive()">
+        <span class="sfx">%</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Amortização extra mensal <span class="form-hint">opcional</span></label>
+      <div class="pfx-wrap"><span class="pfx">R$</span>
+        <input type="text" id="amort-extra" placeholder="300,00" oninput="maskCurrency(this);calcLive()">
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calcular()">▶ Calcular Saúde Financeira</button>
+  </div>
+
+  <!-- ═══ CONTEÚDO ═══ -->
+  <div class="content" id="content">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">📊</div>
+      <div>
+        <strong style="color:var(--text);font-family:'Syne',sans-serif">Preencha seus dados ao lado</strong>
+        <p style="max-width:260px;font-size:13px">O módulo calculará seu índice de saúde financeira, projetará a quitação das dívidas e simulará cenários de crise orçamentária.</p>
+      </div>
+    </div>
+
+    <div id="results" style="display:none">
+      <!-- Header resultado -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700" id="res-titulo">Diagnóstico Orçamentário</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px" id="res-sub"></div>
+        </div>
+        <button class="pdf-btn" onclick="gerarPDF()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Relatório PDF
+        </button>
+      </div>
+
+      <!-- Índice de saúde -->
+      <div class="section-card animate-in">
+        <div class="section-heading">Indicadores de Saúde Financeira</div>
+        <div class="metrics-4" id="metrics-saude"></div>
+        <div id="tip-saude" class="tip-box"></div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="section-card animate-in">
+        <div class="section-heading">Distribuição Orçamentária</div>
+        <div class="canvas-row">
+          <div class="canvas-wrap">
+            <div class="canvas-title">Alocação da Renda Atual</div>
+            <canvas id="canvas-pizza" style="width:100%;height:200px"></canvas>
+          </div>
+          <div class="canvas-wrap">
+            <div class="canvas-title">Evolução do Saldo Devedor</div>
+            <canvas id="canvas-evolucao" style="width:100%;height:200px"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cenário adverso -->
+      <div class="section-card animate-in" id="card-cenario">
+        <div class="section-heading">Simulação de Cenário Adverso</div>
+        <div class="scenario-tabs">
+          <button class="sc-tab active" onclick="renderCenario('atual',this)">Situação atual</button>
+          <button class="sc-tab" onclick="renderCenario('reducao',this)">Redução de renda</button>
+          <button class="sc-tab" onclick="renderCenario('amort',this)">Com amortização extra</button>
+        </div>
+        <div id="cenario-content" class="metrics-3"></div>
+        <div id="cenario-tip" class="tip-box" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Linha do tempo de quitação -->
+      <div class="section-card animate-in">
+        <div class="section-heading">Linha do Tempo de Quitação</div>
+        <div class="timeline-wrap"><div class="timeline" id="timeline"></div></div>
+        <div id="timeline-tip" class="tip-box tip-info" style="margin-top:14px"></div>
+      </div>
+
+      <!-- Metas financeiras -->
+      <div class="section-card animate-in">
+        <div class="section-heading">Metas Financeiras</div>
+        <div class="add-goal-form">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nome da meta</label>
+            <input type="text" id="goal-nome" placeholder="Ex: Reserva de emergência">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Valor objetivo</label>
+            <div class="pfx-wrap"><span class="pfx">R$</span>
+              <input type="text" id="goal-valor" placeholder="15.000,00" oninput="maskCurrency(this)">
+            </div>
+          </div>
+          <button class="add-btn" onclick="adicionarMeta()">+ Adicionar</button>
+        </div>
+        <div id="goal-list" class="goal-list"></div>
+        <div id="goal-empty" style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma meta cadastrada ainda.</div>
+      </div>
+
+      <!-- Economias: corte de gastos -->
+      <div class="section-card animate-in">
+        <div class="section-heading">Simulador — Corte de Gastos → Amortização</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">Descubra quantos meses você economiza na dívida redirecionando um gasto supérfluo para amortização.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:flex-end;margin-bottom:14px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Gasto a cortar por mês</label>
+            <div class="pfx-wrap"><span class="pfx">R$</span>
+              <input type="text" id="corte-valor" placeholder="200,00" oninput="maskCurrency(this)">
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Taxa mensal do contrato</label>
+            <div class="sfx-wrap">
+              <input type="number" id="corte-taxa" placeholder="1.80" step="0.01">
+              <span class="sfx">% a.m.</span>
+            </div>
+          </div>
+          <button class="add-btn" onclick="calcularCorte()">Simular</button>
+        </div>
+        <div id="corte-result" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+function fmtBRL(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function fmtPct(v,d=1){ return v.toFixed(d).replace('.',',')+' %'; }
+function parseBRL(s){ if(!s)return 0; return parseFloat(s.replace(/\./g,'').replace(',','.'))||0; }
+function maskCurrency(el){ let v=el.value.replace(/\D/g,''); if(!v){el.value='';return;} v=(parseInt(v)/100).toFixed(2); el.value=parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+
+// Estado global
+let ST = {
+  renda:0, dividaTotal:0, parcelaMensal:0,
+  gastosFixos:0, reserva:0,
+  reducaoRenda:0, amortExtra:0, metas:[],
+};
+
+// ═══════════════════════════════════════════
+//  CÁLCULO PRINCIPAL
+// ═══════════════════════════════════════════
+function calcular(){
+  ST.renda          = parseBRL(document.getElementById('renda').value);
+  ST.dividaTotal    = parseBRL(document.getElementById('total-dividas').value);
+  ST.parcelaMensal  = parseBRL(document.getElementById('parcela-total').value);
+  ST.gastosFixos    = parseBRL(document.getElementById('gastos-fixos').value);
+  ST.reserva        = parseBRL(document.getElementById('reserva').value);
+  ST.reducaoRenda   = parseFloat(document.getElementById('reducao-renda').value)||20;
+  ST.amortExtra     = parseBRL(document.getElementById('amort-extra').value);
+
+  if(!ST.renda || !ST.parcelaMensal){
+    alert('Preencha ao menos renda e parcela mensal.'); return;
+  }
+
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('results').style.display='';
+
+  renderIndicadores();
+  setTimeout(()=>{ renderPizza(); renderEvolucao(); },80);
+  renderCenario('atual', document.querySelector('.sc-tab'));
+  renderTimeline();
+  renderMetas();
+  document.getElementById('res-sub').textContent =
+    'Renda: '+fmtBRL(ST.renda)+' · Dívidas: '+fmtBRL(ST.dividaTotal)+' · Parcela: '+fmtBRL(ST.parcelaMensal);
+}
+
+function calcLive(){ /* atualiza badge de comprometimento */ }
+
+// ── Indicadores ──
+function renderIndicadores(){
+  const comprometimento = (ST.parcelaMensal / ST.renda) * 100;
+  const sobra           = ST.renda - ST.parcelaMensal - ST.gastosFixos;
+  const margem          = (sobra / ST.renda) * 100;
+  const mesesReserva    = ST.reserva > 0 ? (ST.reserva / (ST.gastosFixos + ST.parcelaMensal)).toFixed(1) : 0;
+  const pesoDivida      = ST.dividaTotal > 0 ? ((ST.dividaTotal / (ST.renda * 12)) * 100).toFixed(0) : 0;
+
+  const cls_c = comprometimento > 40 ? 'bad' : comprometimento > 30 ? 'warn' : 'ok';
+  const cls_m = margem < 0 ? 'bad' : margem < 15 ? 'warn' : 'ok';
+  const cls_r = mesesReserva < 3 ? 'bad' : mesesReserva < 6 ? 'warn' : 'ok';
+
+  document.getElementById('metrics-saude').innerHTML = `
+    <div class="metric-card ${cls_c}">
+      <div class="mc-lbl">Comprometimento</div>
+      <div class="mc-val ${cls_c}">${fmtPct(comprometimento)}</div>
+      <div class="mc-sub">limite prudencial: 30%</div>
+    </div>
+    <div class="metric-card ${cls_m}">
+      <div class="mc-lbl">Margem livre</div>
+      <div class="mc-val ${cls_m}">${fmtBRL(Math.max(0,sobra))}</div>
+      <div class="mc-sub">${fmtPct(Math.max(0,margem))} da renda</div>
+    </div>
+    <div class="metric-card ${cls_r}">
+      <div class="mc-lbl">Reserva de emergência</div>
+      <div class="mc-val ${cls_r}">${mesesReserva} meses</div>
+      <div class="mc-sub">recomendado: 6 meses</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-lbl">Peso da dívida / renda anual</div>
+      <div class="mc-val">${pesoDivida}%</div>
+      <div class="mc-sub">referência: abaixo de 150%</div>
+    </div>
+  `;
+
+  const tip = document.getElementById('tip-saude');
+  if(comprometimento > 40){
+    tip.className='tip-box tip-box warn'; tip.textContent='O comprometimento de renda está elevado. Mais de 40% da renda líquida alocada em dívidas pode dificultar a manutenção financeira em cenários de crise.';
+  } else if(margem < 0){
+    tip.className='tip-box tip-box'; tip.style.background='var(--red-dim)'; tip.style.color='var(--red)';
+    tip.textContent='⚠ A soma das dívidas e gastos fixos supera a renda. É necessário revisar o orçamento com urgência.';
+  } else if(mesesReserva < 3){
+    tip.className='tip-box tip-warn'; tip.textContent='A reserva de emergência está abaixo de 3 meses. Recomenda-se priorizar a formação desta reserva antes de amortizações extras.';
+  } else {
+    tip.className='tip-box tip-ok'; tip.textContent='✓ Situação dentro dos parâmetros de referência de saúde financeira pessoal.';
+  }
+}
+
+// ── Gráfico pizza ──
+function renderPizza(){
+  const canvas = document.getElementById('canvas-pizza');
+  if(!canvas||!canvas.offsetWidth) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = canvas.offsetHeight || 200;
+  canvas.width = W * (window.devicePixelRatio||1);
+  canvas.height= H * (window.devicePixelRatio||1);
+  ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+  ctx.clearRect(0,0,W,H);
+
+  const sobra = Math.max(0, ST.renda - ST.parcelaMensal - ST.gastosFixos);
+  const total = ST.renda || 1;
+  const slices = [
+    { val: ST.parcelaMensal, cor: '#f05252', label: 'Dívidas' },
+    { val: ST.gastosFixos,   cor: '#f5a623', label: 'Gastos fixos' },
+    { val: sobra,            cor: '#4cde8a', label: 'Livre' },
+  ].filter(s => s.val > 0);
+
+  const cx = W/2, cy = H/2, r = Math.min(W,H)/2 - 20;
+  let angle = -Math.PI/2;
+  slices.forEach(s => {
+    const sweep = (s.val/total)*2*Math.PI;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx, cy, r, angle, angle+sweep);
+    ctx.closePath(); ctx.fillStyle = s.cor+'cc'; ctx.fill();
+    ctx.strokeStyle = '#0e0f11'; ctx.lineWidth = 2; ctx.stroke();
+    // Label
+    const mid = angle + sweep/2;
+    const lx = cx + (r*0.65)*Math.cos(mid);
+    const ly = cy + (r*0.65)*Math.sin(mid);
+    ctx.fillStyle = '#fff'; ctx.font = '10px DM Mono, monospace'; ctx.textAlign = 'center';
+    if(sweep > 0.25) ctx.fillText(fmtPct(s.val/total*100,0), lx, ly);
+    angle += sweep;
+  });
+
+  // Legenda
+  let lx = 10, ly = H - 12;
+  slices.forEach(s => {
+    ctx.fillStyle = s.cor; ctx.fillRect(lx, ly-8, 10, 10);
+    ctx.fillStyle = 'rgba(138,136,128,0.8)'; ctx.font = '9px DM Mono, monospace'; ctx.textAlign = 'left';
+    ctx.fillText(s.label, lx+13, ly);
+    lx += ctx.measureText(s.label).width + 30;
+  });
+}
+
+// ── Gráfico evolução da dívida ──
+function renderEvolucao(){
+  const canvas = document.getElementById('canvas-evolucao');
+  if(!canvas||!canvas.offsetWidth) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = canvas.offsetHeight || 200;
+  if(!W||!H) return;
+  canvas.width = W*(window.devicePixelRatio||1); canvas.height=H*(window.devicePixelRatio||1);
+  ctx.scale(window.devicePixelRatio||1,window.devicePixelRatio||1);
+  ctx.clearRect(0,0,W,H);
+
+  const taxa = (ST.taxaImplicita||0.018);
+  const amort = ST.parcelaMensal;
+  const amortExtra = ST.amortExtra;
+  const meses = 120;
+  const pad = {t:10,r:10,b:28,l:60};
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+
+  // Linha sem extra
+  let saldos1=[], saldos2=[], s1=ST.dividaTotal, s2=ST.dividaTotal;
+  for(let m=0;m<=meses;m++){
+    saldos1.push(s1); saldos2.push(s2);
+    if(s1>0){ const j=s1*taxa; s1=Math.max(0,s1-(amort-j)); }
+    if(s2>0){ const j=s2*taxa; s2=Math.max(0,s2-(amort+amortExtra-j)); }
+  }
+  const maxS = ST.dividaTotal||1;
+  const xS = i => pad.l + (i/meses)*cW;
+  const yS = v => pad.t + cH - (v/maxS)*cH;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  [0,.25,.5,.75,1].forEach(f=>{
+    const yy=pad.t+f*cH; ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(pad.l+cW,yy); ctx.stroke();
+    ctx.fillStyle='rgba(138,136,128,.6)'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
+    ctx.fillText(fmtBRL(maxS*(1-f)).replace('R$\xa0','R$'), pad.l-4, yy+3);
+  });
+
+  // Sem extra
+  ctx.beginPath(); saldos1.forEach((v,i)=>i===0?ctx.moveTo(xS(i),yS(v)):ctx.lineTo(xS(i),yS(v)));
+  ctx.strokeStyle='rgba(240,82,82,.7)'; ctx.lineWidth=2; ctx.stroke();
+
+  // Com extra
+  if(amortExtra>0){
+    ctx.beginPath(); saldos2.forEach((v,i)=>i===0?ctx.moveTo(xS(i),yS(v)):ctx.lineTo(xS(i),yS(v)));
+    ctx.strokeStyle='rgba(76,222,138,.7)'; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  // Eixo X
+  ctx.fillStyle='rgba(84,82,80,.8)'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
+  [0,24,48,72,96,120].forEach(m=>{ ctx.fillText(m+'m', xS(m), H-6); });
+}
+
+// ── Cenários ──
+let _cenarioAtual = {};
+function renderCenario(tipo, btn){
+  if(btn){ document.querySelectorAll('.sc-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); }
+  const renda = ST.renda, parcela=ST.parcelaMensal, fixos=ST.gastosFixos;
+  let rendaUso=renda, label='', cor='ok';
+
+  if(tipo==='reducao'){ rendaUso=renda*(1-ST.reducaoRenda/100); label=`Renda reduzida em ${ST.reducaoRenda}%`; }
+  else if(tipo==='amort'){ label=`+${fmtBRL(ST.amortExtra)} amortização/mês`; }
+  else { label='Situação atual'; }
+
+  const comprometimento = (parcela/rendaUso)*100;
+  const sobra = rendaUso - parcela - fixos;
+  const parcAntec = tipo==='amort' ? parcela + ST.amortExtra : parcela;
+  const sobraAmort = rendaUso - parcAntec - fixos;
+
+  cor = comprometimento>40?'bad':comprometimento>30?'warn':'ok';
+
+  document.getElementById('cenario-content').innerHTML = `
+    <div class="metric-card ${cor}">
+      <div class="mc-lbl">Comprometimento</div>
+      <div class="mc-val ${cor}">${fmtPct(Math.min(comprometimento,999))}</div>
+      <div class="mc-sub">${label}</div>
+    </div>
+    <div class="metric-card ${sobra<0?'bad':sobra<500?'warn':'ok'}">
+      <div class="mc-lbl">Sobra mensal</div>
+      <div class="mc-val ${sobra<0?'bad':sobra<500?'warn':'ok'}">${fmtBRL(sobra)}</div>
+      <div class="mc-sub">após dívidas + fixos</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-lbl">Meses p/ quitar (est.)</div>
+      <div class="mc-val accent">${estimarMeses(ST.dividaTotal, parcAntec, ST.taxaImplicita||0.018)} m</div>
+      <div class="mc-sub">com taxa estimada de mercado</div>
+    </div>
+  `;
+
+  const tip = document.getElementById('cenario-tip');
+  if(tipo==='reducao'&&sobra<0){
+    tip.className='tip-box'; tip.style.background='var(--red-dim)'; tip.style.color='var(--red)';
+    tip.textContent='⚠ Neste cenário adverso, as obrigações superam a renda. Manter uma reserva de emergência é essencial para absorver essa redução sem inadimplência.';
+  } else if(tipo==='amort'&&ST.amortExtra>0){
+    const s_normal = estimarMeses(ST.dividaTotal, ST.parcelaMensal, ST.taxaImplicita||0.018);
+    const s_amort  = estimarMeses(ST.dividaTotal, parcAntec, ST.taxaImplicita||0.018);
+    const ganho = s_normal - s_amort;
+    tip.className='tip-box tip-ok';
+    tip.textContent=`✓ Com ${fmtBRL(ST.amortExtra)}/mês de amortização extra, você quita ${ganho} ${ganho===1?'mês':'meses'} mais cedo.`;
+  } else {
+    tip.className='tip-box tip-info';
+    tip.textContent='Utilize as abas acima para simular o impacto de diferentes cenários na sua saúde financeira.';
+  }
+}
+
+function estimarMeses(saldo, parcela, taxa){
+  if(!saldo||!parcela||parcela<=0) return '—';
+  let s=saldo, m=0;
+  while(s>0&&m<600){ const j=s*taxa; if(parcela<=j) return '+600'; s=Math.max(0,s-(parcela-j)); m++; }
+  return m;
+}
+
+// ── Linha do tempo ──
+function renderTimeline(){
+  const mesesQuit = estimarMeses(ST.dividaTotal, ST.parcelaMensal, ST.taxaImplicita||0.018);
+  const mesesAmort = ST.amortExtra>0 ? estimarMeses(ST.dividaTotal, ST.parcelaMensal+ST.amortExtra, ST.taxaImplicita||0.018) : null;
+  const agora = new Date();
+
+  const pontos = [
+    { label: 'Hoje', sub: agora.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}), tipo: 'active' },
+  ];
+
+  // Marcos intermediários
+  [12,24,36].forEach(m => {
+    if(m < mesesQuit){
+      const d = new Date(agora); d.setMonth(d.getMonth()+m);
+      const pago = m * ST.parcelaMensal;
+      pontos.push({ label: m+'m', sub: d.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}),
+        tipo:'past', extra: fmtBRL(pago)+' pagos' });
+    }
+  });
+
+  if(mesesAmort && mesesAmort < mesesQuit){
+    const d = new Date(agora); d.setMonth(d.getMonth()+mesesAmort);
+    pontos.push({ label: 'Quitação\nc/ extra', sub: d.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}), tipo:'future' });
+  }
+
+  if(mesesQuit !== '—' && mesesQuit < 601){
+    const d = new Date(agora); d.setMonth(d.getMonth()+mesesQuit);
+    pontos.push({ label: 'Quitação', sub: d.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}), tipo:'future' });
+  }
+
+  document.getElementById('timeline').innerHTML = pontos.map(p=>`
+    <div class="tl-item">
+      <div class="tl-dot ${p.tipo}"></div>
+      <div class="tl-label">${p.label.replace('\n','<br>')}</div>
+      <div class="tl-value">${p.sub}</div>
+      ${p.extra?`<div class="tl-value" style="color:var(--text3)">${p.extra}</div>`:''}
+    </div>
+  `).join('<div style="flex:.2"></div>');
+
+  const tip = document.getElementById('timeline-tip');
+  if(mesesQuit!=='—'&&mesesQuit<601){
+    const d = new Date(agora); d.setMonth(d.getMonth()+mesesQuit);
+    tip.textContent = `Com o ritmo atual de pagamento, a estimativa de quitação é em ${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} (${mesesQuit} meses). Esta é uma projeção educativa baseada na taxa média implícita.`;
+  } else {
+    tip.textContent = 'A parcela atual parece insuficiente para cobrir os juros acumulados. Considere renegociar as condições do contrato.';
+  }
+}
+
+// ── Metas ──
+const metas = JSON.parse(localStorage.getItem('mtr_metas')||'[]');
+
+function adicionarMeta(){
+  const nome  = document.getElementById('goal-nome').value.trim();
+  const valor = parseBRL(document.getElementById('goal-valor').value);
+  if(!nome||!valor){ alert('Preencha nome e valor da meta.'); return; }
+  metas.push({ id: Date.now(), nome, valor, poupado: 0 });
+  localStorage.setItem('mtr_metas', JSON.stringify(metas));
+  document.getElementById('goal-nome').value='';
+  document.getElementById('goal-valor').value='';
+  renderMetas();
+}
+
+function renderMetas(){
+  const container = document.getElementById('goal-list');
+  const empty     = document.getElementById('goal-empty');
+  if(!metas.length){ empty.style.display=''; container.innerHTML=''; return; }
+  empty.style.display='none';
+  const sobraMensal = Math.max(0, ST.renda - ST.parcelaMensal - ST.gastosFixos);
+  container.innerHTML = metas.map(m => {
+    const pct = Math.min(100, (m.poupado/m.valor)*100);
+    const mesesParaMeta = sobraMensal > 0 ? Math.ceil((m.valor - m.poupado) / (sobraMensal * 0.3)) : '—';
+    return `<div class="goal-item">
+      <div class="goal-icon">🎯</div>
+      <div class="goal-info">
+        <div class="goal-name">${m.nome}</div>
+        <div class="goal-sub">${fmtBRL(m.poupado)} de ${fmtBRL(m.valor)} · ~${mesesParaMeta}m (30% da sobra)</div>
+        <div class="goal-bar-wrap"><div class="goal-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="goal-pct">${pct.toFixed(0)}%</span>
+        <button onclick="removerMeta(${m.id})" style="font-size:11px;background:none;border:none;color:var(--text3);cursor:pointer">remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removerMeta(id){
+  const i = metas.findIndex(m=>m.id===id);
+  if(i>=0){ metas.splice(i,1); localStorage.setItem('mtr_metas',JSON.stringify(metas)); renderMetas(); }
+}
+
+// ── Simulador de corte de gastos ──
+function calcularCorte(){
+  const corte = parseBRL(document.getElementById('corte-valor').value);
+  const taxa  = (parseFloat(document.getElementById('corte-taxa').value)||1.8)/100;
+  const el    = document.getElementById('corte-result');
+  if(!corte||!ST.dividaTotal){ el.style.display='none'; return; }
+
+  const m_normal = estimarMeses(ST.dividaTotal, ST.parcelaMensal, taxa);
+  const m_corte  = estimarMeses(ST.dividaTotal, ST.parcelaMensal + corte, taxa);
+  const ganho = typeof m_normal==='number'&&typeof m_corte==='number' ? m_normal-m_corte : 0;
+
+  // Juros economizados
+  let j_normal=0, j_corte=0, s1=ST.dividaTotal, s2=ST.dividaTotal;
+  for(let m=0;m<600;m++){
+    if(s1>0){ const j=s1*taxa; j_normal+=j; s1=Math.max(0,s1-(ST.parcelaMensal-j)); }
+    if(s2>0){ const j=s2*taxa; j_corte+=j;  s2=Math.max(0,s2-(ST.parcelaMensal+corte-j)); }
+    if(s1<=0&&s2<=0) break;
+  }
+
+  el.style.display='block';
+  el.innerHTML=`
+    <div class="metrics-3">
+      <div class="metric-card ok">
+        <div class="mc-lbl">Meses economizados</div>
+        <div class="mc-val ok">${ganho} ${ganho===1?'mês':'meses'}</div>
+        <div class="mc-sub">antecipação da quitação</div>
+      </div>
+      <div class="metric-card ok">
+        <div class="mc-lbl">Juros economizados</div>
+        <div class="mc-val ok">${fmtBRL(Math.max(0,j_normal-j_corte))}</div>
+        <div class="mc-sub">ao longo do contrato</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-lbl">Nova previsão de quitação</div>
+        <div class="mc-val accent">${m_corte} meses</div>
+        <div class="mc-sub">vs. ${m_normal}m sem corte</div>
+      </div>
+    </div>
+    <div class="tip-box tip-ok" style="margin-top:10px">
+      Redirecionando ${fmtBRL(corte)}/mês de gastos supérfluos para amortização, você quita a dívida ${ganho} ${ganho===1?'mês':'meses'} mais cedo e economiza ${fmtBRL(Math.max(0,j_normal-j_corte))} em juros.
+    </div>
+  `;
+}
+
+// ── PDF ──
+function gerarPDF(){
+  const {jsPDF} = window.jspdf||{};
+  if(!jsPDF){ alert('PDF indisponível. Verifique conexão.'); return; }
+  const doc = new jsPDF({unit:'mm',format:'a4'});
+  const lm=20, pw=170;
+  let y=20;
+
+  doc.setFillColor(14,15,17); doc.rect(0,0,210,40,'F');
+  doc.setTextColor(212,240,60); doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('MinhaTaxaReal — Saúde Financeira', lm, 16);
+  doc.setTextColor(180,180,180); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Relatório de Diagnóstico Orçamentário Pessoal · '+new Date().toLocaleDateString('pt-BR'), lm, 24);
+  doc.setFillColor(212,240,60); doc.rect(lm, 34, pw, 1, 'F');
+  y=50;
+
+  // Dados
+  doc.setTextColor(50,50,50); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.setFillColor(240,240,240); doc.roundedRect(lm,y,pw,7,2,2,'F');
+  doc.text('1. DADOS INFORMADOS', lm+3, y+5); y+=12;
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  const d1=[
+    ['Renda mensal líquida', fmtBRL(ST.renda)],
+    ['Total de dívidas ativas', fmtBRL(ST.dividaTotal)],
+    ['Parcela mensal total', fmtBRL(ST.parcelaMensal)],
+    ['Gastos fixos mensais', fmtBRL(ST.gastosFixos)],
+    ['Reserva de emergência', fmtBRL(ST.reserva)],
+  ];
+  d1.forEach(([k,v])=>{ doc.setFont('helvetica','bold'); doc.text(k+':',lm+2,y); doc.setFont('helvetica','normal'); doc.text(v,lm+75,y); y+=6; });
+  y+=6;
+
+  // Indicadores
+  const compr = (ST.parcelaMensal/ST.renda*100).toFixed(1);
+  const sobra = ST.renda - ST.parcelaMensal - ST.gastosFixos;
+  doc.setFillColor(240,240,240); doc.roundedRect(lm,y,pw,7,2,2,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('2. INDICADORES DE SAÚDE FINANCEIRA', lm+3, y+5); y+=12;
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  [
+    ['Comprometimento de renda', compr+'% (limite prudencial: 30%)'],
+    ['Sobra mensal estimada', fmtBRL(sobra)],
+    ['Meses de reserva', estimarMeses(ST.dividaTotal,ST.parcelaMensal,0.018)+' meses estimados p/ quitação'],
+  ].forEach(([k,v])=>{ doc.setFont('helvetica','bold'); doc.text(k+':',lm+2,y); doc.setFont('helvetica','normal'); doc.text(v,lm+75,y); y+=6; });
+  y+=6;
+
+  // Disclaimer
+  doc.setFillColor(250,248,240); doc.roundedRect(lm,y,pw,20,2,2,'F');
+  doc.setTextColor(140,120,60); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+  doc.text(doc.splitTextToSize(
+    'AVISO: Este relatório possui finalidade exclusivamente educativa e informativa. As projeções são estimativas matemáticas baseadas nos dados fornecidos pelo usuário. Não constitui consultoria jurídica, financeira ou assessoria de investimentos. Consulte um profissional habilitado para decisões financeiras.',
+    pw-4), lm+2, y+5);
+
+  doc.save('MinhaTaxaReal-Saude-Financeira-'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', ()=>{ renderMetas(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinhaTaxaReal — Simulador de Taxa Real</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2026;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0ede8;
+    --text2: #8a8880;
+    --text3: #545250;
+    --accent: #d4f03c;
+    --accent2: #a8c42e;
+    --accent-dim: rgba(212,240,60,0.1);
+    --accent-dim2: rgba(212,240,60,0.18);
+    --red: #f05252;
+    --red-dim: rgba(240,82,82,0.12);
+    --green: #4cde8a;
+    --green-dim: rgba(76,222,138,0.1);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,15,17,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  .badge-header {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    padding: 4px 12px;
+    border-radius: 99px;
+    letter-spacing: .04em;
+  }
+
+  /* ── LAYOUT ── */
+  .app-shell {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    min-height: calc(100vh - 61px);
+  }
+
+  /* ── PAINEL ESQUERDO (inputs) ── */
+  .left-panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 24px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 28px;
+  }
+  .tab-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+  }
+  .tab-btn.active {
+    background: var(--accent);
+    color: #0e0f11;
+  }
+
+  /* ── FORM GROUPS ── */
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 7px;
+    letter-spacing: .02em;
+  }
+  .form-hint { color: var(--text3); font-size: 11px; font-family: 'DM Mono', monospace; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim2);
+  }
+  select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+  .input-prefix-wrap { position: relative; }
+  .input-prefix {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    pointer-events: none;
+  }
+  .input-prefix-wrap input { padding-left: 30px; }
+
+  .input-suffix-wrap { position: relative; }
+  .input-suffix {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    pointer-events: none;
+  }
+  .input-suffix-wrap input { padding-right: 44px; }
+
+  .form-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .calc-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0e0f11;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    margin-top: 8px;
+  }
+  .calc-btn:hover { background: var(--accent2); }
+  .calc-btn:active { transform: scale(.98); }
+
+  .clear-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 8px;
+    border: none;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: color .2s;
+    letter-spacing: .02em;
+  }
+  .clear-btn:hover { color: var(--text2); }
+
+  /* ── PAINEL DIREITO (resultados) ── */
+  .right-panel {
+    background: var(--bg);
+    padding: 40px;
+    overflow-y: auto;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+    color: var(--text3);
+    text-align: center;
+  }
+  .empty-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+  }
+  .empty-state p { font-size: 14px; max-width: 260px; line-height: 1.7; }
+
+  /* ── RESULTADO: seções ── */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .results-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; }
+  .results-subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .pdf-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    letter-spacing: .04em;
+    transition: background .15s, border-color .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pdf-btn:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+
+  /* ── CARDS DE MÉTRICAS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: border-color .2s;
+  }
+  .metric-card:hover { border-color: var(--border2); }
+  .metric-card.highlight {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .metric-card.danger { border-color: var(--red); background: var(--red-dim); }
+  .metric-card.warn { border-color: var(--amber); background: var(--amber-dim); }
+  .metric-card.good { border-color: var(--green); background: var(--green-dim); }
+
+  .mc-label { font-size: 11px; color: var(--text2); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+  .mc-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; line-height: 1.2; }
+  .mc-value.accent { color: var(--accent); }
+  .mc-value.danger { color: var(--red); }
+  .mc-value.warn { color: var(--amber); }
+  .mc-value.good { color: var(--green); }
+  .mc-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  /* ── COMPARATIVO BACEN ── */
+  .compare-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .section-heading {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-heading::before {
+    content: '';
+    display: inline-block;
+    width: 3px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .compare-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .compare-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .compare-row-label {
+    font-size: 12px;
+    color: var(--text2);
+    width: 130px;
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+  }
+  .compare-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+  .compare-bar { height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .bar-user { background: var(--red); }
+  .bar-bacen { background: var(--accent); }
+  .compare-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; width: 80px; text-align: right; }
+
+  .differential-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .diff-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .diff-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+  }
+  .diff-bad { background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,82,82,0.25); }
+  .diff-ok { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,222,138,0.25); }
+
+  /* ── TABELA DE AMORTIZAÇÃO ── */
+  .amort-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .amort-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .amort-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .05em;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+  }
+  .amort-tab.active { background: var(--accent-dim2); border-color: var(--accent); color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 12px; }
+  thead { position: sticky; top: 0; background: var(--surface); z-index: 2; }
+  th {
+    text-align: right;
+    padding: 10px 12px;
+    color: var(--text3);
+    font-size: 11px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  th:first-child { text-align: center; }
+  td {
+    text-align: right;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text2);
+    font-size: 12px;
+  }
+  td:first-child { text-align: center; color: var(--text3); }
+  tr:hover td { background: rgba(255,255,255,.025); }
+  .td-highlight { color: var(--text); }
+  .td-juros { color: var(--red); }
+  .td-amort { color: var(--green); }
+  .td-saldo { color: var(--text2); }
+
+  /* ── EDUCATIVO ── */
+  .edu-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .edu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .edu-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    border-left: 3px solid var(--accent);
+  }
+  .edu-card h4 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .edu-card p { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+  /* ── ANTECIPAÇÃO ── */
+  .antec-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .antec-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 18px;
+  }
+  .antec-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 11px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .antec-btn:hover { background: var(--accent-dim2); border-color: var(--accent); }
+
+  .antec-result {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    display: none;
+  }
+  .antec-result.show { display: block; }
+  .antec-result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .antec-result-row:last-child { border-bottom: none; }
+  .antec-key { font-size: 12px; color: var(--text2); }
+  .antec-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+
+  /* ── FOOTER ── */
+  .disclaimer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .disclaimer strong { color: var(--text2); }
+
+  /* ── ALERTAS ── */
+  .alert {
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert-warn { background: var(--amber-dim); border: 1px solid rgba(245,166,35,.3); color: var(--amber); }
+  .alert-danger { background: var(--red-dim); border: 1px solid rgba(240,82,82,.3); color: var(--red); }
+  .alert-info { background: var(--blue-dim); border: 1px solid rgba(96,165,250,.3); color: var(--blue); }
+  .alert-success { background: var(--green-dim); border: 1px solid rgba(76,222,138,.3); color: var(--green); }
+
+  /* ── ANIMAÇÕES ── */
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .animate-in { animation: fadeUp .35s ease forwards; }
+  .delay-1 { animation-delay: .06s; opacity:0; }
+  .delay-2 { animation-delay: .12s; opacity:0; }
+  .delay-3 { animation-delay: .18s; opacity:0; }
+  .delay-4 { animation-delay: .24s; opacity:0; }
+  .delay-5 { animation-delay: .30s; opacity:0; }
+
+  @media (max-width: 900px) {
+    .app-shell { grid-template-columns: 1fr; }
+    .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .edu-grid { grid-template-columns: 1fr; }
+    .antec-controls { grid-template-columns: 1fr 1fr; }
+    .antec-btn { grid-column: span 2; }
+    header { padding: 16px 20px; }
+    .left-panel, .right-panel { padding: 24px 20px; }
+  }
+</style>
+
+<script>
+// ══════════════════════════════════════════
+//  AUTH GUARD — verifica sessão ativa
+//  Se não autenticado → redireciona para auth.html
+// ══════════════════════════════════════════
+(function() {
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://minhataxareal-backend.onrender.com';
+
+  function getToken() { return localStorage.getItem('mtr_token'); }
+
+  async function verificarAcesso() {
+    const token = getToken();
+    if (!token) { window.location.href = 'auth.html'; return; }
+    try {
+      const res = await fetch(API_URL + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error('unauthorized');
+      const me = await res.json();
+      // Atualiza dados locais
+      localStorage.setItem('mtr_user', JSON.stringify(me));
+      // Verifica plano ativo
+      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+      if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
+        window.location.href = 'auth.html?reason=expired'; return;
+      }
+      // Injeta nome do usuário no header se existir
+      const nameEl = document.getElementById('user-header-name');
+      if (nameEl) nameEl.textContent = me.name;
+      const planEl = document.getElementById('user-header-plan');
+      if (planEl) planEl.textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
+    } catch (e) {
+      localStorage.removeItem('mtr_token');
+      localStorage.removeItem('mtr_user');
+      window.location.href = 'auth.html';
+    }
+  }
+
+  // Verifica assim que o DOM carrega
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verificarAcesso);
+  } else {
+    verificarAcesso();
+  }
+})();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    MinhaTaxaReal
+  </div>
+  
+  <!-- User info + logout no header -->
+  <div id="header-user-info" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:12px;color:var(--text2)" id="user-header-name"></span>
+    <span style="font-size:10px;font-family:'DM Mono',monospace;background:var(--accent-dim2);color:var(--accent);border:1px solid var(--accent);padding:2px 8px;border-radius:99px" id="user-header-plan"></span>
+    <button onclick="(function(){localStorage.removeItem('mtr_token');localStorage.removeItem('mtr_user');window.location.href='auth.html'})()" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:none;cursor:pointer;letter-spacing:.04em;padding:4px 8px;border-radius:8px;transition:color .15s" onmouseover="this.style.color='#f05252'" onmouseout="this.style.color='var(--text3)'">sair</button>
+  </div>
+</header>
+
+<div class="app-shell">
+
+  <!-- ══ PAINEL ESQUERDO ══ -->
+  <div class="left-panel">
+    <p class="panel-title">Dados da Operação</p>
+
+    <!-- tabs: simular / auditar -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-simular" onclick="switchTab('simular')">Simular</button>
+      <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Auditar Contrato</button>
+    </div>
+
+    <!-- MODO SIMULAR -->
+    <div id="mode-simular">
+      <div class="form-group">
+        <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
+        <select id="modalidade" onchange="updateBacenRef()">
+          <option value="veiculo">Financiamento de Veículos</option>
+          <option value="pessoal">Crédito Pessoal</option>
+          <option value="habitacional">Crédito Habitacional</option>
+          <option value="capital">Capital de Giro (PJ)</option>
+          <option value="consignado">Crédito Consignado</option>
+          <option value="cheque">Cheque Especial</option>
+          <option value="cartao">Cartão de Crédito Rotativo</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Valor líquido recebido <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="valor-liquido" placeholder="30.000,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Número de parcelas <span class="form-hint">meses</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="num-parcelas" placeholder="36" min="1" max="480" />
+          <span class="input-suffix">x</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="valor-parcela" placeholder="1.050,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+
+      <hr class="form-divider">
+
+      <div class="form-group">
+        <label class="form-label">Sistema de amortização <span class="form-hint">tabela</span></label>
+        <select id="sistema-amort">
+          <option value="price">Tabela Price (parcelas fixas)</option>
+          <option value="sac">SAC (amortização constante)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Taxa nominal informada <span class="form-hint">a.m. opcional</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="taxa-nominal" placeholder="1,80" step="0.01" min="0" />
+          <span class="input-suffix">% a.m.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODO AUDITAR (campos adicionais) -->
+    <div id="mode-auditar" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
+        <select id="modalidade-aud" onchange="updateBacenRefAud()">
+          <option value="veiculo">Financiamento de Veículos</option>
+          <option value="pessoal">Crédito Pessoal</option>
+          <option value="habitacional">Crédito Habitacional</option>
+          <option value="capital">Capital de Giro (PJ)</option>
+          <option value="consignado">Crédito Consignado</option>
+          <option value="cheque">Cheque Especial</option>
+          <option value="cartao">Cartão de Crédito Rotativo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor total financiado (contrato) <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="aud-valor" placeholder="25.000,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Número total de parcelas <span class="form-hint">meses</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="aud-parcelas" placeholder="48" min="1" max="480" />
+          <span class="input-suffix">x</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="aud-parcela-val" placeholder="750,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Parcelas já pagas <span class="form-hint">quitadas</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="aud-pagas" placeholder="12" min="0" />
+          <span class="input-suffix">x</span>
+        </div>
+      </div>
+      <hr class="form-divider">
+      <div class="form-group">
+        <label class="form-label">Sistema de amortização <span class="form-hint">tabela</span></label>
+        <select id="aud-sistema">
+          <option value="price">Tabela Price</option>
+          <option value="sac">SAC</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="alert-input" class="alert alert-danger"></div>
+
+    <button class="calc-btn" onclick="calcular()">▶ Calcular Agora</button>
+    <button class="clear-btn" onclick="limpar()">↺ Limpar campos</button>
+  </div>
+
+  <!-- ══ PAINEL DIREITO (resultados) ══ -->
+  <div class="right-panel" id="right-panel">
+
+    <!-- Estado vazio -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🧮</div>
+      <div>
+        <strong style="color:var(--text);font-family:'Syne',sans-serif">Preencha os dados ao lado</strong>
+        <p>O app calculará a taxa real da operação, comparará com a média oficial do Banco Central e gerará a tabela de amortização completa.</p>
+      </div>
+    </div>
+
+    <!-- Área de resultados -->
+    <div id="results-area" style="display:none">
+
+      <div class="results-header animate-in">
+        <div>
+          <div class="results-title" id="res-titulo">Análise da Operação</div>
+          <div class="results-subtitle" id="res-subtitulo"></div>
+        </div>
+        <button class="pdf-btn" onclick="gerarPDF()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Exportar PDF
+        </button>
+      </div>
+
+      <!-- Métricas principais -->
+      <div class="metrics-grid animate-in delay-1" id="metrics-grid"></div>
+
+      <!-- Alert de situação -->
+      <div id="alert-situacao" class="alert"></div>
+
+      <!-- Comparativo Bacen -->
+      <div class="compare-section animate-in delay-2" id="compare-section">
+        <div class="section-heading">Comparativo com Banco Central</div>
+        <div class="compare-visual" id="compare-visual"></div>
+        <div class="differential-box" id="differential-box"></div>
+      </div>
+
+      <!-- Tabela de amortização -->
+      <div class="amort-section animate-in delay-3" id="amort-section">
+        <div class="section-heading">Tabela de Amortização</div>
+        <div class="amort-tabs" id="amort-tabs">
+          <button class="amort-tab active" onclick="renderTabela('price', this)">Price</button>
+          <button class="amort-tab" onclick="renderTabela('sac', this)">SAC</button>
+        </div>
+        <div class="table-wrap" id="table-wrap"></div>
+      </div>
+
+      <!-- Simulação de antecipação -->
+      <div class="antec-section animate-in delay-4" id="antec-section">
+        <div class="section-heading">Simulação de Antecipação (CDC)</div>
+        <div class="antec-controls">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">A partir da parcela</label>
+            <div class="input-suffix-wrap">
+              <input type="number" id="antec-de" placeholder="Ex: 6" min="1" />
+              <span class="input-suffix">ª</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Até a parcela</label>
+            <div class="input-suffix-wrap">
+              <input type="number" id="antec-ate" placeholder="Ex: 12" min="1" />
+              <span class="input-suffix">ª</span>
+            </div>
+          </div>
+          <button class="antec-btn" onclick="calcularAntecipacao()">Simular</button>
+        </div>
+        <div class="antec-result" id="antec-result"></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6">
+          Conforme <strong style="color:var(--text2)">Art. 52 § 2º do CDC</strong> e a <strong style="color:var(--text2)">Resolução CMN nº 4.965/2021</strong>, a antecipação de parcelas garante redução proporcional dos juros. A quitação antecipada reduz o montante devido com desconto dos juros vincendos.
+        </p>
+      </div>
+
+      <!-- Educativo -->
+      <div class="edu-section animate-in delay-5">
+        <div class="section-heading">Direitos do Consumidor</div>
+        <div class="edu-grid">
+          <div class="edu-card">
+            <h4>Portabilidade de Crédito</h4>
+            <p>Regulada pela <strong>Resolução CMN nº 4.292/2013</strong>, a portabilidade permite transferir sua dívida para outra instituição com taxa menor, sem custo ou multa. Você tem direito de exigir a proposta de portabilidade por escrito.</p>
+          </div>
+          <div class="edu-card">
+            <h4>Quitação Antecipada</h4>
+            <p>Garantida pelo <strong>Art. 52 do CDC</strong>, a quitação antecipada deve ser feita com <em>redução proporcional dos juros</em>. O banco não pode cobrar juros de parcelas futuras já pagas. Exija a carta de quitação em até 5 dias.</p>
+          </div>
+          <div class="edu-card">
+            <h4>CET — Custo Efetivo Total</h4>
+            <p>Por lei (<strong>Resolução CMN nº 3.517/2007</strong>), toda operação de crédito deve informar o CET, que inclui juros + tarifas + seguros. Exija o CET antes de assinar. A taxa nominal pode ser muito menor que o CET real.</p>
+          </div>
+          <div class="edu-card">
+            <h4>Cláusulas Abusivas</h4>
+            <p>Contratos com taxas superiores à média de mercado podem ser questionados via <strong>Procon, Bacen Consumidor (0800 979 2345)</strong> ou judicialmente por dano financeiro comprovado. O relatório desta ferramenta serve de base para a contestação.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Aviso legal:</strong> Esta ferramenta realiza exclusivamente cálculos matemáticos de engenharia financeira com fins educativos e informativos. As taxas médias do Banco Central utilizadas como referência são atualizadas mensalmente (ref.: <span id="data-referencia">Mai/2026</span>). Os resultados <strong>não constituem assessoria jurídica, financeira ou consultoria</strong>. Para decisões contratuais, consulte um profissional habilitado.
+      </div>
+
+    </div><!-- /results-area -->
+  </div><!-- /right-panel -->
+</div><!-- /app-shell -->
+
+<script>
+// ════════════════════════════════════════════
+//  API BACEN — ATUALIZAÇÃO AUTOMÁTICA
+//  Fonte: dadosabertos.bcb.gov.br (SGS)
+//  Sem autenticação, sem custo, gratuita
+//  Códigos SGS:
+//    25471 = Veículos PF
+//    25464 = Crédito Pessoal
+//    25468 = Habitacional
+//    20714 = Capital de Giro PJ
+//    25469 = Consignado total
+//    25403 = Cheque Especial PF
+//    20754 = Cartão Rotativo PF
+// ════════════════════════════════════════════
+
+// Fallback usado se API falhar
+const BACEN_FALLBACK = {
+  veiculo:      { nome: 'Financiamento de Veículos',   taxaMes: 1.65, taxaAno: 21.74, ref: 'fallback' },
+  pessoal:      { nome: 'Crédito Pessoal',             taxaMes: 3.82, taxaAno: 56.48, ref: 'fallback' },
+  habitacional: { nome: 'Crédito Habitacional',        taxaMes: 0.78, taxaAno: 9.75,  ref: 'fallback' },
+  capital:      { nome: 'Capital de Giro (PJ)',         taxaMes: 1.42, taxaAno: 18.47, ref: 'fallback' },
+  consignado:   { nome: 'Crédito Consignado',           taxaMes: 1.80, taxaAno: 23.87, ref: 'fallback' },
+  cheque:       { nome: 'Cheque Especial',              taxaMes: 7.22, taxaAno: 131.5, ref: 'fallback' },
+  cartao:       { nome: 'Cartão de Crédito Rotativo',  taxaMes: 14.3, taxaAno: 439.8, ref: 'fallback' },
+};
+
+// Códigos SGS de cada modalidade
+const SGS_CODIGOS = {
+  veiculo: 25471, pessoal: 25464, habitacional: 25468,
+  capital: 20714, consignado: 25469, cheque: 25403, cartao: 20754,
+};
+
+// BACEN dinâmico — começa com fallback, preenchido pela API
+let BACEN = JSON.parse(JSON.stringify(BACEN_FALLBACK));
+
+// Cache 24h
+const CACHE_KEY = 'mtr_bacen_cache';
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+async function buscarTaxaBacen(chave, codigo) {
+  const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + codigo + '/dados/ultimos/1?formato=json';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || !data[0]) throw new Error('sem dados');
+    const taxaMes = parseFloat(data[0].valor);
+    const ref = data[0].data;
+    if (isNaN(taxaMes)) throw new Error('valor invalido');
+    const taxaAno = parseFloat(((Math.pow(1 + taxaMes / 100, 12) - 1) * 100).toFixed(2));
+    return { taxaMes, taxaAno, ref };
+  } catch (e) {
+    console.warn('[Bacen] Falha ' + chave + ' (SGS ' + codigo + '):', e.message);
+    return null;
+  }
+}
+
+async function atualizarBacen() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      BACEN = cached.data;
+      exibirStatusBacen(cached.data, 'cache');
+      return;
+    }
+  } catch (_) {}
+
+  exibirStatusBacen(null, 'carregando');
+
+  const chaves = Object.keys(SGS_CODIGOS);
+  const results = await Promise.all(chaves.map(k => buscarTaxaBacen(k, SGS_CODIGOS[k])));
+
+  let algumSucesso = false;
+  let refData = '';
+  chaves.forEach(function(k, i) {
+    if (results[i]) {
+      BACEN[k] = Object.assign({}, BACEN_FALLBACK[k], {
+        taxaMes: results[i].taxaMes,
+        taxaAno: results[i].taxaAno,
+        ref: results[i].ref,
+      });
+      refData = results[i].ref;
+      algumSucesso = true;
+    }
+  });
+
+  if (algumSucesso) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: BACEN })); } catch (_) {}
+    exibirStatusBacen(BACEN, 'ok', refData);
+  } else {
+    exibirStatusBacen(BACEN, 'erro');
+  }
+  updateBacenRef();
+  updateBacenRefAud();
+}
+
+function exibirStatusBacen(dados, status, ref) {
+  const el = document.getElementById('data-referencia');
+  if (el) {
+    if (status === 'carregando') {
+      el.textContent = 'buscando…';
+      el.style.color = 'var(--amber)';
+    } else if (status === 'ok' && ref) {
+      const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      const p = ref.split('/');
+      el.textContent = p.length === 3 ? (meses[parseInt(p[1])-1] + '/' + p[2] + ' — Bacen ao vivo') : ref;
+      el.style.color = 'var(--green)';
+    } else if (status === 'erro') {
+      el.textContent = 'ref. salva (offline)';
+      el.style.color = 'var(--amber)';
+    }
+  }
+
+  let banner = document.getElementById('bacen-status-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'bacen-status-banner';
+    banner.style.cssText = 'font-size:11px;font-family:"DM Mono",monospace;padding:6px 12px;border-radius:6px;margin-bottom:16px;display:flex;align-items:center;gap:6px;';
+    const painel = document.querySelector('.left-panel');
+    if (painel) painel.prepend(banner);
+  }
+  if (status === 'carregando') {
+    banner.style.background = 'var(--amber-dim)'; banner.style.color = 'var(--amber)';
+    banner.innerHTML = '⟳ Buscando taxas do Banco Central…';
+  } else if (status === 'ok') {
+    banner.style.background = 'var(--green-dim)'; banner.style.color = 'var(--green)';
+    banner.innerHTML = '✓ Taxas Bacen atualizadas automaticamente';
+    setTimeout(function() { if (banner) banner.style.display = 'none'; }, 4000);
+  } else if (status === 'cache') {
+    banner.style.display = 'none';
+  } else {
+    banner.style.background = 'var(--amber-dim)'; banner.style.color = 'var(--amber)';
+    banner.innerHTML = '⚠ Usando taxas de referência salvas (sem conexão)';
+  }
+}
+
+// Estado global
+let state = {
+  modo: 'simular',
+  modalidade: 'veiculo',
+  valorLiquido: 0,
+  numParcelas: 0,
+  valorParcela: 0,
+  taxaCalculada: 0,
+  sistema: 'price',
+  tabelaPrice: [],
+  tabelaSAC: [],
+};
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function fmtBRL(v) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+function fmtPct(v, dec = 2) {
+  return v.toFixed(dec).replace('.', ',') + '%';
+}
+function parseBRL(s) {
+  if (!s) return 0;
+  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+}
+function maskCurrency(el) {
+  let v = el.value.replace(/\D/g, '');
+  if (!v) { el.value = ''; return; }
+  v = (parseInt(v) / 100).toFixed(2);
+  el.value = parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+// ════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ════════════════════════════════════════════
+function switchTab(tab) {
+  state.modo = tab;
+  document.getElementById('tab-simular').classList.toggle('active', tab === 'simular');
+  document.getElementById('tab-auditar').classList.toggle('active', tab === 'auditar');
+  document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
+  document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
+  resetResultados();
+}
+
+function limpar() {
+  document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
+  resetResultados();
+  document.getElementById('alert-input').classList.remove('show');
+}
+
+function resetResultados() {
+  document.getElementById('empty-state').style.display = '';
+  document.getElementById('results-area').style.display = 'none';
+  document.getElementById('antec-result').classList.remove('show');
+}
+
+// ════════════════════════════════════════════
+//  CÁLCULO PRINCIPAL
+// ════════════════════════════════════════════
+function calcular() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  let pv, n, pmt, modalidade, sistema;
+
+  if (state.modo === 'simular') {
+    pv  = parseBRL(document.getElementById('valor-liquido').value);
+    n   = parseInt(document.getElementById('num-parcelas').value) || 0;
+    pmt = parseBRL(document.getElementById('valor-parcela').value);
+    modalidade = document.getElementById('modalidade').value;
+    sistema    = document.getElementById('sistema-amort').value;
+  } else {
+    pv  = parseBRL(document.getElementById('aud-valor').value);
+    n   = parseInt(document.getElementById('aud-parcelas').value) || 0;
+    pmt = parseBRL(document.getElementById('aud-parcela-val').value);
+    modalidade = document.getElementById('modalidade-aud').value;
+    sistema    = document.getElementById('aud-sistema').value;
+  }
+
+  // Validações
+  if (!pv || pv <= 0)  { showAlert(alertEl, 'Informe o valor líquido da operação.'); return; }
+  if (!n  || n <= 0)   { showAlert(alertEl, 'Informe o número de parcelas.'); return; }
+  if (!pmt || pmt <= 0){ showAlert(alertEl, 'Informe o valor de cada parcela.'); return; }
+  if (pmt * n <= pv)   { showAlert(alertEl, 'O total pago deve ser maior que o valor recebido (verrifique os valores).'); return; }
+
+  // TIR (Newton-Raphson)
+  // Usa TIR específica para SAC quando necessário (fluxo decrescente real)
+  const taxaMes = sistema === 'sac'
+    ? calcularTIR_SAC(pv, n, pmt) ?? calcularTIR(pv, n, pmt)
+    : calcularTIR(pv, n, pmt);
+
+  if (taxaMes === null) {
+    showAlert(alertEl, 'Não foi possível calcular a TIR para esses valores. Verifique se os dados refletem uma operação de crédito real.', 'alert-warn');
+    return;
+  }
+
+  // Armazena estado
+  state.valorLiquido = pv;
+  state.numParcelas  = n;
+  state.valorParcela = pmt;
+  state.taxaCalculada = taxaMes;
+  state.modalidade   = modalidade;
+  state.sistema      = sistema;
+
+  // Gera tabelas
+  state.tabelaPrice = gerarTabelaPrice(pv, taxaMes, n);
+  state.tabelaSAC   = gerarTabelaSAC(pv, taxaMes, n);
+
+  renderResultados(taxaMes, pv, n, pmt, modalidade, sistema);
+}
+
+function showAlert(el, msg, cls = 'alert-danger') {
+  el.className = 'alert show ' + cls;
+  el.textContent = '⚠ ' + msg;
+}
+
+// Newton-Raphson para TIR — com trava de divergência (doc item 2)
+function calcularTIR(pv, n, pmt) {
+  // Para SAC o fluxo é variável — usamos bisseção como fallback
+  let i = 0.03;
+  for (let iter = 0; iter < 2000; iter++) {
+    const fv  = Math.pow(1 + i, -n);
+    const fi  = pv - pmt * (1 - fv) / i;
+    const dfi = pmt * (n * fv / (i * (1 + i)) - (1 - fv) / (i * i));
+    // Trava: derivada próxima de zero = divergência iminente
+    if (Math.abs(dfi) < 1e-12) break;
+    const iNew = i - fi / dfi;
+    if (Math.abs(iNew - i) < 1e-12) return Math.max(0, iNew);
+    i = iNew;
+    if (i <= 0 || i > 5 || isNaN(i)) i = 0.03 + Math.random() * 0.02;
+  }
+  // Fallback: bisseção robusta (sempre converge)
+  return calcularTIRBissecao(pv, n, pmt);
+}
+
+// TIR via bisseção — fallback para casos onde NR diverge (SAC, dados atípicos)
+function calcularTIRBissecao(pv, n, pmt) {
+  let lo = 1e-6, hi = 5.0;
+  const vpl = (r) => {
+    let s = 0;
+    for (let k = 1; k <= n; k++) s += pmt / Math.pow(1 + r, k);
+    return s - pv;
+  };
+  if (vpl(lo) < 0 || vpl(hi) > 0) return null;
+  for (let iter = 0; iter < 200; iter++) {
+    const mid = (lo + hi) / 2;
+    if (Math.abs(hi - lo) < 1e-10) return mid;
+    vpl(mid) > 0 ? lo = mid : hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// TIR específica para SAC (fluxo decrescente real)
+function calcularTIR_SAC(pv, n, pmtPrimeira) {
+  // No SAC a amortização é constante = pv/n
+  // pmt_k = pv/n + saldo_k * i  →  saldo_k = pv - (k-1)*pv/n
+  // VPL(i) = sum_k [ pmt_k / (1+i)^k ] - pv = 0
+  const amort = pv / n;
+  const vpl = (r) => {
+    let s = 0, saldo = pv;
+    for (let k = 1; k <= n; k++) {
+      const pk = amort + saldo * r;
+      s += pk / Math.pow(1 + r, k);
+      saldo -= amort;
+    }
+    return s - pv;
+  };
+  let lo = 1e-6, hi = 5.0;
+  if (vpl(lo) < 0) return null;
+  for (let iter = 0; iter < 300; iter++) {
+    const mid = (lo + hi) / 2;
+    if (Math.abs(hi - lo) < 1e-10) return mid;
+    vpl(mid) > 0 ? lo = mid : hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// Tabela Price
+function gerarTabelaPrice(pv, i, n) {
+  const pmt = pv * i * Math.pow(1 + i, n) / (Math.pow(1 + i, n) - 1);
+  const rows = [];
+  let saldo = pv;
+  for (let k = 1; k <= n; k++) {
+    const juros = saldo * i;
+    const amort = pmt - juros;
+    saldo = Math.max(0, saldo - amort);
+    rows.push({ parc: k, pmt: pmt, juros, amort, saldo });
+  }
+  return rows;
+}
+
+// Tabela SAC
+function gerarTabelaSAC(pv, i, n) {
+  const amortConst = pv / n;
+  const rows = [];
+  let saldo = pv;
+  for (let k = 1; k <= n; k++) {
+    const juros = saldo * i;
+    const pmt = amortConst + juros;
+    saldo = Math.max(0, saldo - amortConst);
+    rows.push({ parc: k, pmt, juros, amort: amortConst, saldo });
+  }
+  return rows;
+}
+
+// ════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════
+function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-area').style.display = '';
+
+  const bacen = BACEN[modalidade];
+  const taxaAnoUser = (Math.pow(1 + taxaMes, 12) - 1) * 100;
+  const totalPago   = pmt * n;
+  const totalJuros  = totalPago - pv;
+  const cetAno      = taxaAnoUser;
+
+  // Título
+  document.getElementById('res-titulo').textContent = bacen.nome;
+  document.getElementById('res-subtitulo').textContent =
+    fmtBRL(pv) + ' · ' + n + ' parcelas de ' + fmtBRL(pmt);
+
+  // ── Métricas ──
+  const diff = taxaMes * 100 - bacen.taxaMes;
+  const cardClass = diff > 1 ? 'danger' : diff > 0.3 ? 'warn' : 'good';
+  const valClass  = diff > 1 ? 'danger' : diff > 0.3 ? 'warn' : 'good';
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card ${cardClass}">
+      <div class="mc-label">Taxa Real (TIR)</div>
+      <div class="mc-value ${valClass}">${fmtPct(taxaMes * 100)} <span style="font-size:14px">a.m.</span></div>
+      <div class="mc-sub">${fmtPct(taxaAnoUser)} ao ano</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Total de Juros Pagos</div>
+      <div class="mc-value" style="font-size:20px">${fmtBRL(totalJuros)}</div>
+      <div class="mc-sub">${fmtPct(totalJuros / pv * 100)} do principal</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Montante Total</div>
+      <div class="mc-value accent" style="font-size:20px">${fmtBRL(totalPago)}</div>
+      <div class="mc-sub">${n}x de ${fmtBRL(pmt)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Média Bacen</div>
+      <div class="mc-value" style="font-size:20px;color:var(--accent)">${fmtPct(bacen.taxaMes)} a.m.</div>
+      <div class="mc-sub">${fmtPct(bacen.taxaAno)} ao ano · ref. Mai/2026</div>
+    </div>
+    <div class="metric-card ${diff > 0 ? (diff > 1 ? 'danger' : 'warn') : 'good'}">
+      <div class="mc-label">Diferencial</div>
+      <div class="mc-value ${diff > 0 ? (diff > 1 ? 'danger' : 'warn') : 'good'}">
+        ${diff >= 0 ? '+' : ''}${fmtPct(diff)} a.m.
+      </div>
+      <div class="mc-sub">vs. média de mercado</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">CET estimado</div>
+      <div class="mc-value" style="font-size:19px;color:var(--text)">${fmtPct(cetAno)} a.a.</div>
+      <div class="mc-sub">Custo Efetivo Total</div>
+    </div>
+  `;
+
+  // ── Alert de situação ──
+  const alertSit = document.getElementById('alert-situacao');
+  if (diff > 2) {
+    alertSit.className = 'alert show alert-danger';
+    alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> Sua operação está ${fmtPct(diff)} a.m. acima da média Bacen para ${bacen.nome}. Para referência: a média Bacen para esta modalidade é de . Consulte um profissional para análise contratual.`;
+  } else if (diff > 0.5) {
+    alertSit.className = 'alert show alert-warn';
+    alertSit.innerHTML = `<strong>⚡ Taxa ligeiramente acima da média.</strong> Há espaço para negociação. Com o relatório desta ferramenta em mãos, compare propostas de portabilidade.`;
+  } else if (diff <= 0) {
+    alertSit.className = 'alert show alert-success';
+    alertSit.innerHTML = `<strong>✓ Ótima condição!</strong> A taxa da sua operação está igual ou abaixo da média Bacen para esta modalidade.`;
+  } else {
+    alertSit.className = 'alert show alert-info';
+    alertSit.innerHTML = `<strong>ℹ Taxa próxima da média.</strong> A operação está dentro do intervalo esperado para o mercado.`;
+  }
+
+  // ── Comparativo Bacen ──
+  const maxTaxa = Math.max(taxaMes * 100, bacen.taxaMes) * 1.15;
+  document.getElementById('compare-visual').innerHTML = `
+    <div class="compare-row">
+      <span class="compare-row-label">Sua operação</span>
+      <div class="compare-bar-wrap">
+        <div class="compare-bar bar-user" style="width:${Math.min(100, taxaMes * 100 / maxTaxa * 100)}%"></div>
+      </div>
+      <span class="compare-val" style="color:${diff > 1 ? 'var(--red)' : diff > 0.3 ? 'var(--amber)' : 'var(--green)'}">${fmtPct(taxaMes * 100)}</span>
+    </div>
+    <div class="compare-row">
+      <span class="compare-row-label">Média Bacen</span>
+      <div class="compare-bar-wrap">
+        <div class="compare-bar bar-bacen" style="width:${Math.min(100, bacen.taxaMes / maxTaxa * 100)}%"></div>
+      </div>
+      <span class="compare-val" style="color:var(--accent)">${fmtPct(bacen.taxaMes)}</span>
+    </div>
+  `;
+
+  const difAnual = (Math.pow(1 + diff / 100, 12) - 1) * 100;
+  const extraJuros = totalJuros - (pv * (Math.pow(1 + bacen.taxaMes / 100, n) - 1));
+  document.getElementById('differential-box').innerHTML = `
+    <span class="diff-text">
+      Diferença de <strong>${fmtPct(Math.abs(diff))} a.m.</strong> 
+      (${fmtPct(Math.abs(difAnual))} a.a.) em relação à média ${bacen.nome}.<br>
+      ${diff > 0 ? 'Custo extra estimado: <strong>' + fmtBRL(Math.max(0, extraJuros)) + '</strong> em juros adicionais.' : 'Você está pagando abaixo da média de mercado.'}
+    </span>
+    <span class="diff-badge ${diff > 0 ? 'diff-bad' : 'diff-ok'}">
+      ${diff >= 0 ? '+' : ''}${fmtPct(diff)} a.m.
+    </span>
+  `;
+
+  // ── Tabela de amortização ──
+  // Resets tabs
+  document.querySelectorAll('.amort-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.amort-tab').classList.add('active');
+  renderTabela(sistema === 'price' ? 'price' : 'sac', document.querySelector('.amort-tab'));
+
+  // ── Antecipação: define max ──
+  document.getElementById('antec-de').max = n;
+  document.getElementById('antec-ate').max = n;
+
+  // Scroll suave
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderTabela(tipo, btn) {
+  if (btn) {
+    document.querySelectorAll('.amort-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const rows = tipo === 'price' ? state.tabelaPrice : state.tabelaSAC;
+  if (!rows || !rows.length) return;
+
+  let html = `<table>
+    <thead><tr>
+      <th>#</th>
+      <th>Parcela</th>
+      <th style="color:var(--red)">Juros</th>
+      <th style="color:var(--green)">Amortização</th>
+      <th>Saldo Devedor</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${r.parc}</td>
+      <td class="td-highlight">${fmtBRL(r.pmt)}</td>
+      <td class="td-juros">${fmtBRL(r.juros)}</td>
+      <td class="td-amort">${fmtBRL(r.amort)}</td>
+      <td class="td-saldo">${fmtBRL(r.saldo)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+}
+
+// ════════════════════════════════════════════
+//  ANTECIPAÇÃO
+// ════════════════════════════════════════════
+function calcularAntecipacao() {
+  const de  = parseInt(document.getElementById('antec-de').value) || 0;
+  const ate = parseInt(document.getElementById('antec-ate').value) || 0;
+  const n   = state.numParcelas;
+  const resultEl = document.getElementById('antec-result');
+
+  if (!de || !ate || de < 1 || ate < de || ate > n) {
+    resultEl.className = 'antec-result show';
+    resultEl.innerHTML = '<p style="color:var(--amber);font-size:13px">⚠ Informe parcelas válidas (de ≤ até ≤ total).</p>';
+    return;
+  }
+
+  const tabela = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
+  if (!tabela.length) return;
+
+  // Parcelas antecipadas
+  const parcsAntec = tabela.slice(de - 1, ate);
+  const totalParcs = parcsAntec.reduce((s, r) => s + r.pmt, 0);
+  const totalJurosVincendos = parcsAntec.reduce((s, r) => s + r.juros, 0);
+  const saldoDevedorAntes = tabela[de - 1].saldo + tabela[de - 1].amort;
+  const valorQuitacao = saldoDevedorAntes - parcsAntec.reduce((s, r) => s + r.amort, 0) + parcsAntec[0].amort;
+  // Valor real a pagar (saldo devedor no início do período, sem juros futuros)
+  const saldoInicio = de === 1 ? state.valorLiquido : tabela[de - 2].saldo;
+  const amortTotal = parcsAntec.reduce((s, r) => s + r.amort, 0);
+  const valorReal = amortTotal; // paga só o principal das parcelas
+
+  resultEl.className = 'antec-result show';
+  resultEl.innerHTML = `
+    <div class="antec-result-row"><span class="antec-key">Parcelas antecipadas</span><span class="antec-val">${de}ª a ${ate}ª (${ate - de + 1} parcelas)</span></div>
+    <div class="antec-result-row"><span class="antec-key">Total bruto das parcelas</span><span class="antec-val">${fmtBRL(totalParcs)}</span></div>
+    <div class="antec-result-row"><span class="antec-key" style="color:var(--green)">Juros vincendos (desconto)</span><span class="antec-val" style="color:var(--green)">− ${fmtBRL(totalJurosVincendos)}</span></div>
+    <div class="antec-result-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:10px">
+      <span class="antec-key"><strong>Valor a pagar (sem juros)</strong></span>
+      <span class="antec-val" style="color:var(--accent);font-size:16px">${fmtBRL(amortTotal)}</span>
+    </div>
+    <div class="antec-result-row"><span class="antec-key">Economia total</span><span class="antec-val" style="color:var(--green)">${fmtBRL(totalJurosVincendos)}</span></div>
+  `;
+}
+
+// ════════════════════════════════════════════
+//  EXPORT PDF
+// ════════════════════════════════════════════
+function gerarPDF() {
+  let jsPDF;
+  try {
+    jsPDF = window.jspdf?.jsPDF;
+    if (!jsPDF) throw new Error('não carregada');
+  } catch(e) {
+    showAlert(document.getElementById('alert-input'),
+      'Biblioteca de PDF não disponível. Verifique sua conexão com a internet e tente novamente.', 'alert-warn');
+    return;
+  }
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const bacen  = BACEN[state.modalidade];
+  const taxa   = state.taxaCalculada;
+  const taxaAno = (Math.pow(1 + taxa, 12) - 1) * 100;
+  const total  = state.numParcelas * state.valorParcela;
+  const juros  = total - state.valorLiquido;
+  const diff   = taxa * 100 - bacen.taxaMes;
+
+  let y = 20;
+  const lm = 20;
+  const pw = 170;
+
+  // Cabeçalho
+  doc.setFillColor(14, 15, 17);
+  doc.rect(0, 0, 210, 40, 'F');
+  doc.setTextColor(212, 240, 60);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('MinhaTaxaReal', lm, 16);
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Relatório Técnico de Análise de Crédito', lm, 23);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + ' — Taxa Bacen ref.: Mai/2026', lm, 29);
+  doc.setFillColor(212, 240, 60);
+  doc.rect(lm, 34, pw, 1, 'F');
+
+  y = 50;
+  doc.setTextColor(30, 30, 30);
+
+  // Seção 1
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(50, 50, 50);
+  doc.text('1. DADOS DA OPERAÇÃO', lm + 3, y + 5);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+
+  const dados1 = [
+    ['Modalidade', bacen.nome],
+    ['Valor Líquido Recebido', fmtBRL(state.valorLiquido)],
+    ['Número de Parcelas', state.numParcelas + ' meses'],
+    ['Valor de Cada Parcela', fmtBRL(state.valorParcela)],
+    ['Sistema de Amortização', state.sistema.toUpperCase()],
+    ['Montante Total Pago', fmtBRL(total)],
+    ['Total de Juros', fmtBRL(juros)],
+  ];
+  dados1.forEach(([k, v]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.text(k + ':', lm + 2, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(v, lm + 65, y);
+    y += 6;
+  });
+
+  y += 6;
+
+  // Seção 2
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(50, 50, 50);
+  doc.text('2. ANÁLISE DE TAXA (CÁLCULO TIR)', lm + 3, y + 5);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  const dados2 = [
+    ['Taxa Real Calculada (TIR)', fmtPct(taxa * 100) + ' a.m.  /  ' + fmtPct(taxaAno) + ' a.a.'],
+    ['Média Bacen — ' + bacen.nome, fmtPct(bacen.taxaMes) + ' a.m.  /  ' + fmtPct(bacen.taxaAno) + ' a.a.'],
+    ['Diferencial (operação vs mercado)', (diff >= 0 ? '+' : '') + fmtPct(diff) + ' a.m.'],
+    ['CET Estimado (base TIR)', fmtPct(taxaAno) + ' a.a.'],
+  ];
+  dados2.forEach(([k, v]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.text(k + ':', lm + 2, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(v, lm + 80, y);
+    y += 6;
+  });
+
+  // Destaque situação
+  y += 4;
+  let situacaoTxt, situacaoColor;
+  if (diff > 2) {
+    situacaoTxt = 'SITUAÇÃO: Taxa muito acima da média — avalie portabilidade de crédito.';
+    situacaoColor = [200, 50, 50];
+  } else if (diff > 0.5) {
+    situacaoTxt = 'SITUAÇÃO: Taxa ligeiramente acima da média — há margem para negociação.';
+    situacaoColor = [180, 120, 0];
+  } else {
+    situacaoTxt = 'SITUAÇÃO: Taxa dentro ou abaixo da média de mercado Bacen.';
+    situacaoColor = [30, 140, 80];
+  }
+  doc.setFillColor(...situacaoColor, 20);
+  doc.roundedRect(lm, y, pw, 10, 2, 2, 'F');
+  doc.setTextColor(...situacaoColor);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text(situacaoTxt, lm + 3, y + 7);
+  y += 16;
+
+  // Seção 3 — tabela (primeiras 12 linhas)
+  doc.setTextColor(50, 50, 50);
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('3. TABELA DE AMORTIZAÇÃO — ' + state.sistema.toUpperCase() + ' (12 primeiras parcelas)', lm + 3, y + 5);
+  y += 11;
+
+  // Header tabela
+  doc.setFillColor(220, 220, 220);
+  doc.rect(lm, y, pw, 7, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo Devedor'].forEach((h, i) => {
+    const xs = [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133];
+    doc.text(h, xs[i], y + 5);
+  });
+  y += 7;
+
+  const tabela = state.sistema === 'price' ? state.tabelaPrice : state.tabelaSAC;
+  const maxRows = Math.min(12, tabela.length);
+  tabela.slice(0, maxRows).forEach((r, idx) => {
+    if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(60, 60, 60);
+    doc.text(String(r.parc), lm + 2, y + 4.5);
+    doc.text(fmtBRL(r.pmt), lm + 18, y + 4.5);
+    doc.text(fmtBRL(r.juros), lm + 58, y + 4.5);
+    doc.text(fmtBRL(r.amort), lm + 95, y + 4.5);
+    doc.text(fmtBRL(r.saldo), lm + 133, y + 4.5);
+    y += 6;
+  });
+  if (tabela.length > 12) {
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(7);
+    doc.text('... tabela completa disponível no app (' + tabela.length + ' parcelas)', lm + 2, y + 4);
+    y += 8;
+  }
+
+  y += 6;
+
+  // Seção 4 — Direitos
+  doc.setTextColor(50, 50, 50);
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('4. DIREITOS E BASE NORMATIVA', lm + 3, y + 5);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(70, 70, 70);
+  const direitos = [
+    '• Portabilidade de crédito: Resolução CMN nº 4.292/2013 — direito de transferir dívida para outro banco com taxa menor.',
+    '• Quitação antecipada com redução de juros: Art. 52 §2º do CDC — sem multa, com desconto proporcional dos juros vincendos.',
+    '• CET obrigatório: Resolução CMN nº 3.517/2007 — toda oferta de crédito deve informar o Custo Efetivo Total.',
+    '• Canais de denúncia: Procon estadual | Bacen Consumidor: 0800 979 2345 | Consumidor.gov.br',
+  ];
+  direitos.forEach(d => {
+    const lines = doc.splitTextToSize(d, pw - 4);
+    doc.text(lines, lm + 2, y);
+    y += lines.length * 5.5;
+  });
+
+  y += 6;
+
+  // Disclaimer
+  doc.setFillColor(250, 248, 240);
+  doc.roundedRect(lm, y, pw, 18, 2, 2, 'F');
+  doc.setTextColor(140, 120, 60);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'italic');
+  const disclaimer = 'AVISO LEGAL: Este relatório tem fins exclusivamente educativos e informativos. Os cálculos são baseados nos dados fornecidos pelo usuário e nas taxas médias oficiais do Banco Central do Brasil (ref.: Mai/2026). Não constitui consultoria jurídica, financeira ou assessoria de investimentos. As taxas Bacen são atualizadas mensalmente.';
+  doc.text(doc.splitTextToSize(disclaimer, pw - 4), lm + 2, y + 5);
+
+  doc.save('MinhaTaxaReal-Relatorio-' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ════════════════════════════════════════════
+//  HISTÓRICO DE SIMULAÇÕES
+// ════════════════════════════════════════════
+let historico = JSON.parse(localStorage.getItem('mtr_historico') || '[]');
+
+function salvarHistorico(taxa, pv, n, pmt, modalidade) {
+  const bacen = BACEN[modalidade];
+  const entry = {
+    id: Date.now(),
+    data: new Date().toLocaleDateString('pt-BR'),
+    modalidade,
+    nome: bacen.nome,
+    pv, n, pmt,
+    taxa: taxa * 100,
+    bacenTaxa: bacen.taxaMes,
+    diff: taxa * 100 - bacen.taxaMes,
+    total: pmt * n,
+    juros: pmt * n - pv,
+  };
+  historico.unshift(entry);
+  if (historico.length > 10) historico.pop();
+  localStorage.setItem('mtr_historico', JSON.stringify(historico));
+  renderHistorico();
+}
+
+function renderHistorico() {
+  const container = document.getElementById('historico-list');
+  if (!container) return;
+  if (!historico.length) {
+    container.innerHTML = '<p style="font-size:12px;color:var(--text3);padding:12px 0">Nenhuma simulação salva ainda.</p>';
+    return;
+  }
+  container.innerHTML = historico.map(h => {
+    const cor = h.diff > 1 ? 'var(--red)' : h.diff > 0.3 ? 'var(--amber)' : 'var(--green)';
+    return `<div class="hist-item" onclick="recarregarHistorico(${h.id})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.nome}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${fmtBRL(h.pv)} · ${h.n}x ${fmtBRL(h.pmt)} · ${h.data}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:${cor}">${fmtPct(h.taxa)} a.m.</div>
+        <div style="font-size:10px;color:var(--text3)">${h.diff >= 0 ? '+' : ''}${fmtPct(h.diff)} vs Bacen</div>
+      </div>
+      <button onclick="event.stopPropagation();removerHistorico(${h.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 0 0 8px;line-height:1" title="Remover">×</button>
+    </div>`;
+  }).join('');
+}
+
+function recarregarHistorico(id) {
+  const h = historico.find(x => x.id === id);
+  if (!h) return;
+  switchTab('simular');
+  document.getElementById('modalidade').value = h.modalidade;
+  document.getElementById('valor-liquido').value = h.pv.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  document.getElementById('num-parcelas').value = h.n;
+  document.getElementById('valor-parcela').value = h.pmt.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  calcular();
+  document.querySelector('.left-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function removerHistorico(id) {
+  historico = historico.filter(x => x.id !== id);
+  localStorage.setItem('mtr_historico', JSON.stringify(historico));
+  renderHistorico();
+}
+
+// ════════════════════════════════════════════
+//  GRÁFICO DE AMORTIZAÇÃO (Canvas nativo)
+// ════════════════════════════════════════════
+function renderGrafico(tipo) {
+  const canvas = document.getElementById('grafico-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const tabela = tipo === 'price' ? state.tabelaPrice : state.tabelaSAC;
+  if (!tabela.length) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  // Trava: canvas não visível ou em aba oculta (doc item 2)
+  if (!W || !H) return;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 16, right: 16, bottom: 36, left: 72 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  // Dados: acumular juros e amortização
+  const labels = tabela.map(r => r.parc);
+  const jurosData = tabela.map(r => r.juros);
+  const amortData = tabela.map(r => r.amort);
+  const saldoData = tabela.map(r => r.saldo);
+  const maxVal = Math.max(...tabela.map(r => r.pmt)) * 1.05;
+
+  const xScale = i => pad.left + (i / (tabela.length - 1)) * chartW;
+  const yScale = v => pad.top + chartH - (v / maxVal) * chartH;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const yy = pad.top + (g / 4) * chartH;
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + chartW, yy); ctx.stroke();
+    ctx.fillStyle = 'rgba(138,136,128,0.6)';
+    ctx.font = '10px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    const val = maxVal * (1 - g / 4);
+    ctx.fillText(fmtBRL(val).replace('R$\u00a0', 'R$'), pad.left - 6, yy + 4);
+  }
+
+  // Área: juros (vermelho)
+  ctx.beginPath();
+  ctx.moveTo(xScale(0), yScale(0));
+  jurosData.forEach((v, i) => ctx.lineTo(xScale(i), yScale(v)));
+  ctx.lineTo(xScale(tabela.length - 1), yScale(0));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(240,82,82,0.18)';
+  ctx.fill();
+
+  // Linha: juros
+  ctx.beginPath();
+  jurosData.forEach((v, i) => i === 0 ? ctx.moveTo(xScale(i), yScale(v)) : ctx.lineTo(xScale(i), yScale(v)));
+  ctx.strokeStyle = '#f05252';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Área: amortização (verde)
+  ctx.beginPath();
+  ctx.moveTo(xScale(0), yScale(0));
+  amortData.forEach((v, i) => ctx.lineTo(xScale(i), yScale(v)));
+  ctx.lineTo(xScale(tabela.length - 1), yScale(0));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(76,222,138,0.12)';
+  ctx.fill();
+
+  // Linha: amortização
+  ctx.beginPath();
+  amortData.forEach((v, i) => i === 0 ? ctx.moveTo(xScale(i), yScale(v)) : ctx.lineTo(xScale(i), yScale(v)));
+  ctx.strokeStyle = '#4cde8a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Linha: saldo devedor (escala própria)
+  const maxSaldo = Math.max(...saldoData);
+  const ySaldo = v => pad.top + chartH - (v / (maxSaldo * 1.05)) * chartH;
+  ctx.beginPath();
+  saldoData.forEach((v, i) => i === 0 ? ctx.moveTo(xScale(i), ySaldo(v)) : ctx.lineTo(xScale(i), ySaldo(v)));
+  ctx.strokeStyle = 'rgba(212,240,60,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Eixo X — labels
+  ctx.fillStyle = 'rgba(84,82,80,0.8)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  const step = Math.ceil(tabela.length / 8);
+  tabela.forEach((r, i) => {
+    if (i % step === 0 || i === tabela.length - 1) {
+      ctx.fillText(r.parc + 'ª', xScale(i), pad.top + chartH + 14);
+    }
+  });
+
+  // Legenda
+  const legenda = [
+    { cor: '#f05252', label: 'Juros' },
+    { cor: '#4cde8a', label: 'Amortização' },
+    { cor: 'rgba(212,240,60,0.7)', label: 'Saldo Devedor', dash: true },
+  ];
+  let lx = pad.left;
+  legenda.forEach(l => {
+    ctx.beginPath();
+    if (l.dash) ctx.setLineDash([4, 3]);
+    ctx.moveTo(lx, pad.top + chartH + 28);
+    ctx.lineTo(lx + 18, pad.top + chartH + 28);
+    ctx.strokeStyle = l.cor; ctx.lineWidth = 2; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(138,136,128,0.8)';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(l.label, lx + 22, pad.top + chartH + 32);
+    lx += l.label.length * 7 + 30;
+  });
+
+  // Tooltip interativo
+  canvas.onmousemove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const idx = Math.round((mx - pad.left) / chartW * (tabela.length - 1));
+    if (idx < 0 || idx >= tabela.length) {
+      document.getElementById('grafico-tooltip').style.display = 'none';
+      return;
+    }
+    const r = tabela[idx];
+    const tip = document.getElementById('grafico-tooltip');
+    tip.style.display = 'block';
+    tip.style.left = Math.min(mx + 10, W - 160) + 'px';
+    tip.style.top = (e.clientY - rect.top - 70) + 'px';
+    tip.innerHTML = `<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text)">Parcela ${r.parc}ª</div>
+      <div style="font-size:10px;color:var(--red)">Juros: ${fmtBRL(r.juros)}</div>
+      <div style="font-size:10px;color:var(--green)">Amortização: ${fmtBRL(r.amort)}</div>
+      <div style="font-size:10px;color:var(--accent)">Saldo: ${fmtBRL(r.saldo)}</div>`;
+  };
+  canvas.onmouseleave = () => { document.getElementById('grafico-tooltip').style.display = 'none'; };
+}
+
+// ════════════════════════════════════════════
+//  CALCULADORA REVERSA
+// ════════════════════════════════════════════
+function calcularReverso() {
+  const objetivo  = parseBRL(document.getElementById('rev-objetivo').value);
+  const renda     = parseBRL(document.getElementById('rev-renda').value);
+  const comprometimento = parseFloat(document.getElementById('rev-comprometimento').value) || 30;
+  const prazo     = parseInt(document.getElementById('rev-prazo').value) || 0;
+  const modalRev  = document.getElementById('rev-modalidade').value;
+
+  const revResult = document.getElementById('rev-result');
+
+  if (!objetivo || !renda || !prazo) {
+    revResult.className = 'antec-result show';
+    revResult.innerHTML = '<p style="color:var(--amber);font-size:12px">⚠ Preencha todos os campos.</p>';
+    return;
+  }
+
+  const bacen     = BACEN[modalRev];
+  const taxaMes   = bacen.taxaMes / 100;
+  const pmtMaxRenda = renda * (comprometimento / 100);
+
+  // Parcela com taxa Bacen
+  const pmtBacen  = objetivo * taxaMes * Math.pow(1 + taxaMes, prazo) / (Math.pow(1 + taxaMes, prazo) - 1);
+  // Parcela com taxa +2pp (realista)
+  const taxaReal  = taxaMes + 0.02;
+  const pmtReal   = objetivo * taxaReal * Math.pow(1 + taxaReal, prazo) / (Math.pow(1 + taxaReal, prazo) - 1);
+
+  const totalBacen = pmtBacen * prazo;
+  const totalReal  = pmtReal  * prazo;
+  const jurosBacen = totalBacen - objetivo;
+  const jurosReal  = totalReal  - objetivo;
+
+  const podeComprometimento = pmtBacen <= pmtMaxRenda;
+  const cor = podeComprometimento ? 'var(--green)' : 'var(--red)';
+  const icone = podeComprometimento ? '✓' : '⚠';
+
+  revResult.className = 'antec-result show';
+  revResult.innerHTML = `
+    <div class="antec-result-row">
+      <span class="antec-key">Valor do Objetivo</span>
+      <span class="antec-val">${fmtBRL(objetivo)}</span>
+    </div>
+    <div class="antec-result-row">
+      <span class="antec-key">Parcela (taxa Bacen ${fmtPct(bacen.taxaMes)} a.m.)</span>
+      <span class="antec-val" style="color:var(--accent)">${fmtBRL(pmtBacen)}</span>
+    </div>
+    <div class="antec-result-row">
+      <span class="antec-key">Parcela (taxa +2pp, realista)</span>
+      <span class="antec-val" style="color:var(--amber)">${fmtBRL(pmtReal)}</span>
+    </div>
+    <div class="antec-result-row">
+      <span class="antec-key">Limite de parcela (${comprometimento}% renda)</span>
+      <span class="antec-val">${fmtBRL(pmtMaxRenda)}</span>
+    </div>
+    <div class="antec-result-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:10px">
+      <span class="antec-key"><strong>Comprometimento de renda</strong></span>
+      <span class="antec-val" style="color:${cor}">${icone} ${fmtPct(pmtBacen / renda * 100)}</span>
+    </div>
+    <div class="antec-result-row">
+      <span class="antec-key">Total de juros (cenário Bacen)</span>
+      <span class="antec-val" style="color:var(--red)">${fmtBRL(jurosBacen)}</span>
+    </div>
+    <div class="antec-result-row">
+      <span class="antec-key">Total de juros (cenário real)</span>
+      <span class="antec-val" style="color:var(--red)">${fmtBRL(jurosReal)}</span>
+    </div>
+    <p style="font-size:11px;color:${cor};margin-top:10px;line-height:1.5">
+      ${podeComprometimento
+        ? icone + ' Operação viável: a parcela caberia no seu orçamento com a taxa média Bacen.'
+        : icone + ' Atenção: a parcela projetada ultrapassa ' + comprometimento + '% da renda informada. Considere um prazo maior ou um valor menor.'}
+    </p>
+  `;
+}
+
+// ════════════════════════════════════════════
+//  INDICADOR BACEN (atualiza label ao mudar select)
+// ════════════════════════════════════════════
+function updateBacenRef() {
+  const m = document.getElementById('modalidade').value;
+  const b = BACEN[m];
+  const el = document.getElementById('bacen-ref-label');
+  if (el) el.textContent = `Bacen: ${fmtPct(b.taxaMes)} a.m. (${b.nome})`;
+}
+
+function updateBacenRefAud() {
+  const m = document.getElementById('modalidade-aud').value;
+  const b = BACEN[m];
+  const el = document.getElementById('bacen-ref-label-aud');
+  if (el) el.textContent = `Bacen: ${fmtPct(b.taxaMes)} a.m. (${b.nome})`;
+}
+
+// ════════════════════════════════════════════
+//  HOOK: salvar histórico e gráfico ao calcular
+// ════════════════════════════════════════════
+const _calcularOriginal = calcular;
+// Sobrescreve calcular para injetar histórico + gráfico
+(function patchCalcular() {
+  const orig = window.calcular;
+  window.calcular = function() {
+    orig();
+    // Se resultados foram renderizados, salvar histórico e gráfico
+    if (document.getElementById('results-area').style.display !== 'none') {
+      salvarHistorico(state.taxaCalculada, state.valorLiquido, state.numParcelas, state.valorParcela, state.modalidade);
+      setTimeout(() => renderGrafico(state.sistema), 80);
+    }
+  };
+})();
+
+// ════════════════════════════════════════════
+//  RENDER RESULTADOS — INJETAR GRÁFICO, HIST., REVERSO
+// ════════════════════════════════════════════
+const _renderOriginal = renderResultados;
+window.renderResultados = function(taxaMes, pv, n, pmt, modalidade, sistema) {
+  _renderOriginal(taxaMes, pv, n, pmt, modalidade, sistema);
+
+  // Injeta seção de gráfico após tabela
+  const amortSec = document.getElementById('amort-section');
+  if (!document.getElementById('grafico-section')) {
+    const grafDiv = document.createElement('div');
+    grafDiv.id = 'grafico-section';
+    grafDiv.className = 'amort-section animate-in delay-3';
+    grafDiv.innerHTML = `
+      <div class="section-heading">Evolução da Dívida — Gráfico</div>
+      <div style="position:relative">
+        <canvas id="grafico-canvas" style="width:100%;height:260px;display:block;border-radius:8px"></canvas>
+        <div id="grafico-tooltip" style="display:none;position:absolute;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;pointer-events:none;z-index:10;min-width:140px"></div>
+      </div>
+    `;
+    amortSec.insertAdjacentElement('afterend', grafDiv);
+  }
+
+  // Injeta seção de calculadora reversa se não existir
+  if (!document.getElementById('reverso-section')) {
+    const revDiv = document.createElement('div');
+    revDiv.id = 'reverso-section';
+    revDiv.className = 'antec-section animate-in delay-4';
+    revDiv.innerHTML = `
+      <div class="section-heading">Calculadora Reversa — Quanto posso tomar?</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+        Informe sua renda e o valor desejado. O app calcula a parcela projetada e verifica se o comprometimento de renda é saudável.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Valor do crédito desejado</label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="rev-objetivo" placeholder="50.000,00" oninput="maskCurrency(this)" />
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Renda mensal líquida</label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="rev-renda" placeholder="5.000,00" oninput="maskCurrency(this)" />
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Prazo desejado</label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="rev-prazo" placeholder="36" min="1" max="480" />
+            <span class="input-suffix">x</span>
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">% máx. comprometimento</label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="rev-comprometimento" value="30" min="1" max="100" />
+            <span class="input-suffix">%</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modalidade de crédito</label>
+        <select id="rev-modalidade">
+          <option value="veiculo">Financiamento de Veículos</option>
+          <option value="pessoal">Crédito Pessoal</option>
+          <option value="habitacional">Crédito Habitacional</option>
+          <option value="capital">Capital de Giro (PJ)</option>
+          <option value="consignado">Crédito Consignado</option>
+        </select>
+      </div>
+      <button class="antec-btn" onclick="calcularReverso()" style="width:100%;margin-bottom:12px">Calcular viabilidade</button>
+      <div id="rev-result" class="antec-result"></div>
+    `;
+    document.getElementById('antec-section').insertAdjacentElement('afterend', revDiv);
+  }
+
+  setTimeout(() => renderGrafico(sistema), 80);
+  setTimeout(() => renderHistorico(), 50);
+};
+
+// ════════════════════════════════════════════
+//  PAINEL DE HISTÓRICO NO SIDEBAR
+// ════════════════════════════════════════════
+(function injectHistoricoSidebar() {
+  window.addEventListener('DOMContentLoaded', () => {
+    const leftPanel = document.querySelector('.left-panel');
+    if (!leftPanel || document.getElementById('historico-sidebar')) return;
+    const histDiv = document.createElement('div');
+    histDiv.id = 'historico-sidebar';
+    histDiv.innerHTML = `
+      <hr class="form-divider" style="margin-top:28px">
+      <p class="panel-title" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        Histórico
+        <button onclick="removerTodoHistorico()" style="font-size:10px;background:none;border:none;color:var(--text3);cursor:pointer;letter-spacing:.03em">Limpar tudo</button>
+      </p>
+      <div id="historico-list"></div>
+    `;
+    leftPanel.appendChild(histDiv);
+    renderHistorico();
+  });
+})();
+
+function removerTodoHistorico() {
+  historico = [];
+  localStorage.setItem('mtr_historico', '[]');
+  renderHistorico();
+}
+
+// ════════════════════════════════════════════
+//  ESTILOS DINÂMICOS ADICIONAIS
+// ════════════════════════════════════════════
+(function injectStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .hist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      margin-bottom: 6px;
+      background: var(--surface2);
+      transition: border-color .15s, background .15s;
+    }
+    .hist-item:hover { border-color: var(--border2); background: var(--bg); }
+
+    #grafico-canvas { cursor: crosshair; }
+
+    .rev-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-family: 'DM Mono', monospace;
+    }
+    .rev-ok  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,222,138,.25); }
+    .rev-bad { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(240,82,82,.25); }
+  `;
+  document.head.appendChild(style);
+})();
+
+// ════════════════════════════════════════════
+//  INDICADORES LIVE (atualiza ao digitar)
+// ════════════════════════════════════════════
+function calcularLive() {
+  const pv  = parseBRL(document.getElementById('valor-liquido')?.value || '');
+  const n   = parseInt(document.getElementById('num-parcelas')?.value) || 0;
+  const pmt = parseBRL(document.getElementById('valor-parcela')?.value || '');
+  const liveEl = document.getElementById('live-indicator');
+  if (!liveEl) return;
+
+  if (pv > 0 && n > 0 && pmt > 0 && pmt * n > pv) {
+    const taxa = calcularTIR(pv, n, pmt);
+    if (taxa) {
+      const bacen = BACEN[document.getElementById('modalidade')?.value || 'pessoal'];
+      const diff = taxa * 100 - bacen.taxaMes;
+      const cor = diff > 1 ? 'var(--red)' : diff > 0.3 ? 'var(--amber)' : 'var(--green)';
+      liveEl.style.display = 'block';
+      liveEl.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:12px;color:${cor}">
+        TIR estimada: ${fmtPct(taxa * 100)} a.m. &nbsp;|&nbsp; ${diff >= 0 ? '+' : ''}${fmtPct(diff)} vs Bacen
+      </span>`;
+      return;
+    }
+  }
+  liveEl.style.display = 'none';
+}
+
+(function injectLiveIndicator() {
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('.calc-btn');
+    if (!btn || document.getElementById('live-indicator')) return;
+    const liveEl = document.createElement('div');
+    liveEl.id = 'live-indicator';
+    liveEl.style.cssText = 'display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;text-align:center';
+    btn.insertAdjacentElement('beforebegin', liveEl);
+
+    // Adiciona indicador Bacen abaixo do select de modalidade
+    const selMod = document.getElementById('modalidade');
+    if (selMod && !document.getElementById('bacen-ref-label')) {
+      const badge = document.createElement('div');
+      badge.id = 'bacen-ref-label';
+      badge.style.cssText = 'font-size:11px;color:var(--accent);font-family:"DM Mono",monospace;margin-top:5px;letter-spacing:.02em';
+      selMod.insertAdjacentElement('afterend', badge);
+      updateBacenRef();
+    }
+    const selModAud = document.getElementById('modalidade-aud');
+    if (selModAud && !document.getElementById('bacen-ref-label-aud')) {
+      const badge2 = document.createElement('div');
+      badge2.id = 'bacen-ref-label-aud';
+      badge2.style.cssText = 'font-size:11px;color:var(--accent);font-family:"DM Mono",monospace;margin-top:5px;letter-spacing:.02em';
+      selModAud.insertAdjacentElement('afterend', badge2);
+      updateBacenRefAud();
+    }
+
+    // Escuta inputs para live feedback
+    ['valor-liquido','num-parcelas','valor-parcela'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', calcularLive);
+    });
+    document.getElementById('modalidade')?.addEventListener('change', calcularLive);
+  });
+})();
+
+// ════════════════════════════════════════════
+//  MODO AUDITAR — campo parcelas já pagas
+//  calcula saldo devedor restante e exibe
+// ════════════════════════════════════════════
+function calcularSaldoAuditoria() {
+  const pv  = parseBRL(document.getElementById('aud-valor')?.value || '');
+  const n   = parseInt(document.getElementById('aud-parcelas')?.value) || 0;
+  const pmt = parseBRL(document.getElementById('aud-parcela-val')?.value || '');
+  const pg  = parseInt(document.getElementById('aud-pagas')?.value) || 0;
+  const sis = document.getElementById('aud-sistema')?.value || 'price';
+  const el  = document.getElementById('aud-saldo-live');
+  if (!el || !pv || !n || !pmt || !pg) { if (el) el.style.display = 'none'; return; }
+
+  const taxa = calcularTIR(pv, n, pmt);
+  if (!taxa) { el.style.display = 'none'; return; }
+
+  const tabela = sis === 'price' ? gerarTabelaPrice(pv, taxa, n) : gerarTabelaSAC(pv, taxa, n);
+  if (pg >= tabela.length) { el.style.display = 'none'; return; }
+
+  const saldoAtual  = tabela[pg - 1]?.saldo ?? pv;
+  const jurosRestante = tabela.slice(pg).reduce((s, r) => s + r.juros, 0);
+  const parcsRestantes = n - pg;
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Saldo devedor atual</div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--amber)">${fmtBRL(saldoAtual)}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Juros restantes</div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--red)">${fmtBRL(jurosRestante)}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px">Parcelas restantes: <strong style="color:var(--text2)">${parcsRestantes}</strong> de ${n}</div>
+  `;
+}
+
+(function hookAuditoriaCampos() {
+  window.addEventListener('DOMContentLoaded', () => {
+    // Injetar área de saldo live no modo auditar
+    const audPagas = document.getElementById('aud-pagas');
+    if (audPagas && !document.getElementById('aud-saldo-live')) {
+      const el = document.createElement('div');
+      el.id = 'aud-saldo-live';
+      el.style.cssText = 'display:none;margin-top:8px';
+      audPagas.closest('.form-group').insertAdjacentElement('afterend', el);
+      ['aud-valor','aud-parcelas','aud-parcela-val','aud-pagas','aud-sistema'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calcularSaldoAuditoria);
+        document.getElementById(id)?.addEventListener('change', calcularSaldoAuditoria);
+      });
+    }
+  });
+})();
+
+// ════════════════════════════════════════════
+//  INIT — dispara ao carregar
+// ════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  updateBacenRef();
+  updateBacenRefAud();
+  renderHistorico();
+  // Busca taxas atualizadas do Bacen automaticamente
+  atualizarBacen();
+});
+</script>
+</body>
+</html>
