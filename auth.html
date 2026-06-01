@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinhaTaxaReal — Acesso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM — idêntico ao app principal
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #0e0f11;
+  --surface:    #16181c;
+  --surface2:   #1e2026;
+  --border:     rgba(255,255,255,0.07);
+  --border2:    rgba(255,255,255,0.13);
+  --text:       #f0ede8;
+  --text2:      #8a8880;
+  --text3:      #545250;
+  --accent:     #d4f03c;
+  --accent2:    #a8c42e;
+  --accent-dim: rgba(212,240,60,0.10);
+  --accent-dim2:rgba(212,240,60,0.18);
+  --red:        #f05252;
+  --red-dim:    rgba(240,82,82,0.12);
+  --green:      #4cde8a;
+  --green-dim:  rgba(76,222,138,0.10);
+  --amber:      #f5a623;
+  --amber-dim:  rgba(245,166,35,0.12);
+  --radius-sm:  8px;
+  --radius:     12px;
+  --radius-lg:  16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(14,15,17,0.92);
+  backdrop-filter: blur(12px);
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.badge-header {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text2);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  padding: 4px 12px;
+  border-radius: 99px;
+  letter-spacing: .04em;
+}
+
+/* ── LAYOUT CENTRAL ── */
+.page {
+  flex: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.page.active { display: flex; }
+
+/* ── CARD BASE ── */
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+}
+.card-wide {
+  max-width: 780px;
+}
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+.card-sub {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* ── FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 6px;
+  letter-spacing: .02em;
+}
+.form-hint { color: var(--text3); font-size: 11px; font-family: 'DM Mono', monospace; }
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim2);
+}
+input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+
+.input-wrap { position: relative; }
+.eye-btn {
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+  transition: color .15s;
+}
+.eye-btn:hover { color: var(--text2); }
+
+/* ── BOTÕES ── */
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #0e0f11;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled {
+  background: var(--surface2);
+  color: var(--text3);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 10px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 8px;
+}
+.btn-secondary:hover { border-color: var(--text2); color: var(--text); }
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 0;
+  transition: color .15s;
+}
+.btn-ghost:hover { color: var(--accent2); text-decoration: underline; }
+
+/* ── ALERTS ── */
+.alert {
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: none;
+}
+.alert.show { display: block; }
+.alert-danger  { background: var(--red-dim);   border: 1px solid rgba(240,82,82,.3);  color: var(--red);   }
+.alert-success { background: var(--green-dim);  border: 1px solid rgba(76,222,138,.3); color: var(--green); }
+.alert-info    { background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.3); color: #60a5fa; }
+.alert-warn    { background: var(--amber-dim);  border: 1px solid rgba(245,166,35,.3); color: var(--amber); }
+
+/* ── DIVISOR ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text3);
+  font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+/* ── STRENGTH BAR ── */
+.strength-wrap { margin-top: 6px; }
+.strength-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border2);
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+.strength-fill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; }
+.strength-label { font-size: 11px; font-family: 'DM Mono', monospace; }
+
+/* ── PLANOS ── */
+.plans-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.plan-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.plan-card:hover { border-color: var(--text2); }
+.plan-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.plan-card.featured { border-color: rgba(96,165,250,0.4); }
+
+.plan-badge {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 99px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.badge-blue   { background: rgba(96,165,250,.15); color: #60a5fa; }
+.badge-accent { background: var(--accent-dim2);   color: var(--accent); }
+.badge-gray   { background: var(--surface2);       color: var(--text2);  border: 1px solid var(--border2); }
+
+.plan-price {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.plan-price-old {
+  font-size: 13px;
+  color: var(--text3);
+  text-decoration: line-through;
+  margin-bottom: 4px;
+  font-family: 'DM Mono', monospace;
+}
+.plan-period { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.plan-features li {
+  font-size: 12px;
+  color: var(--text2);
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  line-height: 1.5;
+}
+.plan-features li::before { content: '✓'; color: var(--green); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+
+.plan-radio {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  transition: all .2s;
+}
+.plan-card.selected .plan-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--surface2);
+}
+
+/* ── PROGRESSO ── */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 32px;
+}
+.ps-item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.ps-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  flex-shrink: 0;
+  z-index: 1;
+  transition: all .3s;
+}
+.ps-dot.done  { background: var(--green);  border-color: var(--green);  color: #0e0f11; }
+.ps-dot.active{ background: var(--accent); border-color: var(--accent); color: #0e0f11; }
+.ps-label { font-size: 11px; color: var(--text3); margin-left: 8px; white-space: nowrap; }
+.ps-label.active { color: var(--text); font-weight: 500; }
+.ps-line { flex: 1; height: 2px; background: var(--border2); margin: 0 8px; }
+.ps-line.done { background: var(--green); }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(14,15,17,.3);
+  border-top-color: #0e0f11;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── USER MENU ── */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--accent-dim2);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.user-name { font-size: 13px; color: var(--text2); }
+.user-plan {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  background: var(--accent-dim2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.logout-btn {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  letter-spacing: .04em;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color .15s;
+}
+.logout-btn:hover { color: var(--red); }
+
+/* ── ANIMAÇÕES ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeUp .3s ease forwards; }
+
+/* ── RESPONSIVO ── */
+@media (max-width: 700px) {
+  header { padding: 16px 20px; }
+  .auth-card { padding: 28px 20px; }
+  .plans-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HEADER — muda conforme estado do usuário
+══════════════════════════════════════════ -->
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    MinhaTaxaReal
+  </div>
+  <!-- Estado: visitante -->
+  <div id="header-guest">
+    <span class="badge-header">Acesso · Cadastro</span>
+  </div>
+  <!-- Estado: logado -->
+  <div id="header-user" style="display:none">
+    <div class="user-menu">
+      <div class="user-avatar" id="user-initials">?</div>
+      <div>
+        <div class="user-name" id="user-name-display"></div>
+        <div class="user-plan" id="user-plan-display"></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">sair</button>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 1: LOGIN
+══════════════════════════════════════════ -->
+<div class="page active" id="page-login">
+  <div class="auth-card fade-in">
+    <div class="card-title">Bem-vindo de volta</div>
+    <div class="card-sub">Entre com sua conta para acessar o simulador.</div>
+
+    <div id="alert-login" class="alert"></div>
+
+    <div class="form-group">
+      <label class="form-label">E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com"
+             onkeydown="if(event.key==='Enter')login()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        Senha
+        <button class="btn-ghost" style="font-size:12px" onclick="showPage('page-forgot')">Esqueceu?</button>
+      </label>
+      <div class="input-wrap">
+        <input type="password" id="login-senha" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter')login()">
+        <button class="eye-btn" onclick="toggleSenha('login-senha', this)" tabindex="-1">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-login" onclick="login()">
+      Entrar
+    </button>
+
+    <div class="divider">ou</div>
+
+    <button class="btn-secondary" onclick="showPage('page-register')">
+      Criar conta — R$49,99 de ativação
+    </button>
+
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">
+      Ao continuar você concorda com os
+      <button class="btn-ghost" style="font-size:12px" onclick="showTermos()">Termos de Uso</button>
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 2: CADASTRO
+══════════════════════════════════════════ -->
+<div class="page" id="page-register">
+  <div class="auth-card fade-in">
+
+    <!-- Indicador de progresso -->
+    <div class="progress-steps" id="reg-steps">
+      <div class="ps-item">
+        <div class="ps-dot active" id="step-dot-1">1</div>
+        <span class="ps-label active" id="step-lbl-1">Dados</span>
+      </div>
+      <div class="ps-line" id="step-line-1"></div>
+      <div class="ps-item">
+        <div class="ps-dot" id="step-dot-2">2</div>
+        <span class="ps-label" id="step-lbl-2">Plano</span>
+      </div>
+      <div class="ps-line" id="step-line-2"></div>
+      <div class="ps-item">
+        <div class="ps-dot" id="step-dot-3">3</div>
+        <span class="ps-label" id="step-lbl-3">Pagamento</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: Dados pessoais -->
+    <div id="reg-step-1">
+      <div class="card-title">Criar conta</div>
+      <div class="card-sub">Preencha seus dados para começar.</div>
+
+      <div id="alert-register" class="alert"></div>
+
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input type="text" id="reg-nome" placeholder="João Silva"
+               onkeydown="if(event.key==='Enter')document.getElementById('reg-email').focus()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input type="email" id="reg-email" placeholder="seu@email.com"
+               onkeydown="if(event.key==='Enter')document.getElementById('reg-senha').focus()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Senha <span class="form-hint">mínimo 8 caracteres</span></label>
+        <div class="input-wrap">
+          <input type="password" id="reg-senha" placeholder="Crie uma senha forte"
+                 oninput="checkSenhaForca(this.value)"
+                 onkeydown="if(event.key==='Enter')document.getElementById('reg-confirma').focus()">
+          <button class="eye-btn" onclick="toggleSenha('reg-senha', this)" tabindex="-1">👁</button>
+        </div>
+        <div class="strength-wrap" id="strength-wrap" style="display:none">
+          <div class="strength-bar">
+            <div class="strength-fill" id="strength-fill"></div>
+          </div>
+          <span class="strength-label" id="strength-label"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirmar senha</label>
+        <div class="input-wrap">
+          <input type="password" id="reg-confirma" placeholder="Repita a senha"
+                 oninput="checkConfirma()"
+                 onkeydown="if(event.key==='Enter')irStep2()">
+          <button class="eye-btn" onclick="toggleSenha('reg-confirma', this)" tabindex="-1">👁</button>
+        </div>
+        <div id="confirma-ok" style="font-size:11px;color:var(--green);margin-top:4px;display:none">✓ Senhas coincidem</div>
+      </div>
+
+      <button class="btn-primary" id="btn-reg-step1" onclick="irStep2()">
+        Continuar → Escolher plano
+      </button>
+
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text2)">
+        Já tem conta?
+        <button class="btn-ghost" onclick="showPage('page-login')">Entrar</button>
+      </p>
+    </div>
+
+    <!-- STEP 2: Escolha de plano -->
+    <div id="reg-step-2" style="display:none">
+      <div class="card-title">Escolha seu plano</div>
+      <div class="card-sub">Ativação única + mensalidade para dados sempre atualizados do Banco Central.</div>
+
+      <div id="alert-plano" class="alert"></div>
+
+      <div class="plans-grid" style="grid-template-columns:1fr 1fr">
+        <!-- Plano: Ativação + Mensal -->
+        <div class="plan-card selected" id="plan-mensal" onclick="selecionarPlano('mensal')">
+          <div class="plan-radio"></div>
+          <div class="plan-badge badge-blue">Mais popular</div>
+          <div class="plan-price-old">R$ 99,99</div>
+          <div class="plan-price">R$ 49,99</div>
+          <div class="plan-period">ativação única + R$&nbsp;19,90/mês</div>
+          <ul class="plan-features">
+            <li>Primeiro acesso imediato</li>
+            <li>Taxas Bacen sempre atualizadas</li>
+            <li>Histórico ilimitado</li>
+            <li>PDF técnico exportável</li>
+            <li>Módulo Saúde Financeira</li>
+            <li>Cancele quando quiser</li>
+          </ul>
+        </div>
+
+        <!-- Plano: Anual -->
+        <div class="plan-card" id="plan-anual" onclick="selecionarPlano('anual')">
+          <div class="plan-radio"></div>
+          <div class="plan-badge badge-accent">Melhor custo</div>
+          <div class="plan-price-old">R$ 197,00</div>
+          <div class="plan-price">R$ 97,00</div>
+          <div class="plan-period">acesso anual completo — ~R$&nbsp;8/mês</div>
+          <ul class="plan-features">
+            <li>Tudo do plano mensal</li>
+            <li>12 meses sem mensalidade</li>
+            <li>Economia de R$&nbsp;143/ano</li>
+            <li>Prioridade no suporte</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-reg-step2" onclick="irStep3()">
+        Continuar → Pagamento
+      </button>
+      <button class="btn-secondary" onclick="voltarStep1()">← Voltar</button>
+    </div>
+
+    <!-- STEP 3: Confirmação / redirect Stripe -->
+    <div id="reg-step-3" style="display:none">
+      <div class="card-title">Quase lá!</div>
+      <div class="card-sub" id="step3-sub">Sua conta será criada e você será redirecionado para o pagamento seguro.</div>
+
+      <div id="alert-step3" class="alert"></div>
+
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:20px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;font-family:'DM Mono',monospace">Resumo do pedido</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:14px" id="resumo-plano">Ativação MinhaTaxaReal</span>
+          <span style="font-family:'DM Mono',monospace;font-size:14px;font-weight:500" id="resumo-preco">R$ 49,99</span>
+        </div>
+        <div id="resumo-mensal-row" style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2)">
+          <span>+ Assinatura recorrente</span>
+          <span style="font-family:'DM Mono',monospace">R$ 19,90/mês</span>
+        </div>
+        <div style="border-top:1px solid var(--border);margin:12px 0"></div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.6">
+          Pagamento processado com segurança pela Stripe. Você pode cancelar a assinatura a qualquer momento.
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-finalizar" onclick="finalizarCadastro()">
+        Criar conta e ir para pagamento
+      </button>
+      <button class="btn-secondary" onclick="voltarStep2()">← Voltar</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 3: ATIVAÇÃO PENDENTE
+     (usuário cadastrado mas não pagou)
+══════════════════════════════════════════ -->
+<div class="page" id="page-ativacao">
+  <div class="auth-card fade-in">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--amber-dim);border:1px solid var(--amber);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px">🔒</div>
+      <div class="card-title">Ativação pendente</div>
+      <div class="card-sub">Sua conta foi criada. Para acessar o app, finalize a ativação.</div>
+    </div>
+
+    <div id="alert-ativacao" class="alert"></div>
+
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:20px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;font-family:'DM Mono',monospace">O que você recebe</div>
+      <ul class="plan-features">
+        <li>Simulador com TIR real e comparativo Bacen ao vivo</li>
+        <li>Auditoria de contratos ativos (Price e SAC)</li>
+        <li>Módulo completo de Saúde Financeira</li>
+        <li>Relatório PDF técnico exportável</li>
+        <li>Gráfico interativo de evolução da dívida</li>
+        <li>Calculadora reversa e simulação de antecipação</li>
+      </ul>
+    </div>
+
+    <button class="btn-primary" onclick="ativarAcesso()">
+      Ativar por R$ 49,99 + R$ 19,90/mês
+    </button>
+    <button class="btn-secondary" onclick="logout()">Usar outra conta</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 4: ASSINATURA VENCIDA
+══════════════════════════════════════════ -->
+<div class="page" id="page-vencida">
+  <div class="auth-card fade-in">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--red-dim);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px">⏸</div>
+      <div class="card-title">Assinatura pausada</div>
+      <div class="card-sub">Sua assinatura mensal está inativa. Renove para continuar usando.</div>
+    </div>
+
+    <div id="alert-vencida" class="alert"></div>
+
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.6">
+      Seus dados e histórico estão preservados. Assim que a assinatura for reativada, o acesso é imediato.
+    </div>
+
+    <button class="btn-primary" onclick="renovarAssinatura()">
+      Reativar por R$ 19,90/mês
+    </button>
+    <button class="btn-secondary" onclick="abrirPortal()">
+      Gerenciar assinatura (Stripe)
+    </button>
+    <button class="btn-secondary" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 5: RECUPERAR SENHA
+══════════════════════════════════════════ -->
+<div class="page" id="page-forgot">
+  <div class="auth-card fade-in">
+    <div class="card-title">Recuperar senha</div>
+    <div class="card-sub">Informe seu e-mail e enviaremos as instruções de recuperação.</div>
+
+    <div id="alert-forgot" class="alert"></div>
+
+    <div class="form-group">
+      <label class="form-label">E-mail cadastrado</label>
+      <input type="email" id="forgot-email" placeholder="seu@email.com"
+             onkeydown="if(event.key==='Enter')enviarRecuperacao()">
+    </div>
+
+    <button class="btn-primary" onclick="enviarRecuperacao()">Enviar instruções</button>
+    <button class="btn-secondary" onclick="showPage('page-login')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PÁGINA 6: SUCESSO (pós-pagamento)
+══════════════════════════════════════════ -->
+<div class="page" id="page-sucesso">
+  <div class="auth-card fade-in" style="text-align:center">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">✓</div>
+    <div class="card-title">Acesso liberado!</div>
+    <div class="card-sub" id="sucesso-sub">Seu pagamento foi confirmado. Bem-vindo ao MinhaTaxaReal.</div>
+    <button class="btn-primary" onclick="irParaApp()">Acessar o simulador →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONFIGURAÇÃO — troque pela URL do seu backend
+// ═══════════════════════════════════════════════
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3001'
+  : 'https://minhataxareal-backend.onrender.com'; // ← troque pela URL do Render
+
+const APP_PAGE      = 'simulador.html';
+const FINANC_PAGE   = 'gestao-financeira.html';
+
+// ─── Token ───
+function setToken(t)  { localStorage.setItem('mtr_token', t); }
+function getToken()   { return localStorage.getItem('mtr_token'); }
+function clearToken() { localStorage.removeItem('mtr_token'); localStorage.removeItem('mtr_user'); }
+function setUser(u)   { localStorage.setItem('mtr_user', JSON.stringify(u)); }
+function getUser()    { try { return JSON.parse(localStorage.getItem('mtr_user')||'null'); } catch{ return null; } }
+
+// ─── API helper ───
+async function api(path, opts = {}) {
+  const token = getToken();
+  const res = await fetch(API_URL + path, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || 'Erro desconhecido'), { code: data.code, status: res.status });
+  return data;
+}
+
+// ─── UI helpers ───
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.querySelector('.auth-card')?.classList.add('fade-in'); }
+}
+
+function showAlert(id, msg, type = 'alert-danger') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'alert show ' + type;
+  el.textContent = msg;
+}
+function clearAlert(id) {
+  const el = document.getElementById(id);
+  if (el) { el.className = 'alert'; el.textContent = ''; }
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn._orig = btn.innerHTML;
+    btn.innerHTML = '<div class="spinner"></div>';
+  } else {
+    btn.innerHTML = btn._orig || btn.innerHTML;
+  }
+}
+
+function toggleSenha(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Header dinâmico ──
+function atualizarHeader(user) {
+  if (!user) {
+    document.getElementById('header-guest').style.display = '';
+    document.getElementById('header-user').style.display = 'none';
+    return;
+  }
+  document.getElementById('header-guest').style.display = 'none';
+  document.getElementById('header-user').style.display = '';
+  const initials = user.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('user-initials').textContent = initials;
+  document.getElementById('user-name-display').textContent = user.name;
+  const planLabels = { none:'sem plano', activated:'ativo', subscription:'assinante', anual:'anual' };
+  document.getElementById('user-plan-display').textContent = planLabels[user.plan] || user.plan;
+}
+
+// ── Força da senha ──
+function checkSenhaForca(senha) {
+  const wrap = document.getElementById('strength-wrap');
+  const fill = document.getElementById('strength-fill');
+  const lbl  = document.getElementById('strength-label');
+  if (!senha) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  let score = 0;
+  if (senha.length >= 8)  score++;
+  if (senha.length >= 12) score++;
+  if (/[A-Z]/.test(senha)) score++;
+  if (/[0-9]/.test(senha)) score++;
+  if (/[^A-Za-z0-9]/.test(senha)) score++;
+
+  const levels = [
+    { pct:'20%', bg:'var(--red)',   txt:'Muito fraca' },
+    { pct:'40%', bg:'var(--red)',   txt:'Fraca' },
+    { pct:'60%', bg:'var(--amber)', txt:'Média' },
+    { pct:'80%', bg:'var(--amber)', txt:'Boa' },
+    { pct:'100%',bg:'var(--green)', txt:'Forte' },
+  ];
+  const l = levels[Math.min(score, 4)];
+  fill.style.width = l.pct;
+  fill.style.background = l.bg;
+  lbl.textContent = l.txt;
+  lbl.style.color = l.bg;
+}
+
+function checkConfirma() {
+  const s1 = document.getElementById('reg-senha').value;
+  const s2 = document.getElementById('reg-confirma').value;
+  const ok = document.getElementById('confirma-ok');
+  ok.style.display = (s2 && s1 === s2) ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════
+//  FLUXO DE CADASTRO — 3 STEPS
+// ═══════════════════════════════════════════════
+let regData = { nome:'', email:'', senha:'', plano:'mensal' };
+
+function atualizarSteps(step) {
+  [1,2,3].forEach(s => {
+    const dot = document.getElementById('step-dot-'+s);
+    const lbl = document.getElementById('step-lbl-'+s);
+    dot.className = 'ps-dot' + (s < step ? ' done' : s === step ? ' active' : '');
+    dot.textContent = s < step ? '✓' : s;
+    lbl.className = 'ps-label' + (s === step ? ' active' : '');
+  });
+  [1,2].forEach(s => {
+    const line = document.getElementById('step-line-'+s);
+    if (line) line.className = 'ps-line' + (s < step ? ' done' : '');
+  });
+}
+
+function irStep2() {
+  clearAlert('alert-register');
+  const nome  = document.getElementById('reg-nome').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const senha = document.getElementById('reg-senha').value;
+  const conf  = document.getElementById('reg-confirma').value;
+
+  if (!nome)           return showAlert('alert-register', 'Informe seu nome completo.');
+  if (!email || !email.includes('@')) return showAlert('alert-register', 'Informe um e-mail válido.');
+  if (senha.length < 8) return showAlert('alert-register', 'A senha deve ter ao menos 8 caracteres.');
+  if (senha !== conf)  return showAlert('alert-register', 'As senhas não coincidem.');
+
+  regData.nome  = nome;
+  regData.email = email;
+  regData.senha = senha;
+
+  document.getElementById('reg-step-1').style.display = 'none';
+  document.getElementById('reg-step-2').style.display = '';
+  atualizarSteps(2);
+}
+
+function voltarStep1() {
+  document.getElementById('reg-step-2').style.display = 'none';
+  document.getElementById('reg-step-1').style.display = '';
+  atualizarSteps(1);
+}
+
+function selecionarPlano(plano) {
+  regData.plano = plano;
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('plan-'+plano).classList.add('selected');
+}
+
+function irStep3() {
+  document.getElementById('reg-step-2').style.display = 'none';
+  document.getElementById('reg-step-3').style.display = '';
+  atualizarSteps(3);
+
+  // Atualiza resumo
+  if (regData.plano === 'anual') {
+    document.getElementById('resumo-plano').textContent  = 'MinhaTaxaReal — Plano Anual';
+    document.getElementById('resumo-preco').textContent  = 'R$ 97,00';
+    document.getElementById('resumo-mensal-row').style.display = 'none';
+  } else {
+    document.getElementById('resumo-plano').textContent  = 'Ativação MinhaTaxaReal';
+    document.getElementById('resumo-preco').textContent  = 'R$ 49,99';
+    document.getElementById('resumo-mensal-row').style.display = '';
+  }
+}
+
+function voltarStep2() {
+  document.getElementById('reg-step-3').style.display = 'none';
+  document.getElementById('reg-step-2').style.display = '';
+  atualizarSteps(2);
+}
+
+async function finalizarCadastro() {
+  clearAlert('alert-step3');
+  setLoading('btn-finalizar', true);
+  try {
+    // 1) Criar conta
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: { name: regData.nome, email: regData.email, password: regData.senha },
+    });
+
+    // 2) Login automático
+    const loginRes = await api('/api/auth/login', {
+      method: 'POST',
+      body: { email: regData.email, password: regData.senha },
+    });
+    setToken(loginRes.token);
+    setUser(loginRes.user);
+    atualizarHeader(loginRes.user);
+
+    // 3) Criar sessão de checkout Stripe
+    const tipo = regData.plano === 'anual' ? 'anual' : 'activation';
+    const checkoutRes = await api('/api/stripe/checkout', {
+      method: 'POST',
+      body: { type: tipo },
+    });
+
+    // Redireciona para o Stripe
+    window.location.href = checkoutRes.url;
+
+  } catch (e) {
+    setLoading('btn-finalizar', false);
+    if (e.status === 409) {
+      showAlert('alert-step3', 'Este e-mail já possui cadastro. Faça login.', 'alert-warn');
+      setTimeout(() => showPage('page-login'), 2000);
+    } else {
+      showAlert('alert-step3', e.message || 'Erro ao criar conta. Tente novamente.');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════
+async function login() {
+  clearAlert('alert-login');
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  if (!email || !senha) return showAlert('alert-login', 'Preencha e-mail e senha.');
+
+  setLoading('btn-login', true);
+  try {
+    const res = await api('/api/auth/login', {
+      method: 'POST',
+      body: { email, password: senha },
+    });
+    setToken(res.token);
+    setUser(res.user);
+    atualizarHeader(res.user);
+    rotearPosLogin(res.user);
+  } catch (e) {
+    setLoading('btn-login', false);
+    showAlert('alert-login', e.message || 'E-mail ou senha incorretos.');
+    document.getElementById('login-senha').classList.add('error');
+    setTimeout(() => document.getElementById('login-senha').classList.remove('error'), 1500);
+  }
+}
+
+// ─── Decide para onde mandar após login ───
+function rotearPosLogin(user) {
+  if (!user.activationPaid) {
+    showPage('page-ativacao');
+  } else if (user.plan === 'subscription' && user.planExpiry && user.planExpiry < Date.now()) {
+    showPage('page-vencida');
+  } else {
+    irParaApp();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ATIVAÇÃO E RENOVAÇÃO
+// ═══════════════════════════════════════════════
+async function ativarAcesso() {
+  clearAlert('alert-ativacao');
+  try {
+    const res = await api('/api/stripe/checkout', {
+      method: 'POST',
+      body: { type: 'activation' },
+    });
+    window.location.href = res.url;
+  } catch (e) {
+    showAlert('alert-ativacao', e.message || 'Erro ao iniciar pagamento. Tente novamente.');
+  }
+}
+
+async function renovarAssinatura() {
+  clearAlert('alert-vencida');
+  try {
+    const res = await api('/api/stripe/checkout', {
+      method: 'POST',
+      body: { type: 'subscription' },
+    });
+    window.location.href = res.url;
+  } catch (e) {
+    showAlert('alert-vencida', e.message || 'Erro ao iniciar pagamento.');
+  }
+}
+
+async function abrirPortal() {
+  try {
+    const res = await api('/api/stripe/portal', { method: 'POST' });
+    window.open(res.url, '_blank');
+  } catch (e) {
+    showAlert('alert-vencida', e.message || 'Erro ao abrir portal. Tente novamente.');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  RECUPERAR SENHA
+// ═══════════════════════════════════════════════
+async function enviarRecuperacao() {
+  clearAlert('alert-forgot');
+  const email = document.getElementById('forgot-email').value.trim();
+  if (!email) return showAlert('alert-forgot', 'Informe seu e-mail.');
+  // Backend ainda não tem rota de reset — exibe instrução manual
+  showAlert('alert-forgot',
+    'Se este e-mail estiver cadastrado, você receberá as instruções em breve. Verifique sua caixa de entrada.',
+    'alert-success');
+}
+
+// ═══════════════════════════════════════════════
+//  LOGOUT
+// ═══════════════════════════════════════════════
+async function logout() {
+  try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) {}
+  clearToken();
+  atualizarHeader(null);
+  showPage('page-login');
+}
+
+// ═══════════════════════════════════════════════
+//  NAVEGAÇÃO PARA O APP
+// ═══════════════════════════════════════════════
+function irParaApp() {
+  window.location.href = APP_PAGE;
+}
+
+// ═══════════════════════════════════════════════
+//  VERIFICAR RETORNO DO STRIPE (query string)
+// ═══════════════════════════════════════════════
+async function verificarRetornoStripe() {
+  const params = new URLSearchParams(window.location.search);
+  const payment = params.get('payment');
+  const type    = params.get('type');
+
+  if (!payment) return false;
+
+  // Limpa query string da URL sem recarregar
+  window.history.replaceState({}, '', window.location.pathname);
+
+  if (payment === 'success') {
+    // Atualiza dados do usuário
+    try {
+      const me = await api('/api/auth/me');
+      setUser(me);
+      atualizarHeader(me);
+    } catch (_) {}
+
+    const user = getUser();
+    if (user) {
+      document.getElementById('sucesso-sub').textContent =
+        `Bem-vindo, ${user.name}! Seu acesso está liberado.`;
+    }
+    showPage('page-sucesso');
+    return true;
+  }
+
+  if (payment === 'cancelled') {
+    const user = getUser();
+    if (user && !user.activationPaid) {
+      showPage('page-ativacao');
+      showAlert('alert-ativacao', 'Pagamento cancelado. Tente novamente quando quiser.', 'alert-warn');
+    } else {
+      showPage('page-login');
+    }
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════
+//  GUARD — verifica sessão ao carregar
+// ═══════════════════════════════════════════════
+async function verificarSessao() {
+  const token = getToken();
+  if (!token) {
+    showPage('page-login');
+    return;
+  }
+  try {
+    const me = await api('/api/auth/me');
+    setUser(me);
+    atualizarHeader(me);
+    rotearPosLogin(me);
+  } catch (e) {
+    // Token expirado ou revogado
+    clearToken();
+    atualizarHeader(null);
+    showPage('page-login');
+    if (e.status !== 401) {
+      showAlert('alert-login', 'Sessão expirada. Faça login novamente.', 'alert-info');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  TERMOS DE USO (modal simples)
+// ═══════════════════════════════════════════════
+function showTermos() {
+  alert('Termos de Uso\n\nO MinhaTaxaReal é uma ferramenta de matemática financeira com fins exclusivamente educativos e informativos.\n\nNão constitui consultoria jurídica, financeira ou de investimentos.\n\nAo usar o app, você concorda que os resultados são simulações matemáticas baseadas nos dados inseridos e nas médias oficiais do Banco Central do Brasil.');
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  const retorno = await verificarRetornoStripe();
+  if (!retorno) await verificarSessao();
+});
+</script>
+</body>
+</html>

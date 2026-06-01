@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Descubra a taxa real do seu financiamento em 30 segundos. Compare com a média oficial do Banco Central e saiba se está pagando mais do que deveria.">
+<title>MinhaTaxaReal — Descubra quanto você realmente paga de juros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   RESET & TOKENS
+═══════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#080909;
+  --surface:#0f1012;
+  --surface2:#161719;
+  --border:rgba(255,255,255,.06);
+  --border2:rgba(255,255,255,.12);
+  --text:#eceae4;
+  --text2:#7a7873;
+  --text3:#3d3c3a;
+  --lime:#c8f135;
+  --lime2:#9dc228;
+  --lime-dim:rgba(200,241,53,.08);
+  --lime-dim2:rgba(200,241,53,.15);
+  --red:#e84040;
+  --red-dim:rgba(232,64,64,.1);
+  --green:#3ecf8e;
+  --green-dim:rgba(62,207,142,.1);
+  --amber:#f59e0b;
+  --amber-dim:rgba(245,158,11,.1);
+  --blue:#5b9ef5;
+  --r:10px;--rl:16px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ── NOISE TEXTURE ── */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:0;
+  opacity:.4;
+}
+
+/* ── GRID BG ── */
+.grid-bg{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 100%);
+}
+
+/* ═══════════════════════════════════════
+   HEADER / NAV
+═══════════════════════════════════════ */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 60px;
+  position:fixed;top:0;left:0;right:0;
+  background:rgba(8,9,9,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  z-index:100;
+}
+.nav-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px;letter-spacing:.05em;
+  display:flex;align-items:center;gap:10px;
+}
+.nav-logo-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--lime);
+  box-shadow:0 0 8px var(--lime);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.3)}}
+
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-link{
+  font-size:13px;color:var(--text2);
+  text-decoration:none;transition:color .15s;
+}
+.nav-link:hover{color:var(--text)}
+.nav-cta{
+  font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:9px 20px;
+  background:var(--lime);color:#080909;
+  border:none;border-radius:var(--r);
+  cursor:pointer;text-decoration:none;
+  transition:background .15s,transform .1s;
+}
+.nav-cta:hover{background:var(--lime2)}
+.nav-cta:active{transform:scale(.97)}
+
+/* ═══════════════════════════════════════
+   HERO
+═══════════════════════════════════════ */
+.hero{
+  position:relative;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:120px 24px 80px;
+  overflow:hidden;
+}
+.hero .grid-bg{opacity:.6}
+
+/* Glow central */
+.hero-glow{
+  position:absolute;
+  width:700px;height:400px;
+  background:radial-gradient(ellipse, rgba(200,241,53,.07) 0%, transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-60%);
+  pointer-events:none;
+}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--lime);
+  background:var(--lime-dim);
+  border:1px solid rgba(200,241,53,.25);
+  padding:6px 16px;border-radius:99px;
+  margin-bottom:32px;
+  animation:fadeUp .6s ease forwards;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 1.5s infinite}
+
+.hero-headline{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(56px, 9vw, 110px);
+  line-height:.95;
+  letter-spacing:-.01em;
+  margin-bottom:28px;
+  animation:fadeUp .6s .1s ease both;
+}
+.hero-headline em{
+  font-style:normal;
+  color:var(--lime);
+  position:relative;
+  display:inline-block;
+}
+.hero-headline em::after{
+  content:'';
+  position:absolute;bottom:-4px;left:0;right:0;
+  height:3px;background:var(--lime);
+  border-radius:2px;
+}
+
+.hero-sub{
+  font-size:clamp(16px,2vw,20px);
+  color:var(--text2);
+  max-width:560px;
+  line-height:1.7;
+  margin:0 auto 48px;
+  font-weight:300;
+  animation:fadeUp .6s .2s ease both;
+}
+.hero-sub strong{color:var(--text);font-weight:500}
+
+.hero-actions{
+  display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+  animation:fadeUp .6s .3s ease both;
+  margin-bottom:64px;
+}
+.btn-hero-primary{
+  font-family:'DM Mono',monospace;
+  font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:16px 36px;
+  background:var(--lime);color:#080909;
+  border:none;border-radius:var(--r);
+  cursor:pointer;text-decoration:none;
+  transition:all .15s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-hero-primary:hover{background:var(--lime2);transform:translateY(-1px)}
+.btn-hero-ghost{
+  font-family:'DM Mono',monospace;
+  font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:16px 36px;
+  background:transparent;color:var(--text2);
+  border:1px solid var(--border2);
+  border-radius:var(--r);cursor:pointer;text-decoration:none;
+  transition:all .15s;
+}
+.btn-hero-ghost:hover{border-color:var(--text2);color:var(--text)}
+
+/* Estatísticas hero */
+.hero-stats{
+  display:flex;gap:48px;justify-content:center;flex-wrap:wrap;
+  animation:fadeUp .6s .4s ease both;
+}
+.stat-item{text-align:center}
+.stat-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:40px;letter-spacing:.02em;
+  color:var(--lime);line-height:1;margin-bottom:4px;
+}
+.stat-lbl{font-size:12px;color:var(--text2);letter-spacing:.04em}
+
+/* Scroll indicator */
+.scroll-hint{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--text3);font-size:11px;font-family:'DM Mono',monospace;
+  letter-spacing:.06em;text-transform:uppercase;
+  animation:fadeUp .6s .8s ease both;
+}
+.scroll-line{
+  width:1px;height:40px;
+  background:linear-gradient(to bottom, transparent, var(--text3));
+  animation:scrollLine 1.5s ease-in-out infinite;
+}
+@keyframes scrollLine{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: PROBLEMA
+═══════════════════════════════════════ */
+.section{padding:96px 24px;position:relative}
+.section-inner{max-width:1100px;margin:0 auto}
+
+.section-tag{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--lime);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.section-tag::before{content:'';width:24px;height:1px;background:var(--lime)}
+
+.section-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(40px,5vw,64px);
+  letter-spacing:.01em;line-height:1;
+  margin-bottom:20px;
+}
+.section-desc{
+  font-size:16px;color:var(--text2);
+  max-width:480px;line-height:1.8;font-weight:300;
+  margin-bottom:48px;
+}
+
+.problema-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;
+}
+.problema-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  padding:28px;
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s;
+}
+.problema-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.problema-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(232,64,64,.4), transparent);
+}
+.pc-icon{
+  width:42px;height:42px;border-radius:10px;
+  background:var(--red-dim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:16px;
+}
+.pc-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:48px;color:var(--red);
+  line-height:1;margin-bottom:4px;
+}
+.pc-title{font-size:15px;font-weight:500;margin-bottom:8px}
+.pc-desc{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: COMO FUNCIONA (DEMO VISUAL)
+═══════════════════════════════════════ */
+.demo-section{
+  padding:96px 24px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.demo-layout{
+  max-width:1100px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1.2fr;gap:60px;align-items:center;
+}
+
+.demo-steps{display:flex;flex-direction:column;gap:0}
+.demo-step{
+  display:flex;gap:20px;
+  padding:24px 0;
+  border-bottom:1px solid var(--border);
+  position:relative;
+  cursor:pointer;
+  transition:opacity .2s;
+}
+.demo-step:last-child{border:none}
+.demo-step.active .ds-num{background:var(--lime);color:#080909;border-color:var(--lime)}
+.demo-step.active .ds-title{color:var(--lime)}
+.ds-num{
+  width:36px;height:36px;flex-shrink:0;
+  border-radius:50%;border:1px solid var(--border2);
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  color:var(--text2);transition:all .2s;margin-top:2px;
+}
+.ds-title{font-size:15px;font-weight:500;margin-bottom:4px;transition:color .2s}
+.ds-desc{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* App mockup */
+.app-mockup{
+  background:var(--bg);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+  position:relative;
+}
+.mockup-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.mb-dot{width:10px;height:10px;border-radius:50%}
+.mb-dot:nth-child(1){background:#ff5f57}
+.mb-dot:nth-child(2){background:#febc2e}
+.mb-dot:nth-child(3){background:#28c840}
+.mb-url{
+  flex:1;margin-left:10px;
+  background:var(--surface2);
+  border-radius:6px;padding:5px 12px;
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);
+}
+.mockup-content{padding:20px}
+
+/* Input simulado */
+.mock-input-group{margin-bottom:14px}
+.mock-label{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px}
+.mock-input{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:7px;padding:9px 12px;
+  font-family:'DM Mono',monospace;font-size:12px;color:var(--text);
+  width:100%;
+}
+.mock-input.active{border-color:var(--lime);box-shadow:0 0 0 2px rgba(200,241,53,.15)}
+.mock-btn{
+  width:100%;
+  background:var(--lime);color:#080909;
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:11px;border:none;border-radius:7px;cursor:pointer;
+  margin-top:6px;
+}
+
+/* Resultado simulado */
+.mock-result{
+  background:var(--surface2);border-radius:10px;
+  padding:14px;margin-top:12px;
+  border:1px solid rgba(200,241,53,.2);
+}
+.mr-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;
+}
+.mr-row:last-child{border:none}
+.mr-key{color:var(--text2)}
+.mr-val{font-family:'DM Mono',monospace;font-weight:500}
+.mr-val.danger{color:var(--red)}
+.mr-val.ok{color:var(--green)}
+.mr-val.lime{color:var(--lime)}
+
+/* Barra comparativa simulada */
+.mock-compare{margin-top:12px}
+.mc-title{font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase}
+.mc-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mc-bar-label{font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;width:70px;flex-shrink:0}
+.mc-bar-wrap{flex:1;background:var(--border);border-radius:3px;height:5px;overflow:hidden}
+.mc-bar-fill{height:100%;border-radius:3px}
+.mc-bar-val{font-size:10px;font-family:'DM Mono',monospace;width:50px;text-align:right}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: PARA QUEM É
+═══════════════════════════════════════ */
+.perfis-grid{
+  display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;
+}
+.perfil-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  padding:24px 20px;
+  transition:all .2s;
+}
+.perfil-card:hover{border-color:var(--lime-dim2);background:var(--surface2)}
+.pc-emoji{font-size:28px;margin-bottom:14px}
+.pc-role{font-size:14px;font-weight:500;margin-bottom:8px}
+.pc-use{font-size:12px;color:var(--text2);line-height:1.7}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: DIFERENCIAIS
+═══════════════════════════════════════ */
+.diff-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  background:var(--border);
+  border-radius:var(--rl);overflow:hidden;
+}
+.diff-item{
+  background:var(--surface);
+  padding:32px 28px;
+  transition:background .2s;
+}
+.diff-item:hover{background:var(--surface2)}
+.di-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--lime-dim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:16px;
+}
+.di-title{font-size:15px;font-weight:500;margin-bottom:8px}
+.di-desc{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: COMPARATIVO DE MERCADO
+═══════════════════════════════════════ */
+.market-table{
+  width:100%;border-collapse:collapse;
+  font-size:14px;
+}
+.market-table th{
+  text-align:left;padding:14px 20px;
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text2);border-bottom:1px solid var(--border2);
+}
+.market-table td{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  color:var(--text2);
+}
+.market-table tr:last-child td{border:none}
+.market-table tr.highlight td{background:var(--lime-dim);color:var(--text)}
+.market-table tr.highlight td:first-child{
+  border-left:3px solid var(--lime);
+  color:var(--lime);font-weight:500;
+}
+.check-yes{color:var(--green)}
+.check-no{color:var(--text3)}
+.check-partial{color:var(--amber)}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: PLANOS
+═══════════════════════════════════════ */
+.plans-section{
+  padding:96px 24px;
+  position:relative;
+  overflow:hidden;
+}
+.plans-glow{
+  position:absolute;
+  width:600px;height:300px;
+  background:radial-gradient(ellipse, rgba(200,241,53,.05) 0%, transparent 70%);
+  bottom:0;left:50%;transform:translateX(-50%);
+  pointer-events:none;
+}
+
+.plans-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:20px;max-width:760px;margin:0 auto 20px;
+}
+.plan-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  padding:32px;
+  position:relative;
+  transition:transform .2s,border-color .2s;
+}
+.plan-card:hover{transform:translateY(-3px)}
+.plan-card.featured{
+  border-color:var(--lime);
+  background:linear-gradient(135deg, var(--surface2) 0%, rgba(200,241,53,.04) 100%);
+}
+.plan-card.featured::before{
+  content:'MAIS POPULAR';
+  position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  font-family:'DM Mono',monospace;font-size:9px;font-weight:500;
+  letter-spacing:.1em;
+  background:var(--lime);color:#080909;
+  padding:4px 14px;border-radius:0 0 8px 8px;
+}
+
+.plan-name{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text2);margin-bottom:12px;
+}
+.plan-price-old{
+  font-size:13px;color:var(--text3);
+  text-decoration:line-through;
+  font-family:'DM Mono',monospace;
+  margin-bottom:2px;
+}
+.plan-price{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:56px;line-height:1;
+  margin-bottom:4px;
+}
+.plan-price span{font-size:20px;vertical-align:top;margin-top:10px;display:inline-block;font-family:'DM Sans',sans-serif;font-weight:300}
+.plan-period{
+  font-size:12px;color:var(--text2);
+  font-family:'DM Mono',monospace;
+  margin-bottom:24px;
+  padding-bottom:24px;
+  border-bottom:1px solid var(--border);
+}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.plan-features li{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:13px;color:var(--text2);line-height:1.5;
+}
+.plan-features li::before{
+  content:'✓';color:var(--lime);
+  font-size:12px;margin-top:1px;flex-shrink:0;
+}
+.plan-btn{
+  width:100%;
+  font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:14px;border-radius:var(--r);
+  cursor:pointer;text-decoration:none;
+  display:block;text-align:center;
+  transition:all .15s;
+}
+.plan-btn-primary{background:var(--lime);color:#080909;border:none}
+.plan-btn-primary:hover{background:var(--lime2)}
+.plan-btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.plan-btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+
+.plan-note{
+  text-align:center;
+  font-size:12px;color:var(--text3);
+  font-family:'DM Mono',monospace;
+  margin-top:16px;
+  line-height:1.7;
+}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: PROVA SOCIAL / URGÊNCIA
+═══════════════════════════════════════ */
+.urgencia-box{
+  max-width:760px;margin:0 auto;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--rl);
+  padding:40px;
+  text-align:center;
+}
+.urgencia-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:80px;color:var(--lime);
+  line-height:1;margin-bottom:8px;
+}
+.urgencia-text{
+  font-size:18px;font-weight:300;color:var(--text2);
+  line-height:1.7;max-width:480px;margin:0 auto 24px;
+}
+.urgencia-text strong{color:var(--text);font-weight:500}
+
+/* ═══════════════════════════════════════
+   SEÇÃO: FAQ
+═══════════════════════════════════════ */
+.faq-list{display:flex;flex-direction:column;gap:2px;max-width:760px;margin:0 auto}
+.faq-item{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+}
+.faq-q{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:20px 24px;cursor:pointer;
+  font-size:15px;font-weight:500;
+  transition:background .15s;
+  gap:16px;
+}
+.faq-q:hover{background:var(--surface2)}
+.faq-arrow{
+  color:var(--text2);font-size:18px;flex-shrink:0;
+  transition:transform .2s;
+}
+.faq-a{
+  display:none;
+  padding:0 24px 20px;
+  font-size:14px;color:var(--text2);line-height:1.8;
+}
+.faq-item.open .faq-arrow{transform:rotate(180deg)}
+.faq-item.open .faq-a{display:block}
+
+/* ═══════════════════════════════════════
+   FOOTER CTA
+═══════════════════════════════════════ */
+.footer-cta{
+  padding:96px 24px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.footer-cta .grid-bg{opacity:.3}
+.footer-cta-glow{
+  position:absolute;
+  width:500px;height:250px;
+  background:radial-gradient(ellipse, rgba(200,241,53,.08) 0%, transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+}
+.fcta-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,6vw,80px);
+  line-height:1;margin-bottom:20px;
+  position:relative;z-index:1;
+}
+.fcta-sub{
+  font-size:16px;color:var(--text2);
+  max-width:400px;margin:0 auto 40px;
+  font-weight:300;line-height:1.7;
+  position:relative;z-index:1;
+}
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+footer{
+  padding:32px 60px;
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;letter-spacing:.05em;color:var(--text2);
+}
+.footer-disclaimer{
+  font-size:11px;color:var(--text3);
+  max-width:600px;line-height:1.6;
+  font-family:'DM Mono',monospace;
+}
+
+/* ═══════════════════════════════════════
+   ANIMAÇÕES
+═══════════════════════════════════════ */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.reveal{
+  opacity:0;transform:translateY(24px);
+  transition:opacity .6s ease, transform .6s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ═══════════════════════════════════════
+   RESPONSIVO
+═══════════════════════════════════════ */
+@media(max-width:900px){
+  nav{padding:16px 24px}
+  .nav-link{display:none}
+  .problema-grid{grid-template-columns:1fr}
+  .demo-layout{grid-template-columns:1fr}
+  .app-mockup{display:none}
+  .perfis-grid{grid-template-columns:1fr 1fr}
+  .diff-grid{grid-template-columns:1fr}
+  .plans-grid{grid-template-columns:1fr}
+  .section{padding:64px 20px}
+  footer{padding:24px 20px;flex-direction:column;text-align:center}
+}
+@media(max-width:600px){
+  .hero-stats{gap:28px}
+  .perfis-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-logo">
+    <span class="nav-logo-dot"></span>
+    MinhaTaxaReal
+  </div>
+  <div class="nav-right">
+    <a href="#como-funciona" class="nav-link">Como funciona</a>
+    <a href="#planos" class="nav-link">Planos</a>
+    <a href="#faq" class="nav-link">Dúvidas</a>
+    <!-- TROQUE O HREF pelo link do seu produto no Kiwify -->
+    <a href="auth.html" class="nav-cta">Acessar →</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="grid-bg"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    Dados oficiais do Banco Central • Atualização automática
+  </div>
+
+  <h1 class="hero-headline">
+    Descubra quanto<br>você <em>realmente</em><br>paga de juros
+  </h1>
+
+  <p class="hero-sub">
+    Cole os dados do seu financiamento e descubra em 30 segundos a <strong>taxa real</strong> do contrato — comparada com a média oficial do Banco Central para a mesma modalidade.
+  </p>
+
+  <div class="hero-actions">
+    <!-- TROQUE O HREF pelo link do Kiwify quando criar os produtos -->
+    <a href="auth.html" class="btn-hero-primary">
+      Descobrir minha taxa real →
+    </a>
+    <a href="#como-funciona" class="btn-hero-ghost">Ver como funciona</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num">80%</div>
+      <div class="stat-lbl">Das famílias brasileiras<br>têm dívida ativa</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">61%</div>
+      <div class="stat-lbl">Taxa média de juros<br>ao ano no crédito livre</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">30s</div>
+      <div class="stat-lbl">Para descobrir se você<br>está pagando acima do mercado</div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    Rolar
+  </div>
+</section>
+
+<!-- ═══ PROBLEMA ═══ -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-tag">O problema</div>
+    <h2 class="section-title reveal">Os bancos contam<br>com sua desinformação</h2>
+    <p class="section-desc reveal">A taxa nominal que aparece no contrato raramente reflete o custo real da operação. O Banco Central publica as médias — mas quase ninguém sabe como usar.</p>
+
+    <div class="problema-grid">
+      <div class="problema-card reveal">
+        <div class="pc-icon">📋</div>
+        <div class="pc-num">73%</div>
+        <div class="pc-title">Não sabem o CET real</div>
+        <div class="pc-desc">A maioria dos tomadores de crédito assina contratos sem saber o Custo Efetivo Total — a taxa que realmente importa, incluindo tarifas e encargos ocultos.</div>
+      </div>
+      <div class="problema-card reveal">
+        <div class="pc-icon">📈</div>
+        <div class="pc-num">2×</div>
+        <div class="pc-title">Acima da média do mercado</div>
+        <div class="pc-desc">Em muitos casos, a taxa cobrada é o dobro da média divulgada pelo Banco Central para a mesma modalidade. Sem comparação, você não tem como saber.</div>
+      </div>
+      <div class="problema-card reveal">
+        <div class="pc-icon">💸</div>
+        <div class="pc-num">R$8k</div>
+        <div class="pc-title">Perdidos em juros extras</div>
+        <div class="pc-desc">Em um financiamento de veículo de 48 meses com taxa 1,5% acima da média, o consumidor paga em média R$8.000 a mais — sem nunca perceber.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ COMO FUNCIONA ═══ -->
+<section class="demo-section" id="como-funciona">
+  <div class="demo-layout">
+    <div>
+      <div class="section-tag">Como funciona</div>
+      <h2 class="section-title reveal">Três passos.<br>Resultado na hora.</h2>
+
+      <div class="demo-steps">
+        <div class="demo-step active" onclick="setStep(0,this)">
+          <div class="ds-num">1</div>
+          <div>
+            <div class="ds-title">Insira os dados do contrato</div>
+            <div class="ds-desc">Valor financiado, número de parcelas e valor de cada parcela. Dados que estão no seu contrato ou boleto.</div>
+          </div>
+        </div>
+        <div class="demo-step" onclick="setStep(1,this)">
+          <div class="ds-num">2</div>
+          <div>
+            <div class="ds-title">Calculamos a TIR real</div>
+            <div class="ds-desc">O sistema usa o método Newton-Raphson para calcular a Taxa Interna de Retorno — a taxa que o banco realmente cobra, não a que ele informa.</div>
+          </div>
+        </div>
+        <div class="demo-step" onclick="setStep(2,this)">
+          <div class="ds-num">3</div>
+          <div>
+            <div class="ds-title">Compare com o Bacen</div>
+            <div class="ds-desc">Sua taxa é comparada com a média oficial do Banco Central para a mesma modalidade. Você vê exatamente quanto está acima ou abaixo do mercado.</div>
+          </div>
+        </div>
+        <div class="demo-step" onclick="setStep(3,this)">
+          <div class="ds-num">4</div>
+          <div>
+            <div class="ds-title">Baixe o relatório PDF</div>
+            <div class="ds-desc">Gere um documento técnico com todos os cálculos, comparativos e seus direitos legais. Pronto para usar em qualquer negociação.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP MOCKUP -->
+    <div class="app-mockup reveal">
+      <div class="mockup-bar">
+        <div class="mb-dot"></div>
+        <div class="mb-dot"></div>
+        <div class="mb-dot"></div>
+        <div class="mb-url">minhataxareal.com.br</div>
+      </div>
+      <div class="mockup-content">
+        <div id="mockup-step-0">
+          <div class="mock-input-group">
+            <div class="mock-label">Valor financiado</div>
+            <div class="mock-input active">R$ 35.000,00</div>
+          </div>
+          <div class="mock-input-group">
+            <div class="mock-label">Número de parcelas</div>
+            <div class="mock-input">48 meses</div>
+          </div>
+          <div class="mock-input-group">
+            <div class="mock-label">Valor da parcela</div>
+            <div class="mock-input">R$ 1.082,00</div>
+          </div>
+          <div class="mock-btn">▶ Calcular taxa real</div>
+        </div>
+        <div id="mockup-step-1" style="display:none">
+          <div class="mock-result">
+            <div style="font-size:10px;color:var(--text2);font-family:'DM Mono',monospace;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase">Calculando TIR...</div>
+            <div style="background:var(--surface);border-radius:6px;padding:12px;text-align:center">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--lime)">2,24%</div>
+              <div style="font-size:10px;color:var(--text2);font-family:'DM Mono',monospace">taxa mensal real (TIR)</div>
+            </div>
+          </div>
+        </div>
+        <div id="mockup-step-2" style="display:none">
+          <div class="mock-compare">
+            <div class="mc-title">Comparativo Banco Central — Veículos</div>
+            <div class="mc-bar-row">
+              <div class="mc-bar-label">Seu contrato</div>
+              <div class="mc-bar-wrap"><div class="mc-bar-fill" style="width:88%;background:var(--red)"></div></div>
+              <div class="mc-bar-val" style="color:var(--red)">2,24%</div>
+            </div>
+            <div class="mc-bar-row">
+              <div class="mc-bar-label">Média Bacen</div>
+              <div class="mc-bar-wrap"><div class="mc-bar-fill" style="width:65%;background:var(--lime)"></div></div>
+              <div class="mc-bar-val" style="color:var(--lime)">1,65%</div>
+            </div>
+            <div style="background:var(--red-dim);border:1px solid rgba(232,64,64,.2);border-radius:7px;padding:10px 12px;margin-top:10px">
+              <div style="font-size:11px;color:var(--red);font-family:'DM Mono',monospace">⚠ +0,59% a.m. acima da média</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:3px">Custo extra estimado: R$ 6.840 ao longo do contrato</div>
+            </div>
+          </div>
+        </div>
+        <div id="mockup-step-3" style="display:none">
+          <div class="mock-result">
+            <div class="mr-row">
+              <span class="mr-key">Valor financiado</span>
+              <span class="mr-val">R$ 35.000</span>
+            </div>
+            <div class="mr-row">
+              <span class="mr-key">Taxa real (TIR)</span>
+              <span class="mr-val danger">2,24% a.m.</span>
+            </div>
+            <div class="mr-row">
+              <span class="mr-key">Média Bacen</span>
+              <span class="mr-val ok">1,65% a.m.</span>
+            </div>
+            <div class="mr-row">
+              <span class="mr-key">Diferencial</span>
+              <span class="mr-val danger">+0,59% a.m.</span>
+            </div>
+            <div class="mr-row">
+              <span class="mr-key">Total de juros pagos</span>
+              <span class="mr-val lime">R$ 16.936</span>
+            </div>
+          </div>
+          <div class="mock-btn" style="background:var(--surface2);color:var(--lime);border:1px solid rgba(200,241,53,.3);margin-top:10px">⬇ Baixar relatório PDF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PARA QUEM É ═══ -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-tag">Para quem é</div>
+    <h2 class="section-title reveal">Se você tem uma dívida,<br>você precisa saber disso</h2>
+    <div class="perfis-grid" style="margin-top:0">
+      <div class="perfil-card reveal">
+        <div class="pc-emoji">🚗</div>
+        <div class="pc-role">Financiamento de Veículo</div>
+        <div class="pc-use">Descubra se o dealership ou banco te cobrou acima da média de mercado antes de assinar ou no contrato ativo.</div>
+      </div>
+      <div class="perfil-card reveal">
+        <div class="pc-emoji">🏠</div>
+        <div class="pc-role">Crédito Habitacional</div>
+        <div class="pc-use">Compare o CET do seu financiamento imobiliário com a média oficial e avalie se vale a pena a portabilidade.</div>
+      </div>
+      <div class="perfil-card reveal">
+        <div class="pc-emoji">🏢</div>
+        <div class="pc-role">Microempreendedor (MEI/ME)</div>
+        <div class="pc-use">Audite empréstimos de capital de giro e descubra se a taxa cobrada está dentro da média para o seu porte.</div>
+      </div>
+      <div class="perfil-card reveal">
+        <div class="pc-emoji">⚖️</div>
+        <div class="pc-role">Advogados e Procon</div>
+        <div class="pc-use">Gere relatórios técnicos com base matemática para instruir ações revisionais com dados do Bacen impressos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DIFERENCIAIS ═══ -->
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="section-tag">Por que o MinhaTaxaReal</div>
+    <h2 class="section-title reveal">Único no Brasil que<br>faz tudo isso junto</h2>
+    <div class="diff-grid reveal">
+      <div class="diff-item">
+        <div class="di-icon">🧮</div>
+        <div class="di-title">TIR reversa de contrato ativo</div>
+        <div class="di-desc">Descobre a taxa real de um contrato que você já tem — não só de simulações futuras. Nenhuma outra ferramenta gratuita faz isso.</div>
+      </div>
+      <div class="diff-item">
+        <div class="di-icon">📡</div>
+        <div class="di-title">Dados Bacen em tempo real</div>
+        <div class="di-desc">As taxas médias do Banco Central são consultadas automaticamente via API oficial. Sem atualização manual, sempre com a referência do mês atual.</div>
+      </div>
+      <div class="diff-item">
+        <div class="di-icon">📄</div>
+        <div class="di-title">Relatório PDF técnico</div>
+        <div class="di-desc">Documento com todos os cálculos, comparativos e base normativa (CDC, CMN). Serve de material técnico para negociações e portabilidade.</div>
+      </div>
+      <div class="diff-item">
+        <div class="di-icon">📊</div>
+        <div class="di-title">Gráfico de evolução da dívida</div>
+        <div class="di-desc">Visualize mês a mês como juros e amortização se comportam ao longo do contrato. Interativo, com tooltip e comparação Price vs SAC.</div>
+      </div>
+      <div class="diff-item">
+        <div class="di-icon">🔄</div>
+        <div class="di-title">Simulação de antecipação</div>
+        <div class="di-desc">Calcule quanto você economiza antecipando parcelas com desconto proporcional de juros — direito garantido pelo Art. 52 do CDC.</div>
+      </div>
+      <div class="diff-item">
+        <div class="di-icon">💰</div>
+        <div class="di-title">Módulo de saúde financeira</div>
+        <div class="di-desc">Diagnóstico do comprometimento de renda, cenários adversos, linha do tempo de quitação e metas financeiras com projeção personalizada.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ COMPARATIVO DE MERCADO ═══ -->
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="section-tag">Comparativo</div>
+    <h2 class="section-title reveal">O que existe vs.<br>o que entregamos</h2>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-top:0" class="reveal">
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th>Ferramenta</th>
+            <th>TIR de contrato ativo</th>
+            <th>Bacen ao vivo</th>
+            <th>PDF técnico</th>
+            <th>Consumidor final</th>
+            <th>Preço</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Calculadora do Cidadão (Bacen)</td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-partial">Parcial</span></td>
+            <td>Gratuito</td>
+          </tr>
+          <tr>
+            <td>DPECalcWeb (Defensoria RS)</td>
+            <td><span class="check-partial">Parcial</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗ Jurídico</span></td>
+            <td>Gratuito</td>
+          </tr>
+          <tr>
+            <td>Cálculo Jurídico</td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗ Advogados</span></td>
+            <td>R$ 97/mês</td>
+          </tr>
+          <tr>
+            <td>Calcule.net / CalcBrasil</td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td>Gratuito c/ anúncios</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>✦ MinhaTaxaReal</strong></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><span class="check-yes">✓</span></td>
+            <td><strong>R$ 49,99 + R$ 19,90/mês</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PLANOS ═══ -->
+<section class="plans-section" id="planos">
+  <div class="plans-glow"></div>
+  <div class="section-inner" style="text-align:center">
+    <div class="section-tag" style="justify-content:center">Planos</div>
+    <h2 class="section-title reveal">Menos que um café<br>por semana</h2>
+    <p style="color:var(--text2);font-size:16px;font-weight:300;max-width:400px;margin:0 auto 48px;line-height:1.7" class="reveal">
+      Você está prestes a analisar uma dívida que provavelmente é de R$20.000 a R$100.000. O custo da ferramenta é irrelevante.
+    </p>
+
+    <div class="plans-grid reveal">
+      <!-- Plano mensal -->
+      <div class="plan-card featured">
+        <div class="plan-name">Ativação + Assinatura</div>
+        <div class="plan-price-old">R$ 99,99</div>
+        <div class="plan-price"><span>R$</span>49<span style="font-size:32px">,99</span></div>
+        <div class="plan-period">ativação única · depois R$ 19,90/mês</div>
+        <ul class="plan-features">
+          <li>Simulador completo com TIR reversa</li>
+          <li>Comparativo Bacen ao vivo (API oficial)</li>
+          <li>Auditoria de contratos ativos</li>
+          <li>Relatório PDF técnico exportável</li>
+          <li>Gráfico interativo de amortização</li>
+          <li>Módulo de Saúde Financeira completo</li>
+          <li>Simulação de antecipação de parcelas</li>
+          <li>Calculadora reversa de viabilidade</li>
+          <li>Cancele quando quiser</li>
+        </ul>
+        <!-- TROQUE O HREF pelo link do produto no Kiwify -->
+        <a href="auth.html" class="plan-btn plan-btn-primary">Ativar acesso agora →</a>
+      </div>
+
+      <!-- Plano anual -->
+      <div class="plan-card">
+        <div class="plan-name">Plano Anual</div>
+        <div class="plan-price-old">R$ 197,00</div>
+        <div class="plan-price"><span>R$</span>97<span style="font-size:32px">,00</span></div>
+        <div class="plan-period">acesso completo por 12 meses · ~R$ 8/mês</div>
+        <ul class="plan-features">
+          <li>Tudo do plano mensal incluído</li>
+          <li>12 meses sem mensalidade</li>
+          <li>Economia de R$ 143 vs mensal</li>
+          <li>Acesso prioritário a novas funcionalidades</li>
+        </ul>
+        <!-- TROQUE O HREF pelo link do produto anual no Kiwify -->
+        <a href="auth.html" class="plan-btn plan-btn-ghost">Escolher plano anual →</a>
+      </div>
+    </div>
+
+    <p class="plan-note reveal">
+      Pagamento seguro via Kiwify · Cartão de crédito, débito e PIX<br>
+      Cancele quando quiser · Seus dados protegidos pela LGPD
+    </p>
+  </div>
+</section>
+
+<!-- ═══ URGÊNCIA ═══ -->
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="urgencia-box reveal">
+      <div class="urgencia-num">80,4%</div>
+      <p class="urgencia-text">
+        Das famílias brasileiras têm dívida ativa hoje. <strong>Você provavelmente está entre elas.</strong> A pergunta é: você sabe quanto está pagando de taxa real?
+      </p>
+      <a href="auth.html" class="btn-hero-primary" style="display:inline-flex">
+        Descobrir agora — R$ 49,99 →
+      </a>
+      <p style="font-size:12px;color:var(--text3);margin-top:16px;font-family:'DM Mono',monospace">
+        Promoção de lançamento · Preço sobe para R$ 97,00 em breve
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="section" id="faq">
+  <div class="section-inner" style="max-width:760px;margin:0 auto">
+    <div class="section-tag" style="justify-content:center;margin-bottom:32px">Dúvidas frequentes</div>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          O app é uma consultoria financeira ou jurídica?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          Não. O MinhaTaxaReal é exclusivamente uma ferramenta de matemática financeira e educação financeira. Ele realiza cálculos baseados nos dados que você insere e os compara com as médias oficiais do Banco Central. Não constitui consultoria jurídica, financeira ou assessoria de investimentos. Para decisões contratuais, consulte um profissional habilitado.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          De onde vêm as taxas do Banco Central?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          Diretamente da API pública do Bacen (dadosabertos.bcb.gov.br) via Sistema Gerenciador de Séries Temporais (SGS). As consultas são feitas automaticamente pelo app — sem intervenção manual — sempre que você usa a ferramenta. As taxas refletem a média oficial divulgada mensalmente para cada modalidade de crédito.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          O que é a TIR e por que ela é diferente da taxa nominal?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          A Taxa Interna de Retorno (TIR) é a taxa real que equilibra matematicamente o valor recebido e o total de parcelas pagas. A taxa nominal é o número que o banco informa, que frequentemente não inclui tarifas, seguros e outros encargos embutidos nas parcelas. A TIR revela o custo real da operação — que é o que o Banco Central chama de CET (Custo Efetivo Total).
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Posso usar o relatório PDF em uma negociação com o banco?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          O PDF é um documento de referência pessoal com os cálculos matemáticos da operação e as médias do Bacen. Ele pode servir como material de apoio em conversas com gerentes, na solicitação de portabilidade de crédito ou como base para consulta com um advogado. Não tem valor de laudo pericial — para isso é necessário um profissional habilitado.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Como funciona a cobrança? Posso cancelar?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          Você paga R$49,99 de ativação única e R$19,90/mês de assinatura recorrente a partir do segundo mês. O pagamento é processado pelo Kiwify (cartão, débito ou PIX). Você pode cancelar a assinatura a qualquer momento diretamente na plataforma, sem multa ou burocracia.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Meus dados financeiros ficam armazenados?
+          <span class="faq-arrow">▾</span>
+        </div>
+        <div class="faq-a">
+          Todos os cálculos são processados localmente no seu navegador. Os dados que você insere (valor do financiamento, parcelas etc.) não são enviados para nenhum servidor. O histórico de simulações é salvo apenas no seu próprio dispositivo via localStorage. Em conformidade com a LGPD.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER CTA ═══ -->
+<section class="footer-cta">
+  <div class="grid-bg"></div>
+  <div class="footer-cta-glow"></div>
+  <h2 class="fcta-title reveal">Sua taxa real<br>te espera</h2>
+  <p class="fcta-sub reveal">30 segundos para descobrir. Uma vida de decisões mais conscientes.</p>
+  <a href="auth.html" class="btn-hero-primary reveal" style="display:inline-flex;position:relative;z-index:1">
+    Descobrir minha taxa real →
+  </a>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-logo">MinhaTaxaReal</div>
+  <p class="footer-disclaimer">
+    Ferramenta de matemática financeira com fins exclusivamente educativos e informativos. Não constitui consultoria jurídica, financeira ou assessoria de investimentos. As taxas do Banco Central são obtidas via API pública oficial (dadosabertos.bcb.gov.br). © 2026 MinhaTaxaReal · minhataxareal.com.br
+  </p>
+</footer>
+
+<script>
+// ── Reveal on scroll ──
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 60);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+reveals.forEach(el => observer.observe(el));
+
+// ── Mockup steps ──
+const mockupSteps = ['mockup-step-0','mockup-step-1','mockup-step-2','mockup-step-3'];
+let currentStep = 0;
+
+function setStep(idx, el) {
+  mockupSteps.forEach((id, i) => {
+    document.getElementById(id).style.display = i === idx ? '' : 'none';
+  });
+  document.querySelectorAll('.demo-step').forEach((s, i) => {
+    s.classList.toggle('active', i === idx);
+  });
+  currentStep = idx;
+}
+
+// Auto-avança o mockup
+setInterval(() => {
+  currentStep = (currentStep + 1) % mockupSteps.length;
+  setStep(currentStep, null);
+  document.querySelectorAll('.demo-step').forEach((s, i) => {
+    s.classList.toggle('active', i === currentStep);
+  });
+}, 3000);
+
+// ── FAQ ──
+function toggleFaq(btn) {
+  const item = btn.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// ── Smooth scroll nav ──
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// ── Nav scroll effect ──
+window.addEventListener('scroll', () => {
+  document.querySelector('nav').style.borderBottomColor =
+    window.scrollY > 20 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.06)';
+});
+</script>
+</body>
+</html>
