@@ -843,8 +843,8 @@
             <p>A quitação antecipada é uma modalidade de encerramento de contratos de crédito antes do prazo original. Para conhecer as condições aplicáveis ao seu contrato específico, consulte sua instituição financeira.</p>
           </div>
           <div class="edu-card">
-            <h4>CET — Custo Efetivo Total</h4>
-            <p>O Custo Efetivo Total (CET) é um indicador que expressa o custo global de uma operação de crédito, incluindo encargos e despesas. As instituições financeiras são obrigadas a informar o CET em suas propostas comerciais.</p>
+            <h4>Taxa de Juros Efetiva</h4>
+            <p>A taxa de juros efetiva é o parâmetro calculado matematicamente a partir do fluxo real da operação — valor recebido e parcelas pagas. É diferente da taxa nominal informada no contrato e é o indicador utilizado pelo Banco Central nas estatísticas mensais de crédito.</p>
           </div>
           <div class="edu-card">
             <h4>Canais de Informação ao Consumidor</h4>
@@ -1257,7 +1257,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
     <div class="metric-card">
       <div class="mc-label">CET estimado</div>
       <div class="mc-value" style="font-size:19px;color:var(--text)">${fmtPct(cetAno)} a.a.</div>
-      <div class="mc-sub">Custo Efetivo Total</div>
+      <div class="mc-sub">base no fluxo calculado</div>
     </div>
   `;
 
@@ -1488,7 +1488,7 @@ function gerarPDF() {
     ['Taxa Real Calculada (TIR)', fmtPct(taxa * 100) + ' a.m.  /  ' + fmtPct(taxaAno) + ' a.a.'],
     ['Média Bacen — ' + bacen.nome, fmtPct(bacen.taxaMes) + ' a.m.  /  ' + fmtPct(bacen.taxaAno) + ' a.a.'],
     ['Diferencial (operação vs mercado)', (diff >= 0 ? '+' : '') + fmtPct(diff) + ' a.m.'],
-    ['CET Estimado (base TIR)', fmtPct(taxaAno) + ' a.a.'],
+    ['Taxa Efetiva (base TIR)', fmtPct(taxaAno) + ' a.a.'],
   ];
   dados2.forEach(([k, v]) => {
     doc.setFont('helvetica', 'bold');
@@ -1578,7 +1578,7 @@ function gerarPDF() {
   const direitos = [
     '• Portabilidade de crédito: Resolução CMN nº 4.292/2013 — direito de transferir dívida para outro banco com taxa menor.',
     '• Quitação antecipada com redução de juros: Art. 52 §2º do CDC — sem multa, com desconto proporcional dos juros vincendos.',
-    '• CET obrigatório: Resolução CMN nº 3.517/2007 — toda oferta de crédito deve informar o Custo Efetivo Total.',
+    '• Taxa efetiva: o Banco Central divulga mensalmente as taxas médias por modalidade em dadosabertos.bcb.gov.br',
     '• Para dúvidas sobre contratos: Bacen Consumidor: 0800 979 2345 | Consumidor.gov.br',
   ];
   direitos.forEach(d => {
