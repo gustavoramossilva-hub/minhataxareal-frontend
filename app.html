@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinhaTaxaReal — Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2026;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0ede8;
+    --text2: #8a8880;
+    --text3: #545250;
+    --accent: #d4f03c;
+    --accent2: #a8c42e;
+    --accent-dim: rgba(212,240,60,0.1);
+    --accent-dim2: rgba(212,240,60,0.18);
+    --red: #f05252;
+    --red-dim: rgba(240,82,82,0.12);
+    --green: #4cde8a;
+    --green-dim: rgba(76,222,138,0.1);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,15,17,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 64px 40px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .hero-greeting {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text2);
+    max-width: 480px;
+  }
+
+  /* ── SEÇÃO ── */
+  .section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 40px 64px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── GRID DE FERRAMENTAS ── */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── CARD DE FERRAMENTA ── */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-dim) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .tool-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .tool-card:hover::before { opacity: 1; }
+
+  .tool-card.destaque {
+    border-color: rgba(212,240,60,0.25);
+    background: linear-gradient(135deg, rgba(212,240,60,0.06) 0%, var(--surface) 60%);
+  }
+  .tool-card.destaque:hover { border-color: rgba(212,240,60,0.5); }
+
+  .tool-card.em-breve {
+    opacity: .5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .tool-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .tool-card.destaque .tool-icon {
+    background: var(--accent-dim2);
+    border-color: rgba(212,240,60,0.3);
+  }
+
+  .tool-body { flex: 1; }
+
+  .tool-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .tool-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .tool-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tool-badge {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid;
+  }
+  .badge-ativo { color: var(--accent); border-color: rgba(212,240,60,0.3); background: var(--accent-dim); }
+  .badge-breve { color: var(--text3); border-color: var(--border); background: transparent; }
+
+  .tool-arrow {
+    font-size: 18px;
+    color: var(--text3);
+    transition: color .2s, transform .2s;
+  }
+  .tool-card:hover .tool-arrow { color: var(--accent); transform: translateX(3px); }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 28px;
+    margin-bottom: 40px;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 4px; }
+  .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 12px; color: var(--text2); }
+  .stat-divider { width: 1px; background: var(--border); align-self: stretch; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    .hero { padding: 40px 20px 28px; }
+    .hero-title { font-size: 26px; }
+    .section { padding: 0 20px 48px; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .stats-bar { flex-wrap: wrap; gap: 16px; }
+    .stat-divider { display: none; }
+  }
+</style>
+
+<!-- Auth check — redireciona para login se sem token válido -->
+<script>
+(function() {
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://minhataxareal-backend.onrender.com';
+
+  async function verificarAcesso() {
+    const token = localStorage.getItem('mtr_token');
+    if (!token) { window.location.href = 'auth.html'; return; }
+    try {
+      const res = await fetch(API_URL + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error('unauthorized');
+      const me = await res.json();
+      localStorage.setItem('mtr_user', JSON.stringify(me));
+      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+      if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
+        window.location.href = 'auth.html?reason=expired'; return;
+      }
+      // Injeta dados do usuário
+      const nameEl = document.getElementById('user-header-name');
+      if (nameEl) nameEl.textContent = me.name || me.email;
+      const planEl = document.getElementById('user-header-plan');
+      if (planEl) planEl.textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
+
+      // Greeting personalizado
+      const greetEl = document.getElementById('greeting-name');
+      if (greetEl) greetEl.textContent = (me.name || me.email).split(' ')[0];
+
+    } catch (e) {
+      localStorage.removeItem('mtr_token');
+      localStorage.removeItem('mtr_user');
+      window.location.href = 'auth.html';
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verificarAcesso);
+  } else {
+    verificarAcesso();
+  }
+})();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    MinhaTaxaReal
+  </div>
+  <div id="header-user-info" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:12px;color:var(--text2)" id="user-header-name"></span>
+    <span style="font-size:10px;font-family:'DM Mono',monospace;background:var(--accent-dim2);color:var(--accent);border:1px solid rgba(212,240,60,0.3);padding:2px 8px;border-radius:99px" id="user-header-plan"></span>
+    <button onclick="(function(){localStorage.removeItem('mtr_token');localStorage.removeItem('mtr_user');window.location.href='auth.html'})()"
+      style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:none;cursor:pointer;letter-spacing:.04em;padding:4px 8px;border-radius:8px;transition:color .15s"
+      onmouseover="this.style.color='#f05252'" onmouseout="this.style.color='var(--text3)'">sair</button>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <p class="hero-greeting">Painel de Ferramentas</p>
+  <h1 class="hero-title">Olá, <span id="greeting-name">usuário</span> 👋</h1>
+  <p class="hero-sub">Escolha uma ferramenta abaixo para começar sua análise financeira.</p>
+</div>
+
+<!-- FERRAMENTAS -->
+<div class="section">
+  <p class="section-label">Ferramentas disponíveis</p>
+
+  <div class="tools-grid">
+
+    <!-- Simulador de Taxa Real -->
+    <a href="simulador.html" class="tool-card destaque">
+      <div class="tool-icon">📊</div>
+      <div class="tool-body">
+        <div class="tool-name">Simulador de Taxa Real</div>
+        <div class="tool-desc">Calcule a taxa efetiva de qualquer financiamento e compare com a média do Banco Central. Amortização Price e SAC com gráfico.</div>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-badge badge-ativo">disponível</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Gestão Financeira -->
+    <a href="gestao-financeira.html" class="tool-card">
+      <div class="tool-icon">💰</div>
+      <div class="tool-body">
+        <div class="tool-name">Gestão Financeira</div>
+        <div class="tool-desc">Organize receitas, despesas e fluxo de caixa. Visualize sua saúde financeira mês a mês.</div>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-badge badge-ativo">disponível</span>
+        <span class="tool-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Em breve: Calculadora de Portabilidade -->
+    <div class="tool-card em-breve">
+      <div class="tool-icon">🔄</div>
+      <div class="tool-body">
+        <div class="tool-name">Portabilidade de Crédito</div>
+        <div class="tool-desc">Compare sua taxa atual com propostas de outros bancos e calcule a economia real na portabilidade.</div>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-badge badge-breve">em breve</span>
+      </div>
+    </div>
+
+    <!-- Em breve: Calculadora de Quitação -->
+    <div class="tool-card em-breve">
+      <div class="tool-icon">🏁</div>
+      <div class="tool-body">
+        <div class="tool-name">Calculadora de Quitação</div>
+        <div class="tool-desc">Descubra o valor correto para quitar seu contrato antecipadamente e quanto você economiza em juros.</div>
+      </div>
+      <div class="tool-footer">
+        <span class="tool-badge badge-breve">em breve</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

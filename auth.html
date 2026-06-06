@@ -478,7 +478,7 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
 <div class="page active" id="page-login">
   <div class="auth-card fade-in">
     <div class="card-title">Bem-vindo de volta</div>
-    <div class="card-sub">Entre com sua conta para acessar o simulador.</div>
+    <div class="card-sub">Entre com sua conta para acessar a plataforma.</div>
 
     <div id="alert-login" class="alert"></div>
 
@@ -765,7 +765,7 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
     <div style="width:64px;height:64px;border-radius:50%;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">✓</div>
     <div class="card-title">Acesso liberado!</div>
     <div class="card-sub" id="sucesso-sub">Seu pagamento foi confirmado. Bem-vindo ao MinhaTaxaReal.</div>
-    <button class="btn-primary" onclick="irParaApp()">Acessar o simulador →</button>
+    <button class="btn-primary" onclick="irParaApp()">Acessar o painel →</button>
   </div>
 </div>
 
@@ -777,7 +777,7 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
   ? 'http://localhost:3001'
   : 'https://minhataxareal-backend.onrender.com';
 
-const APP_PAGE      = 'simulador.html';
+const APP_PAGE      = 'app.html';
 const FINANC_PAGE   = 'gestao-financeira.html';
 
 // ─── Token ───
