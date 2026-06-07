@@ -644,7 +644,7 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
       <button class="btn-secondary" onclick="voltarStep1()">← Voltar</button>
     </div>
 
-    <!-- STEP 3: Confirmação / redirect Stripe -->
+    <!-- STEP 3: Confirmação / redirect Kiwify -->
     <div id="reg-step-3" style="display:none">
       <div class="card-title">Quase lá!</div>
       <div class="card-sub" id="step3-sub">Sua conta será criada e você será redirecionado para o pagamento seguro.</div>
@@ -663,7 +663,7 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
         </div>
         <div style="border-top:1px solid var(--border);margin:12px 0"></div>
         <div style="font-size:11px;color:var(--text3);line-height:1.6">
-          Pagamento processado com segurança pela Stripe. Você pode cancelar a assinatura a qualquer momento.
+          Pagamento processado com segurança pela Kiwify. Você pode cancelar a assinatura a qualquer momento.
         </div>
       </div>
 
@@ -729,8 +729,8 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
     <button class="btn-primary" onclick="renovarAssinatura()">
       Reativar por R$ 19,90/mês
     </button>
-    <button class="btn-secondary" onclick="abrirPortal()">
-      Gerenciar assinatura (Stripe)
+    <button class="btn-secondary" onclick="window.open('https://kiwify.app/MNsqq6V','_blank')">
+      Gerenciar assinatura (Kiwify)
     </button>
     <button class="btn-secondary" onclick="logout()">Sair</button>
   </div>
@@ -986,15 +986,13 @@ async function finalizarCadastro() {
     setUser(loginRes.user);
     atualizarHeader(loginRes.user);
 
-    // 3) Criar sessão de checkout Stripe
-    const tipo = regData.plano === 'anual' ? 'anual' : 'activation';
-    const checkoutRes = await api('/api/stripe/checkout', {
-      method: 'POST',
-      body: { type: tipo },
-    });
-
-    // Redireciona para o Stripe
-    window.location.href = checkoutRes.url;
+    // 3) Redireciona para o checkout Kiwify
+    const kiwifyUrls = {
+      mensal:  'https://pay.kiwify.com.br/VlSiBG7',
+      anual:   'https://pay.kiwify.com.br/5QNQifx',
+    };
+    const url = kiwifyUrls[regData.plano] || kiwifyUrls.mensal;
+    window.location.href = url;
 
   } catch (e) {
     setLoading('btn-finalizar', false);
@@ -1049,38 +1047,15 @@ function rotearPosLogin(user) {
 //  ATIVAÇÃO E RENOVAÇÃO
 // ═══════════════════════════════════════════════
 async function ativarAcesso() {
-  clearAlert('alert-ativacao');
-  try {
-    const res = await api('/api/stripe/checkout', {
-      method: 'POST',
-      body: { type: 'activation' },
-    });
-    window.location.href = res.url;
-  } catch (e) {
-    showAlert('alert-ativacao', e.message || 'Erro ao iniciar pagamento. Tente novamente.');
-  }
+  window.location.href = 'https://pay.kiwify.com.br/VlSiBG7';
 }
 
 async function renovarAssinatura() {
-  clearAlert('alert-vencida');
-  try {
-    const res = await api('/api/stripe/checkout', {
-      method: 'POST',
-      body: { type: 'subscription' },
-    });
-    window.location.href = res.url;
-  } catch (e) {
-    showAlert('alert-vencida', e.message || 'Erro ao iniciar pagamento.');
-  }
+  window.location.href = 'https://pay.kiwify.com.br/5QNQifx';
 }
 
 async function abrirPortal() {
-  try {
-    const res = await api('/api/stripe/portal', { method: 'POST' });
-    window.open(res.url, '_blank');
-  } catch (e) {
-    showAlert('alert-vencida', e.message || 'Erro ao abrir portal. Tente novamente.');
-  }
+  window.open('https://kiwify.app/MNsqq6V', '_blank');
 }
 
 // ═══════════════════════════════════════════════
@@ -1116,7 +1091,7 @@ function irParaApp() {
 // ═══════════════════════════════════════════════
 //  VERIFICAR RETORNO DO STRIPE (query string)
 // ═══════════════════════════════════════════════
-async function verificarRetornoStripe() {
+async function verificarRetornoPagamento() {
   const params = new URLSearchParams(window.location.search);
   const payment = params.get('payment');
   const type    = params.get('type');
@@ -1192,7 +1167,7 @@ function showTermos() {
 //  INIT
 // ═══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  const retorno = await verificarRetornoStripe();
+  const retorno = await verificarRetornoPagamento();
   if (!retorno) await verificarSessao();
 });
 </script>
