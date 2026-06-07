@@ -45,7 +45,7 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 .nav-links a:hover{color:var(--text)}
 
 /* ── HERO ── */
-.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:120px 48px 80px;max-width:1200px;margin:0 auto;position:relative;z-index:1}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:120px 48px 80px;max-width:860px;margin:0 auto;position:relative;z-index:1}
 .hero-eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--accent)}
 .hero-title{font-family:'Syne',sans-serif;font-size:clamp(36px,4vw,58px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:24px}
@@ -58,119 +58,6 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 .btn-ghost:hover{color:var(--text)}
 .hero-badges{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
 .badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 12px;border-radius:99px;border:1px solid var(--border2);color:var(--text3)}
-
-/* ── DEMO WIDGET ── */
-.demo-widget{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;position:relative;overflow:hidden}
-.demo-widget::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
-.demo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.demo-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)}
-.demo-pill{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--adim2);color:var(--accent);border:1px solid rgba(212,240,60,0.25);padding:3px 10px;border-radius:99px}
-.demo-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
-.demo-field label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:6px}
-.demo-field input,.demo-field select{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 14px;border-radius:var(--radius);outline:none;transition:border-color .15s;-webkit-appearance:none}
-.demo-field input:focus,.demo-field select:focus{border-color:rgba(212,240,60,0.4)}
-.demo-result{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center}
-.res-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
-.res-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:500}
-.res-value.positive{color:var(--green)}
-.res-value.negative{color:var(--red)}
-.res-value.neutral{color:var(--accent)}
-.res-sub{font-size:10px;color:var(--text3);margin-top:2px}
-.demo-cta-bar{margin-top:16px;text-align:center}
-.demo-cta-bar p{font-size:11px;color:var(--text3);margin-bottom:8px}
-.demo-cta-bar a{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);text-decoration:none;letter-spacing:.04em}
-
-/* ── TICKER ── */
-.ticker-wrap{overflow:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);padding:10px 0;position:relative;z-index:1}
-.ticker{display:flex;gap:0;white-space:nowrap;animation:ticker 40s linear infinite}
-.ticker:hover{animation-play-state:paused}
-.ticker-item{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.05em;padding:0 32px;display:inline-flex;align-items:center;gap:10px}
-.ticker-item span{color:var(--accent)}
-.ticker-sep{color:var(--text3);opacity:.3}
-@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-/* ── SECTION BASE ── */
-section{position:relative;z-index:1}
-.section-inner{max-width:1200px;margin:0 auto;padding:0 48px}
-.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.section-label::before{content:'';width:16px;height:1px;background:var(--accent)}
-.section-title{font-family:'Syne',sans-serif;font-size:clamp(28px,3vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.03em;margin-bottom:16px}
-.section-sub{font-size:15px;color:var(--text2);max-width:560px;line-height:1.7}
-
-/* ── PROBLEM ── */
-.problem{padding:100px 0}
-.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;margin-top:60px}
-.stat-stack{display:flex;flex-direction:column;gap:2px}
-.stat-item{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-left:2px solid var(--border);transition:border-color .2s}
-.stat-item:hover{border-color:var(--accent)}
-.stat-item.highlight{border-color:rgba(212,240,60,.4);background:var(--adim)}
-.stat-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--accent)}
-.stat-desc{font-size:13px;color:var(--text2);text-align:right;max-width:200px;line-height:1.4}
-.problem-text h3{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:16px;line-height:1.2}
-.problem-text p{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:16px}
-.problem-text p:last-child{margin-bottom:0}
-.bacen-source{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.06em;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
-
-/* ── HOW IT WORKS ── */
-.how{padding:100px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:60px}
-.step{padding:40px 32px;position:relative}
-.step::after{content:'';position:absolute;top:40px;right:0;width:1px;height:80px;background:var(--border)}
-.step:last-child::after{display:none}
-.step-num{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--text3);margin-bottom:20px}
-.step-icon{width:48px;height:48px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
-.step-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em}
-.step-desc{font-size:13px;color:var(--text2);line-height:1.65}
-
-/* ── FEATURES ── */
-.features{padding:100px 0}
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
-.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .2s;text-decoration:none;color:var(--text);display:block}
-.feat-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.feat-card.featured{border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface))}
-.feat-icon{font-size:28px;margin-bottom:20px}
-.feat-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
-.feat-desc{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:20px}
-.feat-tags{display:flex;flex-wrap:wrap;gap:6px}
-.feat-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);padding:3px 10px;border-radius:99px}
-.feat-soon{opacity:.45;cursor:not-allowed;pointer-events:none}
-.feat-soon-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);padding:3px 10px;border-radius:99px;margin-top:16px;display:inline-block}
-
-/* ── PRICING ── */
-.pricing{padding:100px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px;margin:60px auto 0}
-.price-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px}
-.price-card.featured{border-color:rgba(212,240,60,.3);position:relative;overflow:hidden}
-.price-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
-.price-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
-.price-val{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;color:var(--accent);line-height:1;margin-bottom:4px}
-.price-val sup{font-size:18px;vertical-align:top;margin-top:8px}
-.price-period{font-size:12px;color:var(--text3);margin-bottom:24px}
-.price-items{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
-.price-items li{font-size:13px;color:var(--text2);display:flex;align-items:flex-start;gap:10px}
-.price-items li::before{content:'✓';color:var(--accent);font-size:11px;margin-top:2px;flex-shrink:0}
-.price-cta{display:block;text-align:center;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;padding:13px;border-radius:99px;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
-.price-cta.primary{background:var(--accent);color:#0a0b0d;font-weight:500}
-.price-cta.primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 24px rgba(212,240,60,.25)}
-.price-cta.secondary{border:1px solid var(--border2);color:var(--text2)}
-.price-cta.secondary:hover{border-color:var(--text2);color:var(--text)}
-.price-note{text-align:center;font-size:12px;color:var(--text3);margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto}
-
-/* ── DISCLAIMER ── */
-.disclaimer{padding:60px 0}
-.disclaimer-box{background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--text2);border-radius:var(--radius);padding:32px 36px;max-width:860px;margin:0 auto}
-.disclaimer-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.disclaimer-title::before{content:'⚖';font-size:12px}
-.disclaimer-text{font-size:13px;color:var(--text2);line-height:1.85}
-.disclaimer-text strong{color:var(--text)}
-
-/* ── FOOTER ── */
-footer{padding:48px 0;border-top:1px solid var(--border)}
-.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
-.footer-links{display:flex;gap:24px}
-.footer-links a{font-size:12px;color:var(--text3);text-decoration:none;transition:color .15s}
-.footer-links a:hover{color:var(--text2)}
-.footer-copy{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.04em}
 
 /* ── SCROLL REVEAL ── */
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
@@ -188,7 +75,6 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
   .pricing-grid{grid-template-columns:1fr}
   .section-inner{padding:0 24px}
   .footer-inner{flex-direction:column;text-align:center}
-  .demo-fields{grid-template-columns:1fr}
 }
 
 /* ── GLOW BG ── */
@@ -223,7 +109,7 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
       <h1 class="hero-title">
         Calcule a taxa<br><em>real</em> do seu<br>financiamento
       </h1>
-      <p class="hero-sub">Insira os dados do seu contrato e descubra a taxa efetiva real — calculada com base no fluxo de caixa, não na taxa nominal do banco.</p>
+      <p class="hero-sub" style="max-width:560px">Insira os dados do seu contrato e descubra a taxa efetiva real — calculada com base no fluxo de caixa, não na taxa nominal do banco. Compare com a média do Banco Central para a mesma modalidade.</p>
       <div class="hero-actions">
         <a href="auth.html" class="btn-primary">Criar conta grátis →</a>
         <a href="#como-funciona" class="btn-ghost">Ver como funciona ↓</a>
@@ -235,86 +121,6 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
       </div>
     </div>
 
-    <!-- DEMO AO VIVO -->
-    <div class="demo-widget">
-      <div class="demo-header">
-        <span class="demo-title">Simulação rápida</span>
-        <span class="demo-pill">● ao vivo</span>
-      </div>
-      <div class="demo-fields">
-        <div class="demo-field">
-          <label>Valor financiado</label>
-          <input type="number" id="d-pv" value="30000" min="100" oninput="calcDemo()">
-        </div>
-        <div class="demo-field">
-          <label>Parcelas</label>
-          <input type="number" id="d-n" value="36" min="1" max="360" oninput="calcDemo()">
-        </div>
-        <div class="demo-field">
-          <label>Valor da parcela</label>
-          <input type="number" id="d-pmt" value="1050" min="1" oninput="calcDemo()">
-        </div>
-        <div class="demo-field">
-          <label>Modalidade</label>
-          <select id="d-modal" onchange="calcDemo()">
-            <option value="3">Crédito Pessoal</option>
-            <option value="5" selected>Financ. Veículos</option>
-            <option value="7">Consignado</option>
-            <option value="12">Crédito Imobiliário</option>
-          </select>
-        </div>
-      </div>
-      <div class="demo-result">
-        <div>
-          <div class="res-label">Taxa Real</div>
-          <div class="res-value neutral" id="d-tir">—</div>
-          <div class="res-sub">ao mês</div>
-        </div>
-        <div>
-          <div class="res-label">vs. Média BCB</div>
-          <div class="res-value" id="d-diff">—</div>
-          <div class="res-sub" id="d-diff-sub">calculando...</div>
-        </div>
-        <div>
-          <div class="res-label">Juros Totais</div>
-          <div class="res-value" id="d-juros" style="color:var(--text);font-size:14px">—</div>
-          <div class="res-sub">do valor total</div>
-        </div>
-      </div>
-      <div class="demo-cta-bar">
-        <p>Análise completa com tabela de amortização e gráfico</p>
-        <a href="auth.html">→ Acessar o simulador completo</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TICKER -->
-<div class="ticker-wrap">
-  <div class="ticker">
-    <span class="ticker-item">Crédito Pessoal BCB <span>Mai/2026</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Financiamento Veículos <span>1,99% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Crédito Consignado <span>2,02% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Cartão de Crédito <span>17,53% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Crédito Imobiliário <span>0,82% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Cheque Especial <span>12,41% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Crédito Pessoal BCB <span>Mai/2026</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Financiamento Veículos <span>1,99% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Crédito Consignado <span>2,02% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Cartão de Crédito <span>17,53% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Crédito Imobiliário <span>0,82% a.m.</span></span>
-    <span class="ticker-sep">·</span>
-    <span class="ticker-item">Cheque Especial <span>12,41% a.m.</span></span>
   </div>
 </div>
 
@@ -539,59 +345,6 @@ const statsObserver = new IntersectionObserver(entries => {
 const statsEl = document.querySelector('.stat-stack');
 if (statsEl) statsObserver.observe(statsEl);
 
-// ── DEMO CALCULATOR ──
-// Médias BCB aproximadas por modalidade (a.m.)
-const bcbRates = { '3': 3.28, '5': 1.99, '7': 2.02, '12': 0.82 };
-
-function calcTIR(pv, n, pmt) {
-  let r = 0.01;
-  for (let i = 0; i < 200; i++) {
-    const f = pv - pmt * (1 - Math.pow(1 + r, -n)) / r;
-    const df = pmt * (1 - Math.pow(1 + r, -n)) / (r * r) - pmt * n * Math.pow(1 + r, -n - 1) / r;
-    const nr = r - f / df;
-    if (Math.abs(nr - r) < 1e-8) return nr * 100;
-    r = nr > 0 ? nr : 0.001;
-  }
-  return r * 100;
-}
-
-function fmt(n, d = 2) { return n.toFixed(d).replace('.', ','); }
-
-function calcDemo() {
-  const pv   = parseFloat(document.getElementById('d-pv').value)  || 0;
-  const n    = parseFloat(document.getElementById('d-n').value)   || 0;
-  const pmt  = parseFloat(document.getElementById('d-pmt').value) || 0;
-  const modal = document.getElementById('d-modal').value;
-
-  const tirEl   = document.getElementById('d-tir');
-  const diffEl  = document.getElementById('d-diff');
-  const diffSub = document.getElementById('d-diff-sub');
-  const jurosEl = document.getElementById('d-juros');
-
-  if (!pv || !n || !pmt || pmt * n <= pv) {
-    tirEl.textContent = '—'; diffEl.textContent = '—'; jurosEl.textContent = '—';
-    tirEl.className = 'res-value neutral';
-    diffEl.className = 'res-value';
-    return;
-  }
-
-  const tir  = calcTIR(pv, n, pmt);
-  const bcb  = bcbRates[modal] || 1.99;
-  const diff = tir - bcb;
-  const totalJuros = pmt * n - pv;
-  const pctJuros   = (totalJuros / pv) * 100;
-
-  tirEl.textContent  = fmt(tir) + '%';
-  tirEl.className    = 'res-value neutral';
-
-  diffEl.textContent = (diff >= 0 ? '+' : '') + fmt(diff) + '%';
-  diffEl.className   = 'res-value ' + (diff > 0.1 ? 'negative' : diff < -0.1 ? 'positive' : 'neutral');
-  diffSub.textContent = diff > 0.1 ? 'acima da média' : diff < -0.1 ? 'abaixo da média' : 'na média';
-
-  jurosEl.textContent = fmt(pctJuros) + '%';
-}
-
-calcDemo();
 </script>
 </body>
 </html>
