@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MinhaTaxaReal — Descubra a Taxa Real do Seu Financiamento</title>
-<meta name="description" content="Calcule a taxa efetiva real de qualquer financiamento e compare com a média do Banco Central. Ferramenta educacional gratuita para visualizar contratos de crédito.">
+<meta name="description" content="Calcule a taxa efetiva real de qualquer financiamento e compare com a média do Banco Central. Ferramenta educacional para visualizar contratos de crédito.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -30,44 +30,131 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.65;overflow-x:hidden}
 
-/* ── NOISE OVERLAY ── */
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
 
-/* ── NAV ── */
+/* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:18px 48px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid transparent;transition:all .3s}
 nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-color:var(--border)}
 .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.03em;display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
 .logo-mark{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;box-shadow:0 0 12px var(--accent)}
-.nav-cta{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.06em;background:var(--accent);color:#0a0b0d;font-weight:500;padding:9px 22px;border-radius:99px;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
-.nav-cta:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,240,60,0.3)}
 .nav-links{display:flex;align-items:center;gap:28px}
 .nav-links a{font-size:13px;color:var(--text2);text-decoration:none;transition:color .15s}
 .nav-links a:hover{color:var(--text)}
+.nav-cta{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.06em;background:var(--accent);color:#0a0b0d;font-weight:500;padding:9px 22px;border-radius:99px;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
+.nav-cta:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,240,60,0.3)}
 
-/* ── HERO ── */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:120px 48px 80px;max-width:860px;margin:0 auto;position:relative;z-index:1}
+/* HERO */
+.hero-wrap{position:relative;overflow:hidden;min-height:100vh;display:flex;align-items:center}
+.glow{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.glow-1{width:500px;height:500px;background:rgba(212,240,60,0.04);top:-100px;right:-100px}
+.glow-2{width:400px;height:400px;background:rgba(212,240,60,0.03);bottom:100px;left:-150px}
+.hero{max-width:860px;margin:0 auto;padding:120px 48px 80px;position:relative;z-index:1}
 .hero-eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--accent)}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(36px,4vw,58px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:24px}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(38px,5vw,62px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:24px}
 .hero-title em{font-style:normal;color:var(--accent)}
-.hero-sub{font-size:16px;color:var(--text2);max-width:440px;line-height:1.7;margin-bottom:36px}
-.hero-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hero-sub{font-size:17px;color:var(--text2);max-width:560px;line-height:1.75;margin-bottom:36px}
+.hero-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .btn-primary{font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.05em;background:var(--accent);color:#0a0b0d;font-weight:500;padding:14px 30px;border-radius:99px;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer}
 .btn-primary:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(212,240,60,0.25)}
 .btn-ghost{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;color:var(--text2);text-decoration:none;transition:color .15s;display:inline-flex;align-items:center;gap:6px}
 .btn-ghost:hover{color:var(--text)}
-.hero-badges{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+.hero-badges{display:flex;gap:12px;flex-wrap:wrap}
 .badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 12px;border-radius:99px;border:1px solid var(--border2);color:var(--text3)}
 
-/* ── SCROLL REVEAL ── */
+/* SECTIONS */
+section{position:relative;z-index:1}
+.section-inner{max-width:1200px;margin:0 auto;padding:0 48px}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-label::before{content:'';width:16px;height:1px;background:var(--accent)}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(28px,3vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.03em;margin-bottom:16px}
+.section-sub{font-size:15px;color:var(--text2);max-width:560px;line-height:1.7}
+
+/* PROBLEM */
+.problem{padding:100px 0}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;margin-top:60px}
+.stat-stack{display:flex;flex-direction:column;gap:2px}
+.stat-item{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-left:2px solid var(--border);transition:border-color .2s}
+.stat-item:hover{border-color:var(--accent)}
+.stat-item.highlight{border-color:rgba(212,240,60,.4);background:var(--adim)}
+.stat-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--accent)}
+.stat-desc{font-size:13px;color:var(--text2);text-align:right;max-width:200px;line-height:1.4}
+.stat-label-sm{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.problem-text h3{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:16px;line-height:1.2}
+.problem-text p{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:16px}
+.problem-text p:last-child{margin-bottom:0}
+.bacen-source{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.06em;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* HOW */
+.how{padding:100px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:60px}
+.step{padding:40px 32px;position:relative}
+.step::after{content:'';position:absolute;top:40px;right:0;width:1px;height:80px;background:var(--border)}
+.step:last-child::after{display:none}
+.step-num{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--text3);margin-bottom:20px}
+.step-icon{width:48px;height:48px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
+.step-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em}
+.step-desc{font-size:13px;color:var(--text2);line-height:1.65}
+
+/* FEATURES */
+.features{padding:100px 0}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .2s;text-decoration:none;color:var(--text);display:block}
+.feat-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.feat-card.featured{border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface))}
+.feat-icon{font-size:28px;margin-bottom:20px}
+.feat-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.feat-desc{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:20px}
+.feat-tags{display:flex;flex-wrap:wrap;gap:6px}
+.feat-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);padding:3px 10px;border-radius:99px}
+.feat-soon{opacity:.45;cursor:not-allowed;pointer-events:none}
+.feat-soon-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);padding:3px 10px;border-radius:99px;margin-top:16px;display:inline-block}
+
+/* PRICING */
+.pricing{padding:100px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px;margin:60px auto 0}
+.price-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px}
+.price-card.featured{border-color:rgba(212,240,60,.3);position:relative;overflow:hidden}
+.price-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.price-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+.price-val{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;color:var(--accent);line-height:1;margin-bottom:4px}
+.price-val sup{font-size:18px;vertical-align:top;margin-top:8px}
+.price-period{font-size:12px;color:var(--text3);margin-bottom:24px}
+.price-items{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.price-items li{font-size:13px;color:var(--text2);display:flex;align-items:flex-start;gap:10px}
+.price-items li::before{content:'✓';color:var(--accent);font-size:11px;margin-top:2px;flex-shrink:0}
+.price-cta{display:block;text-align:center;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;padding:13px;border-radius:99px;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
+.price-cta.primary{background:var(--accent);color:#0a0b0d;font-weight:500}
+.price-cta.primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 24px rgba(212,240,60,.25)}
+.price-cta.secondary{border:1px solid var(--border2);color:var(--text2)}
+.price-cta.secondary:hover{border-color:var(--text2);color:var(--text)}
+.price-note{text-align:center;font-size:12px;color:var(--text3);margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto}
+
+/* DISCLAIMER */
+.disclaimer{padding:60px 0}
+.disclaimer-box{background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--text2);border-radius:var(--radius);padding:32px 36px;max-width:860px;margin:0 auto}
+.disclaimer-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.disclaimer-title::before{content:'⚖';font-size:12px}
+.disclaimer-text{font-size:13px;color:var(--text2);line-height:1.85}
+.disclaimer-text strong{color:var(--text)}
+
+/* FOOTER */
+footer{padding:48px 0;border-top:1px solid var(--border)}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:12px;color:var(--text3);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:var(--text2)}
+.footer-copy{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.04em}
+
+/* REVEAL */
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
 .reveal.visible{opacity:1;transform:none}
 
-/* ── MOBILE ── */
+/* MOBILE */
 @media(max-width:768px){
   nav{padding:16px 24px}
   .nav-links{display:none}
-  .hero{grid-template-columns:1fr;padding:100px 24px 60px;gap:40px}
+  .hero{padding:100px 24px 60px}
   .problem-grid{grid-template-columns:1fr;gap:40px}
   .steps{grid-template-columns:1fr}
   .step::after{display:none}
@@ -76,21 +163,13 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
   .section-inner{padding:0 24px}
   .footer-inner{flex-direction:column;text-align:center}
 }
-
-/* ── GLOW BG ── */
-.glow{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
-.glow-1{width:500px;height:500px;background:rgba(212,240,60,0.04);top:-100px;right:-100px}
-.glow-2{width:400px;height:400px;background:rgba(212,240,60,0.03);bottom:100px;left:-150px}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav id="nav">
-  <a href="#" class="logo">
-    <span class="logo-mark"></span>
-    MinhaTaxaReal
-  </a>
+  <a href="#" class="logo"><span class="logo-mark"></span>MinhaTaxaReal</a>
   <div class="nav-links">
     <a href="#como-funciona">Como funciona</a>
     <a href="#ferramentas">Ferramentas</a>
@@ -100,27 +179,22 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 </nav>
 
 <!-- HERO -->
-<div style="position:relative;overflow:hidden">
+<div class="hero-wrap">
   <div class="glow glow-1"></div>
   <div class="glow glow-2"></div>
   <div class="hero">
-    <div class="hero-content">
-      <div class="hero-eyebrow">Ferramenta educacional</div>
-      <h1 class="hero-title">
-        Calcule a taxa<br><em>real</em> do seu<br>financiamento
-      </h1>
-      <p class="hero-sub" style="max-width:560px">Insira os dados do seu contrato e descubra a taxa efetiva real — calculada com base no fluxo de caixa, não na taxa nominal do banco. Compare com a média do Banco Central para a mesma modalidade.</p>
-      <div class="hero-actions">
-        <a href="auth.html" class="btn-primary">Criar conta grátis →</a>
-        <a href="#como-funciona" class="btn-ghost">Ver como funciona ↓</a>
-      </div>
-      <div class="hero-badges">
-        <span class="badge">Dados BCB atualizados</span>
-        <span class="badge">Sem consulta jurídica</span>
-        <span class="badge">100% educacional</span>
-      </div>
+    <div class="hero-eyebrow">Ferramenta educacional</div>
+    <h1 class="hero-title">Calcule a taxa<br><em>real</em> do seu<br>financiamento</h1>
+    <p class="hero-sub">Insira os dados do seu contrato e descubra a taxa efetiva real — calculada com base no fluxo de caixa, não na taxa nominal do banco. Compare com a média do Banco Central para a mesma modalidade.</p>
+    <div class="hero-actions">
+      <a href="auth.html" class="btn-primary">Criar conta grátis →</a>
+      <a href="#como-funciona" class="btn-ghost">Ver como funciona ↓</a>
     </div>
-
+    <div class="hero-badges">
+      <span class="badge">Dados BCB atualizados</span>
+      <span class="badge">Sem consulta jurídica</span>
+      <span class="badge">100% educacional</span>
+    </div>
   </div>
 </div>
 
@@ -135,26 +209,26 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
       <div class="stat-stack reveal">
         <div class="stat-item highlight">
           <div>
-            <div class="res-label" style="text-align:left;margin-bottom:4px">Spread médio crédito PF</div>
+            <div class="stat-label-sm">Spread médio crédito PF</div>
             <div class="stat-num" id="cnt-1">0%</div>
           </div>
           <div class="stat-desc">diferença entre captação e concessão de crédito</div>
         </div>
         <div class="stat-item">
           <div>
-            <div class="res-label" style="text-align:left;margin-bottom:4px">Saldo carteira crédito livre PF</div>
+            <div class="stat-label-sm">Saldo carteira crédito livre PF</div>
             <div class="stat-num" id="cnt-2">R$ 0</div>
           </div>
           <div class="stat-desc">em operações ativas no sistema financeiro nacional</div>
         </div>
         <div class="stat-item">
           <div>
-            <div class="res-label" style="text-align:left;margin-bottom:4px">Modalidades monitoradas pelo BCB</div>
+            <div class="stat-label-sm">Modalidades monitoradas pelo BCB</div>
             <div class="stat-num" id="cnt-3">0</div>
           </div>
           <div class="stat-desc">séries históricas de taxas publicadas mensalmente</div>
         </div>
-        <div class="bacen-source">Fonte: Banco Central do Brasil — SGS / Nota de Crédito. Dados de referência Mai/2026.</div>
+        <div class="bacen-source">Fonte: Banco Central do Brasil — SGS / Nota de Crédito. Ref. Mai/2026.</div>
       </div>
       <div class="problem-text reveal" style="transition-delay:.15s">
         <h3>A taxa nominal não é a taxa que você paga</h3>
@@ -291,10 +365,7 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 <footer>
   <div class="section-inner">
     <div class="footer-inner">
-      <a href="#" class="logo" style="font-size:16px">
-        <span class="logo-mark" style="width:7px;height:7px"></span>
-        MinhaTaxaReal
-      </a>
+      <a href="#" class="logo" style="font-size:16px"><span class="logo-mark" style="width:7px;height:7px"></span>MinhaTaxaReal</a>
       <div class="footer-links">
         <a href="auth.html">Entrar</a>
         <a href="#planos">Planos</a>
@@ -306,19 +377,19 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 </footer>
 
 <script>
-// ── NAV SCROLL ──
+// NAV SCROLL
 const nav = document.getElementById('nav');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 30);
 });
 
-// ── SCROLL REVEAL ──
+// SCROLL REVEAL
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// ── COUNTER ANIMATION ──
+// COUNTER ANIMATION
 function animateCounter(id, target, prefix, suffix, decimals) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -333,7 +404,6 @@ function animateCounter(id, target, prefix, suffix, decimals) {
   }
   requestAnimationFrame(update);
 }
-
 const statsObserver = new IntersectionObserver(entries => {
   if (entries[0].isIntersecting) {
     animateCounter('cnt-1', 28.4, '', '% a.a.', 1);
@@ -344,7 +414,6 @@ const statsObserver = new IntersectionObserver(entries => {
 }, { threshold: 0.4 });
 const statsEl = document.querySelector('.stat-stack');
 if (statsEl) statsObserver.observe(statsEl);
-
 </script>
 </body>
 </html>
