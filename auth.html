@@ -777,7 +777,11 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
   ? 'http://localhost:3001'
   : 'https://minhataxareal-backend.onrender.com';
 
-const APP_PAGE      = 'app.html';
+const APP_PAGE = 'app.html';
+
+// Acorda o Render imediatamente ao carregar a página (fire and forget)
+fetch(API_URL + '/api/health').catch(() => {});
+
 const FINANC_PAGE   = 'gestao-financeira.html';
 
 // ─── Token ───
@@ -1140,23 +1144,9 @@ async function verificarSessao() {
     showPage('page-login');
     return;
   }
-  try {
-    const me = await api('/api/auth/me');
-    setUser(me);
-    atualizarHeader(me);
-    rotearPosLogin(me);
-  } catch (e) {
-    // Só limpa token e redireciona em erro de autenticação (401/403)
-    // Erros de rede (Render dormindo) não devem derrubar a sessão
-    if (e.status === 401 || e.status === 403) {
-      clearToken();
-      atualizarHeader(null);
-      showPage('page-login');
-    } else {
-      // Erro de rede — mantém token e mostra login sem mensagem de erro
-      showPage('page-login');
-    }
-  }
+  // Token existe — vai direto para o app
+  // A verificação real acontece no app.html
+  irParaApp();
 }
 
 // ═══════════════════════════════════════════════
@@ -1171,7 +1161,7 @@ function showTermos() {
 // ═══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
   const retorno = await verificarRetornoPagamento();
-  if (!retorno) await verificarSessao();
+  if (!retorno) showPage('page-login');
 });
 </script>
 </body>
