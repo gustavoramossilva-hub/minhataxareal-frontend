@@ -1146,12 +1146,15 @@ async function verificarSessao() {
     atualizarHeader(me);
     rotearPosLogin(me);
   } catch (e) {
-    // Token expirado ou revogado
-    clearToken();
-    atualizarHeader(null);
-    showPage('page-login');
-    if (e.status !== 401) {
-      showAlert('alert-login', 'Sessão expirada. Faça login novamente.', 'alert-info');
+    // Só limpa token e redireciona em erro de autenticação (401/403)
+    // Erros de rede (Render dormindo) não devem derrubar a sessão
+    if (e.status === 401 || e.status === 403) {
+      clearToken();
+      atualizarHeader(null);
+      showPage('page-login');
+    } else {
+      // Erro de rede — mantém token e mostra login sem mensagem de erro
+      showPage('page-login');
     }
   }
 }
