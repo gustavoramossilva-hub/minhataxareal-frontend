@@ -319,12 +319,9 @@ async function confirmarCancelamento() {
   }
 }
 
-// Fecha modal clicando fora — aguarda DOM
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('modal-cancelamento');
-  if (modal) modal.addEventListener('click', function(e) {
-    if (e.target === this) fecharModalCancelamento();
-  });
+// Fecha modal clicando fora
+document.getElementById('modal-cancelamento').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalCancelamento();
 });
 
   async function verificarAcesso() {
@@ -334,18 +331,26 @@ document.addEventListener('DOMContentLoaded', function() {
       const res = await fetch(API_URL + '/api/auth/me', {
         headers: { 'Authorization': 'Bearer ' + token }
       });
-      if (!res.ok) throw new Error('unauthorized');
+      // Só limpa token se for erro de autenticação (401/403)
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('mtr_token');
+        localStorage.removeItem('mtr_user');
+        window.location.href = 'auth.html';
+        return;
+      }
+      if (!res.ok) throw new Error('server_error');
       const me = await res.json();
       localStorage.setItem('mtr_user', JSON.stringify(me));
 
-      // Bloqueia apenas se não tem ativação E não é conta especial
+      // Bloqueia apenas se sem ativação E plano inativo
       if (!me.activationPaid && me.plan !== 'active' && me.plan !== 'subscription') {
         window.location.href = 'auth.html?reason=activation'; return;
       }
-      // Bloqueia se expirado (plan === 'expired' vem do backend)
+      // Bloqueia se expirado (backend já marca plan: 'expired')
       if (me.plan === 'expired') {
         window.location.href = 'auth.html?reason=expired'; return;
       }
+
       // Mostra botão de cancelamento se dentro de 7 dias
       if (me.activatedAt) {
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -355,7 +360,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-
+      // Injeta dados no header
+      const nameEl = document.getElementById('user-header-name');
       if (nameEl) nameEl.textContent = me.name || me.email;
       const planEl = document.getElementById('user-header-plan');
       if (planEl) planEl.textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
@@ -365,9 +371,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (greetEl) greetEl.textContent = (me.name || me.email).split(' ')[0];
 
     } catch (e) {
-      localStorage.removeItem('mtr_token');
-      localStorage.removeItem('mtr_user');
-      window.location.href = 'auth.html';
+      // Erro de rede (Render acordando) — não limpa token, mostra aviso
+      console.warn('[MTR] Erro ao verificar acesso:', e.message);
+      const greetEl = document.getElementById('greeting-name');
+      if (greetEl) greetEl.textContent = '...';
     }
   }
 
