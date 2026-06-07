@@ -8,31 +8,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0e0f11; --surface:#16181c; --surface2:#1e2026;
-  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
-  --text:#f0ede8; --text2:#8a8880; --text3:#545250;
-  --accent:#d4f03c; --accent2:#a8c42e;
-  --accent-dim:rgba(212,240,60,0.1); --accent-dim2:rgba(212,240,60,0.18);
-  --red:#f05252; --green:#4cde8a; --radius:12px; --radius-lg:16px; --radius-sm:8px;
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0ede8;--text2:#8a8880;--text3:#545250;
+  --accent:#d4f03c;--accent-dim:rgba(212,240,60,0.1);--accent-dim2:rgba(212,240,60,0.18);
+  --red:#f05252;--green:#4cde8a;--radius:12px;--radius-lg:16px;--radius-sm:8px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
 
+/* LOADING */
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+#loading-screen.hidden{display:none}
+.loading-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
+.loading-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.loading-msg{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.08em}
+#loading-retry{display:none;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);background:none;border:1px solid rgba(212,240,60,0.3);padding:8px 20px;border-radius:99px;cursor:pointer;margin-top:8px}
+
+/* LAYOUT */
 header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(14,15,17,0.92);backdrop-filter:blur(12px);z-index:100}
 .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
 .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-
 .hero{padding:64px 40px 40px;max-width:960px;margin:0 auto}
 .hero-greeting{font-size:13px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
 .hero-title{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:10px}
 .hero-sub{font-size:15px;color:var(--text2);max-width:480px}
-
 .section{max-width:960px;margin:0 auto;padding:0 40px 64px}
 .section-label{font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:16px;transition:border-color .2s,transform .15s,box-shadow .2s;position:relative;overflow:hidden}
-.tool-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:16px;transition:border-color .2s,transform .15s,box-shadow .2s;position:relative}
+.tool-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .tool-card.destaque{border-color:rgba(212,240,60,0.25);background:linear-gradient(135deg,rgba(212,240,60,0.06) 0%,var(--surface) 60%)}
 .tool-card.em-breve{opacity:.5;cursor:not-allowed;pointer-events:none}
 .tool-icon{width:44px;height:44px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px}
@@ -45,29 +51,27 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 .badge-breve{color:var(--text3);border-color:var(--border);background:transparent}
 .tool-arrow{font-size:18px;color:var(--text3);transition:color .2s,transform .2s}
 .tool-card:hover .tool-arrow{color:var(--accent);transform:translateX(3px)}
-
-/* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:36px;max-width:420px;width:90%}
-
-@media(max-width:600px){
-  header{padding:16px 20px}
-  .hero{padding:40px 20px 28px}
-  .hero-title{font-size:26px}
-  .section{padding:0 20px 48px}
-  .tools-grid{grid-template-columns:1fr}
-}
+@media(max-width:600px){header{padding:16px 20px}.hero{padding:40px 20px 28px}.hero-title{font-size:26px}.section{padding:0 20px 48px}.tools-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo"><span class="loading-dot"></span>MinhaTaxaReal</div>
+  <div class="loading-msg" id="loading-msg">verificando acesso...</div>
+  <button id="loading-retry" onclick="tentarNovamente()">Tentar novamente</button>
+</div>
 
 <header>
   <div class="logo"><span class="logo-dot"></span>MinhaTaxaReal</div>
   <div style="display:flex;align-items:center;gap:10px">
     <span style="font-size:12px;color:var(--text2)" id="user-header-name"></span>
     <span style="font-size:10px;font-family:'DM Mono',monospace;background:var(--accent-dim2);color:var(--accent);border:1px solid rgba(212,240,60,0.3);padding:2px 8px;border-radius:99px" id="user-header-plan"></span>
-    <button id="btn-cancelar" onclick="abrirModal()" style="display:none;font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:1px solid var(--border2);cursor:pointer;letter-spacing:.04em;padding:4px 10px;border-radius:8px" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">cancelar</button>
+    <button id="btn-cancelar" onclick="abrirModal()" style="display:none;font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:1px solid var(--border2);cursor:pointer;letter-spacing:.04em;padding:4px 10px;border-radius:8px">cancelar</button>
     <button onclick="sair()" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:none;cursor:pointer;letter-spacing:.04em;padding:4px 8px;border-radius:8px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">sair</button>
   </div>
 </header>
@@ -81,31 +85,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 <div class="section">
   <p class="section-label">Ferramentas disponíveis</p>
   <div class="tools-grid">
-
     <a href="simulador.html" class="tool-card destaque">
       <div class="tool-icon">📊</div>
       <div class="tool-body">
         <div class="tool-name">Simulador de Taxa Real</div>
         <div class="tool-desc">Calcule a taxa efetiva de qualquer financiamento e compare com a média do Banco Central. Amortização Price e SAC com gráfico.</div>
       </div>
-      <div class="tool-footer">
-        <span class="tool-badge badge-ativo">disponível</span>
-        <span class="tool-arrow">→</span>
-      </div>
+      <div class="tool-footer"><span class="tool-badge badge-ativo">disponível</span><span class="tool-arrow">→</span></div>
     </a>
-
     <a href="gestao-financeira.html" class="tool-card">
       <div class="tool-icon">💰</div>
       <div class="tool-body">
         <div class="tool-name">Gestão Financeira</div>
         <div class="tool-desc">Organize receitas e despesas, acompanhe seu fluxo de caixa mensal e visualize sua saúde financeira com gráficos intuitivos.</div>
       </div>
-      <div class="tool-footer">
-        <span class="tool-badge badge-ativo">disponível</span>
-        <span class="tool-arrow">→</span>
-      </div>
+      <div class="tool-footer"><span class="tool-badge badge-ativo">disponível</span><span class="tool-arrow">→</span></div>
     </a>
-
     <div class="tool-card em-breve">
       <div class="tool-icon">🔄</div>
       <div class="tool-body">
@@ -114,7 +109,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
       </div>
       <div class="tool-footer"><span class="tool-badge badge-breve">em breve</span></div>
     </div>
-
     <div class="tool-card em-breve">
       <div class="tool-icon">🏁</div>
       <div class="tool-body">
@@ -123,7 +117,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
       </div>
       <div class="tool-footer"><span class="tool-badge badge-breve">em breve</span></div>
     </div>
-
   </div>
 </div>
 
@@ -138,7 +131,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
     <div id="modal-alert" style="display:none;background:rgba(240,82,82,0.1);border:1px solid rgba(240,82,82,0.3);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--red);margin-bottom:16px"></div>
     <div id="modal-success" style="display:none;background:rgba(76,222,138,0.1);border:1px solid rgba(76,222,138,0.3);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--green);margin-bottom:16px;text-align:center"></div>
     <div id="modal-actions" style="display:flex;flex-direction:column;gap:10px">
-      <button onclick="confirmarCancelamento()" id="btn-confirmar-cancel" style="background:var(--red);color:#fff;border:none;border-radius:99px;padding:13px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.05em;cursor:pointer">Confirmar cancelamento</button>
+      <button onclick="confirmarCancelamento()" id="btn-confirmar-cancel" style="background:var(--red);color:#fff;border:none;border-radius:99px;padding:13px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer">Confirmar cancelamento</button>
       <button onclick="fecharModal()" style="background:none;border:1px solid var(--border2);border-radius:99px;padding:13px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);cursor:pointer">Manter meu acesso</button>
     </div>
   </div>
@@ -170,10 +163,9 @@ async function confirmarCancelamento() {
   const btn = document.getElementById('btn-confirmar-cancel');
   btn.disabled = true; btn.textContent = 'Enviando...'; btn.style.opacity = '.6';
   try {
-    const token = localStorage.getItem('mtr_token');
     const res = await fetch(API_URL + '/api/auth/cancel-request', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('mtr_token'), 'Content-Type': 'application/json' }
     });
     const data = await res.json();
     if (!res.ok) {
@@ -186,49 +178,79 @@ async function confirmarCancelamento() {
     document.getElementById('modal-success').innerHTML = '✓ Solicitação enviada.<br><span style="font-size:12px;opacity:.7">Reembolso em até 5 dias úteis.</span>';
     document.getElementById('modal-success').style.display = 'block';
     document.getElementById('btn-cancelar').style.display = 'none';
-  } catch (e) {
-    document.getElementById('modal-alert').textContent = 'Erro de conexão. Tente novamente.';
+  } catch(e) {
+    document.getElementById('modal-alert').textContent = 'Erro de conexão.';
     document.getElementById('modal-alert').style.display = 'block';
     btn.disabled = false; btn.textContent = 'Confirmar cancelamento'; btn.style.opacity = '1';
   }
 }
 
+let tentativas = 0;
+
 async function verificarAcesso() {
   const token = localStorage.getItem('mtr_token');
-  if (!token) { window.location.href = 'auth.html'; return; }
+  if (!token) {
+    window.location.href = 'auth.html';
+    return;
+  }
+
+  document.getElementById('loading-screen').classList.remove('hidden');
+
   try {
+    document.getElementById('loading-msg').textContent = 'conectando ao servidor...';
     const res = await fetch(API_URL + '/api/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
+
     if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('mtr_token');
-      localStorage.removeItem('mtr_user');
+      // Token definitivamente inválido — redireciona sem limpar (usuário pode relogar)
       window.location.href = 'auth.html';
       return;
     }
-    if (!res.ok) return; // erro de rede — não desloga
+
+    if (!res.ok) {
+      throw new Error('server_error');
+    }
+
     const me = await res.json();
     localStorage.setItem('mtr_user', JSON.stringify(me));
 
-    if (!me.activationPaid && me.plan !== 'active' && me.plan !== 'subscription') {
-      window.location.href = 'auth.html?reason=activation'; return;
+    if (!me.activationPaid && me.plan !== 'active' && me.plan !== 'subscription' && me.plan !== 'master') {
+      window.location.href = 'auth.html?reason=activation';
+      return;
     }
     if (me.plan === 'expired') {
-      window.location.href = 'auth.html?reason=expired'; return;
+      window.location.href = 'auth.html?reason=expired';
+      return;
     }
 
-    // Injeta dados
+    // Sucesso — esconde loading e mostra conteúdo
+    document.getElementById('loading-screen').classList.add('hidden');
     document.getElementById('user-header-name').textContent = me.name || me.email;
-    document.getElementById('user-header-plan').textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
+    document.getElementById('user-header-plan').textContent = me.plan === 'subscription' ? 'assinante' : me.plan;
     document.getElementById('greeting-name').textContent = (me.name || me.email).split(' ')[0];
 
-    // Botão cancelamento — só dentro de 7 dias
     if (me.activatedAt && (Date.now() - me.activatedAt) < 7 * 24 * 60 * 60 * 1000) {
       document.getElementById('btn-cancelar').style.display = 'inline-block';
     }
-  } catch (e) {
-    console.warn('[MTR] Erro de rede ao verificar acesso:', e.message);
+
+  } catch(e) {
+    // Erro de rede — backend dormindo — mostra botão de retry
+    tentativas++;
+    document.getElementById('loading-msg').textContent = 'servidor iniciando, aguarde...';
+    if (tentativas >= 2) {
+      document.getElementById('loading-retry').style.display = 'inline-block';
+    }
+    // Retry automático após 5s
+    setTimeout(verificarAcesso, 5000);
   }
+}
+
+function tentarNovamente() {
+  tentativas = 0;
+  document.getElementById('loading-retry').style.display = 'none';
+  document.getElementById('loading-msg').textContent = 'reconectando...';
+  verificarAcesso();
 }
 
 verificarAcesso();
