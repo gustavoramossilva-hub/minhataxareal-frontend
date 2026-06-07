@@ -334,8 +334,13 @@ document.getElementById('modal-cancelamento').addEventListener('click', function
       if (!res.ok) throw new Error('unauthorized');
       const me = await res.json();
       localStorage.setItem('mtr_user', JSON.stringify(me));
-      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
-      if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
+
+      // Bloqueia apenas se não tem ativação E não é conta especial
+      if (!me.activationPaid && me.plan !== 'active' && me.plan !== 'subscription') {
+        window.location.href = 'auth.html?reason=activation'; return;
+      }
+      // Bloqueia se expirado (plan === 'expired' vem do backend)
+      if (me.plan === 'expired') {
         window.location.href = 'auth.html?reason=expired'; return;
       }
       // Mostra botão de cancelamento se dentro de 7 dias
