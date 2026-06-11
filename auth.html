@@ -1161,7 +1161,7 @@ function showTermos() {
 // ═══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
   const retorno = await verificarRetornoPagamento();
-  if (!retorno) showPage('page-login');
+  if (!retorno) verificarSessao();
 });
 </script>
 </body>

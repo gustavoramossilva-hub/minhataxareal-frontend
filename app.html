@@ -172,6 +172,8 @@ async function checkAccess() {
 
     // Só vai para login se o token for genuinamente inválido (não erro de rede)
     if (r.status === 401 || r.status === 403) {
+      localStorage.removeItem('mtr_token');
+      localStorage.removeItem('mtr_user');
       setMsg('sessão expirada');
       document.getElementById('ov-login').style.display = 'inline-block';
       document.getElementById('ov-btn').style.display = 'none';
