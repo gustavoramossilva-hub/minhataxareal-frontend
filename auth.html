@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MinhaTaxaReal — Acesso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════
@@ -17,8 +18,8 @@
   --border:     rgba(255,255,255,0.07);
   --border2:    rgba(255,255,255,0.13);
   --text:       #f0ede8;
-  --text2:      #8a8880;
-  --text3:      #545250;
+  --text2:      #9a9894;
+  --text3:      #767370;
   --accent:     #d4f03c;
   --accent2:    #a8c42e;
   --accent-dim: rgba(212,240,60,0.10);
@@ -604,7 +605,7 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
 
       <div id="alert-plano" class="alert"></div>
 
-      <div class="plans-grid" style="grid-template-columns:1fr 1fr">
+      <div class="plans-grid" style="grid-template-columns:1fr">
         <!-- Plano: Ativação + Mensal -->
         <div class="plan-card selected" id="plan-mensal" onclick="selecionarPlano('mensal')">
           <div class="plan-radio"></div>
@@ -619,21 +620,6 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
             <li>PDF exportável</li>
             <li>Módulo Saúde Financeira</li>
             <li>Cancele quando quiser</li>
-          </ul>
-        </div>
-
-        <!-- Plano: Anual -->
-        <div class="plan-card" id="plan-anual" onclick="selecionarPlano('anual')">
-          <div class="plan-radio"></div>
-          <div class="plan-badge badge-accent">Melhor custo</div>
-          <div class="plan-price-old">R$ 197,00</div>
-          <div class="plan-price">R$ 97,00</div>
-          <div class="plan-period">acesso anual completo — ~R$&nbsp;8/mês</div>
-          <ul class="plan-features">
-            <li>Tudo do plano mensal</li>
-            <li>12 meses sem mensalidade</li>
-            <li>Economia de R$&nbsp;143/ano</li>
-            <li>Prioridade no suporte</li>
           </ul>
         </div>
       </div>
@@ -729,8 +715,8 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
     <button class="btn-primary" onclick="renovarAssinatura()">
       Reativar por R$ 19,90/mês
     </button>
-    <button class="btn-secondary" onclick="window.open('https://kiwify.app/MNsqq6V','_blank')">
-      Gerenciar assinatura (Kiwify)
+    <button class="btn-secondary" onclick="window.location.href='mailto:contato@minhataxareal.com.br?subject=Cancelamento%20de%20assinatura'">
+      Cancelar assinatura
     </button>
     <button class="btn-secondary" onclick="logout()">Sair</button>
   </div>
@@ -954,15 +940,9 @@ function irStep3() {
   atualizarSteps(3);
 
   // Atualiza resumo
-  if (regData.plano === 'anual') {
-    document.getElementById('resumo-plano').textContent  = 'MinhaTaxaReal — Plano Anual';
-    document.getElementById('resumo-preco').textContent  = 'R$ 97,00';
-    document.getElementById('resumo-mensal-row').style.display = 'none';
-  } else {
-    document.getElementById('resumo-plano').textContent  = 'Ativação MinhaTaxaReal';
-    document.getElementById('resumo-preco').textContent  = 'R$ 49,99';
-    document.getElementById('resumo-mensal-row').style.display = '';
-  }
+  document.getElementById('resumo-plano').textContent = 'Ativação MinhaTaxaReal';
+  document.getElementById('resumo-preco').textContent = 'R$ 49,99';
+  document.getElementById('resumo-mensal-row').style.display = '';
 }
 
 function voltarStep2() {
@@ -991,11 +971,7 @@ async function finalizarCadastro() {
     atualizarHeader(loginRes.user);
 
     // 3) Redireciona para o checkout Kiwify
-    const kiwifyUrls = {
-      mensal:  'https://pay.kiwify.com.br/VlSiBG7',
-      anual:   'https://pay.kiwify.com.br/5QNQifx',
-    };
-    const url = kiwifyUrls[regData.plano] || kiwifyUrls.mensal;
+    const url = 'https://pay.kiwify.com.br/VISiBG7';
     window.location.href = url;
 
   } catch (e) {
@@ -1051,15 +1027,11 @@ function rotearPosLogin(user) {
 //  ATIVAÇÃO E RENOVAÇÃO
 // ═══════════════════════════════════════════════
 async function ativarAcesso() {
-  window.location.href = 'https://pay.kiwify.com.br/VlSiBG7';
+  window.location.href = 'https://pay.kiwify.com.br/VISiBG7';
 }
 
 async function renovarAssinatura() {
   window.location.href = 'https://pay.kiwify.com.br/5QNQifx';
-}
-
-async function abrirPortal() {
-  window.open('https://kiwify.app/MNsqq6V', '_blank');
 }
 
 // ═══════════════════════════════════════════════
