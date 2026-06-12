@@ -550,6 +550,29 @@
   .delay-4 { animation-delay: .24s; opacity:0; }
   .delay-5 { animation-delay: .30s; opacity:0; }
 
+  /* ── HAMBURGUÊS / SACRE ── */
+  .eventos-table-wrap { overflow-x: auto; margin: 10px 0; }
+  .eventos-table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 11px; }
+  .eventos-table th { text-align: left; padding: 5px 6px; color: var(--text3); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .eventos-table td { padding: 3px 3px; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
+  .eventos-table input, .eventos-table select { padding: 5px 6px; font-size: 11px; }
+  .btn-add-evento { background: var(--surface2); border: 1px dashed var(--border2); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 11px; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; width: 100%; margin-top: 8px; transition: background .15s; letter-spacing: .04em; text-align: center; }
+  .btn-add-evento:hover { background: var(--accent-dim); }
+  .btn-remove-evento { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 4px; line-height: 1; transition: color .15s; }
+  .btn-remove-evento:hover { color: var(--red); }
+  .stj-badge { background: var(--blue-dim); border: 1px solid rgba(96,165,250,.25); color: var(--blue); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11px; line-height: 1.6; margin-top: 10px; }
+  .stj-badge-warn { background: var(--amber-dim); border: 1px solid rgba(245,166,35,.25); color: var(--amber); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11px; line-height: 1.6; margin-top: 10px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .toggle-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--border2); border-radius: 99px; cursor: pointer; transition: background .2s, border-color .2s; }
+  .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--text3); border-radius: 50%; transition: transform .2s, background .2s; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--accent-dim2); border-color: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
+  .sacre-bloco-start td { border-top: 2px solid rgba(212,240,60,0.22) !important; }
+  .metodo-info-box { background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-size: 11px; color: var(--text2); line-height: 1.65; margin-bottom: 14px; }
+
   @media (max-width: 900px) {
     .app-shell { grid-template-columns: 1fr; }
     .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
@@ -665,7 +688,7 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="fg-num-parcelas">
         <label class="form-label">Número de parcelas <span class="form-hint">meses</span></label>
         <div class="input-suffix-wrap">
           <input type="number" id="num-parcelas" placeholder="36" min="1" max="480" />
@@ -673,7 +696,7 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="fg-valor-parcela">
         <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
         <div class="input-prefix-wrap">
           <span class="input-prefix">R$</span>
@@ -685,9 +708,11 @@
 
       <div class="form-group">
         <label class="form-label">Sistema de amortização <span class="form-hint">tabela</span></label>
-        <select id="sistema-amort">
+        <select id="sistema-amort" onchange="onSistemaChange()">
           <option value="price">Tabela Price (parcelas fixas)</option>
           <option value="sac">SAC (amortização constante)</option>
+          <option value="hamburguês">Método Hamburguês (saldo devedor diário)</option>
+          <option value="sacre">SACRE (amortização crescente — SFH)</option>
         </select>
       </div>
 
@@ -696,6 +721,99 @@
         <div class="input-suffix-wrap">
           <input type="number" id="taxa-nominal" placeholder="1,80" step="0.01" min="0" />
           <span class="input-suffix">% a.m.</span>
+        </div>
+      </div>
+
+      <!-- ══ MÉTODO HAMBURGUÊS ══ -->
+      <div id="section-hamburguês" style="display:none">
+        <hr class="form-divider">
+        <p class="panel-title" style="margin-bottom:10px">Método Hamburguês</p>
+        <div class="metodo-info-box">
+          Juros simples sobre saldo devedor diário (pro rata die). Usado em cheque especial, conta garantida e CDC. Fórmula: <strong>J = i_diária × Σ(SD × dias)</strong>.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Convenção de dias <span class="form-hint">base</span></label>
+          <select id="hamb-convencao">
+            <option value="30">30 dias por mês (base 360)</option>
+            <option value="360">Dias corridos / 360</option>
+            <option value="365">Dias corridos / 365</option>
+          </select>
+        </div>
+
+        <div class="toggle-row">
+          <span class="toggle-label">Capitalização de juros (juros compostos)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hamb-capitaliza" onchange="onCapitalizaChange()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row" style="border-bottom:none;margin-bottom:6px">
+          <span class="toggle-label">Incluir IOF diário</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hamb-iof" onchange="toggleIOF()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div id="hamb-iof-section" style="display:none" class="form-group">
+          <label class="form-label">Taxa IOF diária <span class="form-hint">% a.d.</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="hamb-iof-taxa" value="0.0082" step="0.0001" min="0" />
+            <span class="input-suffix">% a.d.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="margin-bottom:8px">Movimentações do período <span class="form-hint">eventos</span></label>
+          <div class="eventos-table-wrap">
+            <table class="eventos-table">
+              <thead><tr>
+                <th style="width:54px">Dias</th>
+                <th style="width:76px">Tipo</th>
+                <th>Valor (R$)</th>
+                <th style="width:24px"></th>
+              </tr></thead>
+              <tbody id="hamburguês-eventos-tbody"></tbody>
+            </table>
+          </div>
+          <button class="btn-add-evento" onclick="adicionarEvento('debito','',30)">+ Adicionar período / movimentação</button>
+        </div>
+
+        <div class="stj-badge-warn" id="hamb-aviso-cap" style="display:none">
+          <strong>⚠ Atenção (STJ REsp 198.502/MT):</strong> A capitalização composta de juros é vedada em contratos civis, salvo disposição legal expressa. O Método Hamburguês puro usa <em>juros simples</em>.
+        </div>
+        <div class="stj-badge">
+          <strong>Como preencher:</strong> Cada linha é um período entre eventos. "Dias" = duração do intervalo. Tipo "Débito" = novo saque/encargo que aumenta o saldo devedor; "Crédito" = pagamento/depósito que reduz o saldo.
+        </div>
+      </div>
+
+      <!-- ══ SACRE ══ -->
+      <div id="section-sacre" style="display:none">
+        <hr class="form-divider">
+        <p class="panel-title" style="margin-bottom:10px">SACRE — Amortização Crescente</p>
+        <div class="metodo-info-box">
+          Prestação fixa por blocos de meses; amortização recalculada como <strong>saldo ÷ prazo remanescente</strong>. TR corrige o saldo <em>antes</em> da amortização (Súmula 450/STJ).
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">TR mensal <span class="form-hint">% a.m.</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="sacre-tr" placeholder="0,00" step="0.01" min="0" value="0" />
+            <span class="input-suffix">% a.m.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Meses por bloco <span class="form-hint">recálculo</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="sacre-bloco" value="12" min="1" max="60" />
+            <span class="input-suffix">meses</span>
+          </div>
+        </div>
+
+        <div class="stj-badge">
+          <strong>Súmula 450/STJ:</strong> A TR deve corrigir o saldo devedor <em>antes</em> da amortização, não após. A prestação é recalculada a cada bloco com base no novo saldo e prazo remanescente.
         </div>
       </div>
     </div>
@@ -2186,6 +2304,614 @@ function calcularSaldoAuditoria() {
       });
     }
   });
+})();
+
+// ════════════════════════════════════════════
+//  HAMBURGUÊS & SACRE — UI handlers
+// ════════════════════════════════════════════
+
+function onSistemaChange() {
+  const s = document.getElementById('sistema-amort').value;
+  const isHamb  = s === 'hamburguês';
+  const isSacre = s === 'sacre';
+  const isEspecial = isHamb || isSacre;
+
+  document.getElementById('section-hamburguês').style.display = isHamb  ? '' : 'none';
+  document.getElementById('section-sacre').style.display      = isSacre ? '' : 'none';
+
+  // Hamburguês não usa parcelas/valor-parcela (usa eventos próprios)
+  const fgParc = document.getElementById('fg-num-parcelas');
+  const fgPmt  = document.getElementById('fg-valor-parcela');
+  if (fgParc) fgParc.style.display = isHamb ? 'none' : '';
+  if (fgPmt)  fgPmt.style.display  = isHamb ? 'none' : '';
+
+  // Resetar resultados ao trocar método
+  resetResultados();
+}
+
+function toggleIOF() {
+  const on = document.getElementById('hamb-iof').checked;
+  document.getElementById('hamb-iof-section').style.display = on ? '' : 'none';
+}
+
+function onCapitalizaChange() {
+  const on = document.getElementById('hamb-capitaliza').checked;
+  document.getElementById('hamb-aviso-cap').style.display = on ? '' : 'none';
+}
+
+// ── Tabela de eventos Hamburguês ──
+let _hambId = 0;
+function adicionarEvento(tipo, valor, dias) {
+  const tbody = document.getElementById('hamburguês-eventos-tbody');
+  if (!tbody) return;
+  const id = ++_hambId;
+  const tr = document.createElement('tr');
+  tr.id = 'hamb-row-' + id;
+  tr.innerHTML = `
+    <td><input type="number" id="hamb-dias-${id}" value="${dias || 30}" min="1" max="9999" style="width:52px"/></td>
+    <td><select id="hamb-tipo-${id}" style="width:74px">
+      <option value="debito"${tipo !== 'credito' ? ' selected' : ''}>Débito</option>
+      <option value="credito"${tipo === 'credito' ? ' selected' : ''}>Crédito</option>
+    </select></td>
+    <td><div class="input-prefix-wrap" style="position:relative">
+      <span class="input-prefix" style="font-size:11px;left:6px">R$</span>
+      <input type="text" id="hamb-val-${id}" placeholder="0,00" oninput="maskCurrency(this)"
+        value="${valor ? parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2}) : ''}"
+        style="padding-left:24px"/>
+    </div></td>
+    <td><button class="btn-remove-evento" onclick="removerEvento(${id})" title="Remover">×</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function removerEvento(id) {
+  const row = document.getElementById('hamb-row-' + id);
+  if (row) row.remove();
+}
+
+function getEventos() {
+  const tbody = document.getElementById('hamburguês-eventos-tbody');
+  if (!tbody) return [];
+  return Array.from(tbody.querySelectorAll('tr')).map(tr => {
+    const id = tr.id.replace('hamb-row-', '');
+    return {
+      dias:  parseInt(document.getElementById('hamb-dias-' + id)?.value) || 0,
+      tipo:  document.getElementById('hamb-tipo-' + id)?.value || 'debito',
+      valor: parseBRL(document.getElementById('hamb-val-' + id)?.value || ''),
+    };
+  }).filter(e => e.dias > 0);
+}
+
+// ════════════════════════════════════════════
+//  CÁLCULO HAMBURGUÊS
+// ════════════════════════════════════════════
+function calcularHamburguês() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  const sd0       = parseBRL(document.getElementById('valor-liquido').value);
+  const taxaMensal= parseFloat(document.getElementById('taxa-nominal').value) || 0;
+  const convencao = document.getElementById('hamb-convencao').value;
+  const capitaliza= document.getElementById('hamb-capitaliza').checked;
+  const usaIOF    = document.getElementById('hamb-iof').checked;
+  const taxaIOF   = parseFloat(document.getElementById('hamb-iof-taxa')?.value) || 0.0082;
+
+  if (!sd0 || sd0 <= 0)       { showAlert(alertEl, 'Informe o saldo devedor inicial (campo "Valor líquido recebido").'); return; }
+  if (!taxaMensal || taxaMensal <= 0) { showAlert(alertEl, 'Informe a taxa mensal (campo "Taxa nominal informada").'); return; }
+
+  const eventos = getEventos();
+  if (!eventos.length) { showAlert(alertEl, 'Adicione ao menos um período na tabela de movimentações.'); return; }
+
+  const diasBase  = parseInt(convencao); // 30, 360 ou 365
+  // i_diária = taxa_mensal / 30 (conv=30) ou taxa_anual / diasBase (conv=360|365)
+  const taxaAnual = taxaMensal * 12 / 100;
+  const iDiaria   = diasBase === 30
+    ? (taxaMensal / 100) / 30
+    : taxaAnual / diasBase;
+
+  const linhas = [];
+  let sd = sd0;
+  let totalJuros = 0, totalND = 0, totalDias = 0, totalIOF = 0;
+
+  for (let k = 0; k < eventos.length; k++) {
+    const ev = eventos[k];
+    const nd     = sd * ev.dias;       // número devedor do intervalo
+    const juros  = capitaliza
+      ? sd * (Math.pow(1 + iDiaria, ev.dias) - 1)   // composto (com aviso)
+      : nd * iDiaria;                                 // simples puro
+    const iof    = usaIOF ? sd * (taxaIOF / 100) * ev.dias : 0;
+
+    totalND    += nd;
+    totalDias  += ev.dias;
+    totalJuros += juros;
+    totalIOF   += iof;
+
+    linhas.push({ periodo: k + 1, sd, dias: ev.dias, nd, juros, iof, tipo: ev.tipo, valorEvento: ev.valor });
+
+    // Atualiza saldo para o próximo período
+    if (ev.tipo === 'credito') {
+      sd = sd - ev.valor;   // pagamento/depósito reduz saldo
+    } else {
+      sd = sd + ev.valor;   // saque/débito aumenta saldo
+    }
+    sd = Math.max(0, sd);
+  }
+
+  const montante = sd0 + totalJuros + totalIOF;
+
+  renderResultadosHamburguês({ sd0, taxaMensal, iDiaria, convencao, diasBase,
+    totalJuros, totalND, totalDias, totalIOF, montante, linhas, capitaliza, usaIOF });
+}
+
+function renderResultadosHamburguês(r) {
+  document.getElementById('empty-state').style.display  = 'none';
+  document.getElementById('results-area').style.display = '';
+
+  document.getElementById('res-titulo').textContent     = 'Método Hamburguês — Juros s/ Saldo Devedor Diário';
+  document.getElementById('res-subtitulo').textContent  =
+    `Saldo inicial ${fmtBRL(r.sd0)} · ${r.totalDias} dias · convenção ${r.convencao}`;
+
+  // ── Métricas ──
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card highlight">
+      <div class="mc-label">Total de Juros</div>
+      <div class="mc-value accent" style="font-size:20px">${fmtBRL(r.totalJuros)}</div>
+      <div class="mc-sub">${r.capitaliza ? 'Compostos (cláusula contratual)' : 'Simples · Hamburguês puro'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Σ Números Devedores</div>
+      <div class="mc-value" style="font-size:18px;color:var(--blue)">${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})}</div>
+      <div class="mc-sub">Σ (SD × dias) por período</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Taxa Diária Efetiva</div>
+      <div class="mc-value" style="font-size:20px">${fmtPct(r.iDiaria * 100, 4)}</div>
+      <div class="mc-sub">Conv. ${r.convencao} · ${fmtPct(r.taxaMensal)} a.m.</div>
+    </div>
+    ${r.usaIOF ? `
+    <div class="metric-card warn">
+      <div class="mc-label">IOF Total</div>
+      <div class="mc-value warn" style="font-size:20px">${fmtBRL(r.totalIOF)}</div>
+      <div class="mc-sub">Incide sobre SD diário</div>
+    </div>` : ''}
+    <div class="metric-card">
+      <div class="mc-label">Montante Final</div>
+      <div class="mc-value" style="font-size:18px;color:var(--text)">${fmtBRL(r.montante)}</div>
+      <div class="mc-sub">Principal + juros${r.usaIOF ? ' + IOF' : ''}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Custo Efetivo / Principal</div>
+      <div class="mc-value" style="font-size:18px;color:var(--amber)">${fmtPct(r.totalJuros / r.sd0 * 100)}</div>
+      <div class="mc-sub">% sobre o saldo inicial</div>
+    </div>`;
+
+  // ── Alerta legal ──
+  const alertSit = document.getElementById('alert-situacao');
+  if (r.capitaliza) {
+    alertSit.className = 'alert show alert-warn';
+    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> em vez de simples. Conforme STJ REsp 198.502/MT, a mera menção ao Método Hamburguês não autoriza capitalização — é necessária cláusula contratual expressa e previsão legal. O Método Hamburguês <em>puro</em> usa sempre juros simples: <em>J = i_diária × Σ(SD × dias)</em>.`;
+  } else {
+    alertSit.className = 'alert show alert-info';
+    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — em conformidade com a jurisprudência do STJ.`;
+  }
+
+  // ── Ocultar seções inapropriadas ──
+  document.getElementById('compare-section').style.display = 'none';
+  document.getElementById('antec-section').style.display   = 'none';
+
+  // ── Tabela números devedores ──
+  const amortSec = document.getElementById('amort-section');
+  amortSec.style.display = '';
+  amortSec.querySelector('.section-heading').innerHTML = 'Números Devedores — Tabela de Juros por Período';
+  document.getElementById('amort-tabs').style.display = 'none';
+
+  let html = `<table>
+    <thead><tr>
+      <th style="text-align:center">Per.</th>
+      <th>SD Inicial</th>
+      <th>Dias</th>
+      <th style="color:var(--blue)">Nº Devedor (SD×dias)</th>
+      <th style="color:var(--red)">Juros</th>
+      ${r.usaIOF ? '<th style="color:var(--amber)">IOF</th>' : ''}
+      <th>Evento</th>
+    </tr></thead><tbody>`;
+
+  r.linhas.forEach(l => {
+    const evCor  = l.tipo === 'credito' ? 'var(--green)' : 'var(--amber)';
+    const evSign = l.tipo === 'credito' ? '−' : '+';
+    html += `<tr>
+      <td>${l.periodo}</td>
+      <td class="td-highlight">${fmtBRL(l.sd)}</td>
+      <td>${l.dias}</td>
+      <td style="color:var(--blue)">${l.nd.toLocaleString('pt-BR',{maximumFractionDigits:2})}</td>
+      <td class="td-juros">${fmtBRL(l.juros)}</td>
+      ${r.usaIOF ? `<td style="color:var(--amber)">${fmtBRL(l.iof)}</td>` : ''}
+      <td style="color:${evCor}">${evSign} ${fmtBRL(l.valorEvento)} <span style="font-size:10px;opacity:.7">(${l.tipo})</span></td>
+    </tr>`;
+  });
+
+  // Linha de totais
+  html += `<tr style="border-top:2px solid var(--border2);background:var(--surface2)">
+    <td colspan="2" style="color:var(--text2);text-align:right;padding-right:8px;font-family:'Syne',sans-serif;font-size:11px;letter-spacing:.04em;text-transform:uppercase">TOTAL</td>
+    <td style="color:var(--text);font-weight:600">${r.totalDias}</td>
+    <td style="color:var(--blue);font-weight:600">${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})}</td>
+    <td style="color:var(--red);font-weight:600">${fmtBRL(r.totalJuros)}</td>
+    ${r.usaIOF ? `<td style="color:var(--amber);font-weight:600">${fmtBRL(r.totalIOF)}</td>` : ''}
+    <td></td>
+  </tr>`;
+
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ════════════════════════════════════════════
+//  CÁLCULO SACRE
+// ════════════════════════════════════════════
+function calcularSACRE() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  const pv         = parseBRL(document.getElementById('valor-liquido').value);
+  const n          = parseInt(document.getElementById('num-parcelas').value) || 0;
+  const taxaMensal = parseFloat(document.getElementById('taxa-nominal').value) || 0;
+  const trMensal   = parseFloat(document.getElementById('sacre-tr').value) || 0;
+  const B          = parseInt(document.getElementById('sacre-bloco').value) || 12;
+
+  if (!pv || pv <= 0)        { showAlert(alertEl, 'Informe o valor financiado.'); return; }
+  if (!n  || n  <= 0)        { showAlert(alertEl, 'Informe o prazo em meses.'); return; }
+  if (!taxaMensal || taxaMensal <= 0) { showAlert(alertEl, 'Informe a taxa mensal (campo "Taxa nominal informada").'); return; }
+  if (B < 1 || B > 60)       { showAlert(alertEl, 'Tamanho do bloco: entre 1 e 60 meses.'); return; }
+
+  const i  = taxaMensal / 100;
+  const tr = trMensal / 100;
+
+  const tabela = [];
+  let saldo = pv;
+  let prestacaoAtual = 0;
+  let blocoNum = 0;
+  let totalJuros = 0, totalAmort = 0, totalTR = 0;
+  let qtdAmortNeg = 0;
+
+  for (let m = 1; m <= n; m++) {
+    // 1. TR corrige saldo ANTES da amortização (Súmula 450/STJ)
+    const trCorr = saldo * tr;
+    saldo += trCorr;
+    totalTR += trCorr;
+
+    // 2. Recalcula prestação no início de cada bloco
+    const ehInicioBloco = ((m - 1) % B === 0);
+    if (ehInicioBloco) {
+      blocoNum++;
+      const prazoRest = n - (m - 1);
+      const amortBase  = saldo / prazoRest;
+      prestacaoAtual   = amortBase + saldo * i;
+    }
+
+    // 3. Decompõe prestação
+    const jurosMes = saldo * i;
+    const amortMes = prestacaoAtual - jurosMes;
+    const amortNeg = amortMes <= 0; // prestação < juros → amortização negativa
+
+    if (amortNeg) qtdAmortNeg++;
+
+    saldo = Math.max(0, saldo - amortMes);
+    totalJuros += jurosMes;
+    totalAmort += Math.max(0, amortMes);
+
+    tabela.push({ m, bloco: blocoNum, ehInicioBloco, jurosMes, amortMes, prestacao: prestacaoAtual, trCorr, saldo, amortNeg });
+  }
+
+  // Comparativo Price e SAC com mesmos parâmetros (sem TR para comparação pura)
+  const tabelaPrice = gerarTabelaPrice(pv, i, n);
+  const tabelaSAC   = gerarTabelaSAC(pv, i, n);
+
+  renderResultadosSACRE({
+    pv, n, taxaMensal, trMensal, B, i, tr,
+    totalJuros, totalAmort, totalTR,
+    montante: totalJuros + totalAmort,
+    tabela, qtdAmortNeg, tabelaPrice, tabelaSAC,
+  });
+}
+
+function renderResultadosSACRE(r) {
+  document.getElementById('empty-state').style.display  = 'none';
+  document.getElementById('results-area').style.display = '';
+
+  document.getElementById('res-titulo').textContent    = 'SACRE — Sistema de Amortização Crescente';
+  document.getElementById('res-subtitulo').textContent =
+    `${fmtBRL(r.pv)} · ${r.n} meses · ${fmtPct(r.taxaMensal)} a.m. · TR ${fmtPct(r.trMensal)} · blocos de ${r.B} meses`;
+
+  const pmt1 = r.tabela[0]?.prestacao || 0;
+  const pmtN = r.tabela[r.tabela.length - 1]?.prestacao || 0;
+
+  // ── Métricas ──
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card highlight">
+      <div class="mc-label">Total de Juros</div>
+      <div class="mc-value accent" style="font-size:20px">${fmtBRL(r.totalJuros)}</div>
+      <div class="mc-sub">${fmtPct(r.totalJuros / r.pv * 100)} do principal</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Correção TR Total</div>
+      <div class="mc-value" style="font-size:18px;color:var(--blue)">${fmtBRL(r.totalTR)}</div>
+      <div class="mc-sub">Aplicada mensal antes da amort.</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Montante Pago</div>
+      <div class="mc-value" style="font-size:18px;color:var(--text)">${fmtBRL(r.montante + r.totalTR)}</div>
+      <div class="mc-sub">Amortizações + juros + TR</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">1ª Prestação (Bloco 1)</div>
+      <div class="mc-value" style="font-size:18px">${fmtBRL(pmt1)}</div>
+      <div class="mc-sub">Decresce ao longo do contrato</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Última Prestação</div>
+      <div class="mc-value" style="font-size:18px">${fmtBRL(pmtN)}</div>
+      <div class="mc-sub">Parcela mais baixa do contrato</div>
+    </div>
+    ${r.qtdAmortNeg > 0 ? `
+    <div class="metric-card danger">
+      <div class="mc-label">Amortização Negativa</div>
+      <div class="mc-value danger">${r.qtdAmortNeg} mês(es)</div>
+      <div class="mc-sub">Prestação &lt; juros → risco jurídico</div>
+    </div>` : `
+    <div class="metric-card good">
+      <div class="mc-label">Amortização Negativa</div>
+      <div class="mc-value good">Nenhuma</div>
+      <div class="mc-sub">Saldo sempre decrescente</div>
+    </div>`}`;
+
+  // ── Alerta situação ──
+  const alertSit = document.getElementById('alert-situacao');
+  if (r.qtdAmortNeg > 0) {
+    alertSit.className = 'alert show alert-danger';
+    alertSit.innerHTML = `<strong>⚠ Amortização negativa detectada em ${r.qtdAmortNeg} mês(es).</strong> A prestação é menor que os juros do período, fazendo o saldo devedor crescer. Isso pode configurar anatocismo (juros sobre juros) e é objeto de discussão nos tribunais. Verifique a taxa e os parâmetros informados.`;
+  } else if (r.trMensal > 0) {
+    alertSit.className = 'alert show alert-info';
+    alertSit.innerHTML = `<strong>ℹ SACRE com TR mensal de ${fmtPct(r.trMensal)}.</strong> A TR foi aplicada mensalmente sobre o saldo devedor <em>antes</em> da amortização, conforme Súmula 450/STJ. Nenhuma amortização negativa detectada com os parâmetros informados.`;
+  } else {
+    alertSit.className = 'alert show alert-success';
+    alertSit.innerHTML = `<strong>✓ SACRE sem correção monetária.</strong> A prestação decresce em degraus a cada bloco de ${r.B} meses, com amortização crescente. Compare com SAC (parcela decrescente contínua) e Price (parcela fixa) usando a tabela abaixo.`;
+  }
+
+  // ── Ocultar seções inapropriadas ──
+  document.getElementById('compare-section').style.display = 'none';
+  document.getElementById('antec-section').style.display   = 'none';
+
+  // ── Tabela SACRE ──
+  const amortSec = document.getElementById('amort-section');
+  amortSec.style.display = '';
+  amortSec.querySelector('.section-heading').innerHTML = 'Tabela de Amortização SACRE — por Mês';
+
+  // Tabs: SACRE / Price / SAC comparativo
+  document.getElementById('amort-tabs').style.display = '';
+  document.getElementById('amort-tabs').innerHTML = `
+    <button class="amort-tab active" onclick="renderTabelaSacreMode('sacre', this)">SACRE</button>
+    <button class="amort-tab" onclick="renderTabelaSacreMode('price', this)">Price</button>
+    <button class="amort-tab" onclick="renderTabelaSacreMode('sac', this)">SAC</button>`;
+
+  // Armazena dados para as tabs
+  window._sacreData = r;
+  renderTabelaSacreMode('sacre', document.querySelector('#amort-tabs .amort-tab'));
+
+  // Gráfico comparativo de prestações
+  renderGraficoSACRE(r);
+
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderTabelaSacreMode(modo, btn) {
+  if (btn) {
+    document.querySelectorAll('#amort-tabs .amort-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const r = window._sacreData;
+  if (!r) return;
+
+  if (modo === 'price') {
+    // Reutiliza renderTabela padrão com tabelaPrice
+    let html = `<table><thead><tr>
+      <th>#</th><th>Parcela</th>
+      <th style="color:var(--red)">Juros</th>
+      <th style="color:var(--green)">Amortização</th>
+      <th>Saldo Devedor</th>
+    </tr></thead><tbody>`;
+    r.tabelaPrice.forEach(row => {
+      html += `<tr><td>${row.parc}</td><td class="td-highlight">${fmtBRL(row.pmt)}</td>
+        <td class="td-juros">${fmtBRL(row.juros)}</td>
+        <td class="td-amort">${fmtBRL(row.amort)}</td>
+        <td class="td-saldo">${fmtBRL(row.saldo)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('table-wrap').innerHTML = html;
+    return;
+  }
+
+  if (modo === 'sac') {
+    let html = `<table><thead><tr>
+      <th>#</th><th>Parcela</th>
+      <th style="color:var(--red)">Juros</th>
+      <th style="color:var(--green)">Amortização</th>
+      <th>Saldo Devedor</th>
+    </tr></thead><tbody>`;
+    r.tabelaSAC.forEach(row => {
+      html += `<tr><td>${row.parc}</td><td class="td-highlight">${fmtBRL(row.pmt)}</td>
+        <td class="td-juros">${fmtBRL(row.juros)}</td>
+        <td class="td-amort">${fmtBRL(row.amort)}</td>
+        <td class="td-saldo">${fmtBRL(row.saldo)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('table-wrap').innerHTML = html;
+    return;
+  }
+
+  // Modo SACRE
+  let html = `<table><thead><tr>
+    <th style="text-align:center">#</th>
+    <th>Bloco</th>
+    <th>Prestação</th>
+    <th style="color:var(--red)">Juros</th>
+    <th style="color:var(--green)">Amortização</th>
+    <th style="color:var(--blue)">TR</th>
+    <th>Saldo Devedor</th>
+  </tr></thead><tbody>`;
+
+  r.tabela.forEach(row => {
+    const rowCls  = row.ehInicioBloco ? ' class="sacre-bloco-start"' : '';
+    const amortCor = row.amortNeg ? 'color:var(--red)' : 'color:var(--green)';
+    const negMark  = row.amortNeg ? ' ⚠' : '';
+    html += `<tr${rowCls}>
+      <td>${row.m}</td>
+      <td style="color:var(--accent);font-size:10px;font-family:'DM Mono',monospace">${row.ehInicioBloco ? 'Bloco ' + row.bloco : ''}</td>
+      <td class="td-highlight">${fmtBRL(row.prestacao)}</td>
+      <td class="td-juros">${fmtBRL(row.jurosMes)}</td>
+      <td style="${amortCor}">${fmtBRL(row.amortMes)}${negMark}</td>
+      <td style="color:var(--blue)">${r.trMensal > 0 ? fmtBRL(row.trCorr) : '—'}</td>
+      <td class="td-saldo">${fmtBRL(row.saldo)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+}
+
+function renderGraficoSACRE(r) {
+  // Injeta seção de gráfico comparativo após a tabela
+  const amortSec = document.getElementById('amort-section');
+  let grafDiv = document.getElementById('grafico-sacre-section');
+  if (!grafDiv) {
+    grafDiv = document.createElement('div');
+    grafDiv.id = 'grafico-sacre-section';
+    grafDiv.className = 'amort-section animate-in delay-4';
+    grafDiv.innerHTML = `
+      <div class="section-heading">Evolução da Prestação — SACRE vs SAC vs Price</div>
+      <div style="position:relative">
+        <canvas id="grafico-sacre-canvas" style="width:100%;height:240px;display:block;border-radius:8px"></canvas>
+        <div id="grafico-sacre-tooltip" style="display:none;position:absolute;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;pointer-events:none;z-index:10;min-width:160px"></div>
+      </div>`;
+    amortSec.insertAdjacentElement('afterend', grafDiv);
+  }
+
+  setTimeout(() => {
+    const canvas = document.getElementById('grafico-sacre-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth, H = canvas.offsetHeight;
+    if (!W || !H) return;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 16, right: 20, bottom: 36, left: 76 };
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+
+    const sacreData  = r.tabela.map(t => t.prestacao);
+    const priceData  = r.tabelaPrice.map(t => t.pmt);
+    const sacData    = r.tabelaSAC.map(t => t.pmt);
+    const maxVal     = Math.max(...priceData, ...sacData, ...sacreData) * 1.08;
+    const xS = i => pad.left + (i / (r.n - 1)) * cW;
+    const yS = v => pad.top + cH - (v / maxVal) * cH;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 4; g++) {
+      const yy = pad.top + (g / 4) * cH;
+      ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + cW, yy); ctx.stroke();
+      ctx.fillStyle = 'rgba(138,136,128,0.6)';
+      ctx.font = '10px DM Mono, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(fmtBRL(maxVal * (1 - g / 4)).replace('R$ ','R$'), pad.left - 4, yy + 4);
+    }
+
+    // Marcação de blocos SACRE (linhas verticais tênues)
+    ctx.strokeStyle = 'rgba(212,240,60,0.1)';
+    ctx.lineWidth = 1;
+    for (let b = 0; b < r.n; b += r.B) {
+      const xb = xS(b);
+      ctx.beginPath(); ctx.moveTo(xb, pad.top); ctx.lineTo(xb, pad.top + cH); ctx.stroke();
+    }
+
+    // Linhas dos 3 métodos
+    const series = [
+      { data: priceData, color: '#8a8880', label: 'Price', dash: [4,3] },
+      { data: sacData,   color: '#4cde8a', label: 'SAC',   dash: [] },
+      { data: sacreData, color: '#d4f03c', label: 'SACRE', dash: [] },
+    ];
+    series.forEach(s => {
+      ctx.beginPath();
+      s.data.forEach((v, i) => i === 0 ? ctx.moveTo(xS(i), yS(v)) : ctx.lineTo(xS(i), yS(v)));
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.label === 'SACRE' ? 2.5 : 1.5;
+      if (s.dash.length) ctx.setLineDash(s.dash);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Eixo X
+    ctx.fillStyle = 'rgba(84,82,80,0.8)'; ctx.font = '9px DM Mono, monospace'; ctx.textAlign = 'center';
+    const step = Math.ceil(r.n / 8);
+    for (let k = 0; k < r.n; k++) {
+      if (k % step === 0 || k === r.n - 1) ctx.fillText((k + 1) + 'ª', xS(k), pad.top + cH + 14);
+    }
+
+    // Legenda
+    let lx = pad.left;
+    series.forEach(s => {
+      ctx.beginPath();
+      if (s.dash.length) ctx.setLineDash(s.dash);
+      ctx.moveTo(lx, pad.top + cH + 28); ctx.lineTo(lx + 18, pad.top + cH + 28);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(154,152,148,0.9)'; ctx.font = '9px DM Mono, monospace'; ctx.textAlign = 'left';
+      ctx.fillText(s.label, lx + 22, pad.top + cH + 32);
+      lx += s.label.length * 7 + 30;
+    });
+
+    // Tooltip
+    canvas.onmousemove = function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const idx = Math.round((mx - pad.left) / cW * (r.n - 1));
+      if (idx < 0 || idx >= r.n) { document.getElementById('grafico-sacre-tooltip').style.display = 'none'; return; }
+      const tip = document.getElementById('grafico-sacre-tooltip');
+      tip.style.display = 'block';
+      tip.style.left = Math.min(mx + 10, W - 170) + 'px';
+      tip.style.top  = (e.clientY - rect.top - 80) + 'px';
+      tip.innerHTML  = `<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text)">Mês ${idx + 1}</div>
+        <div style="font-size:10px;color:var(--accent)">SACRE: ${fmtBRL(sacreData[idx])}</div>
+        <div style="font-size:10px;color:var(--green)">SAC: ${fmtBRL(sacData[idx])}</div>
+        <div style="font-size:10px;color:var(--text2)">Price: ${fmtBRL(priceData[idx])}</div>`;
+    };
+    canvas.onmouseleave = () => { document.getElementById('grafico-sacre-tooltip').style.display = 'none'; };
+  }, 80);
+}
+
+// ════════════════════════════════════════════
+//  DISPATCH: Hamburguês / SACRE antes do TIR
+// ════════════════════════════════════════════
+(function patchEspeciais() {
+  const orig = window.calcular;
+  window.calcular = function() {
+    const s = document.getElementById('sistema-amort')?.value;
+    if (document.getElementById('mode-simular')?.style.display !== 'none') {
+      if (s === 'hamburguês') { calcularHamburguês(); return; }
+      if (s === 'sacre')      { calcularSACRE();      return; }
+    }
+    orig();
+    // Após calcular Price/SAC: restaurar seções que Hamburguês/SACRE ocultam
+    document.getElementById('compare-section').style.display = '';
+    document.getElementById('antec-section').style.display   = '';
+    document.getElementById('amort-tabs').style.display = '';
+    // Restaura heading da tabela
+    const h = document.querySelector('#amort-section .section-heading');
+    if (h) h.textContent = 'Tabela de Amortização';
+  };
 })();
 
 // ════════════════════════════════════════════
