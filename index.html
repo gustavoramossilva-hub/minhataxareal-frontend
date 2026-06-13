@@ -99,7 +99,8 @@ section{position:relative;z-index:1}
 
 /* FEATURES */
 .features{padding:100px 0}
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
+.features-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:60px}
+.feat-premium-badge{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--adim2);color:var(--accent);border:1px solid rgba(212,240,60,.3);padding:3px 10px;border-radius:99px;margin-bottom:14px}
 .feat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .2s;text-decoration:none;color:var(--text);display:block}
 .feat-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .feat-card.featured{border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface))}
@@ -163,6 +164,9 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
   .pricing-grid{grid-template-columns:1fr}
   .section-inner{padding:0 24px}
   .footer-inner{flex-direction:column;text-align:center}
+}
+@media(max-width:900px) and (min-width:769px){
+  .features-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -285,13 +289,28 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
         <h3 class="feat-name">Simulador de Taxa Real</h3>
         <p class="feat-desc">Calcule a taxa efetiva (TIR) de qualquer financiamento Price ou SAC. Compare com a média BCB. Veja tabela de amortização completa e gráfico de evolução da dívida.</p>
         <div class="feat-tags">
-          <span class="feat-tag">Price / SAC</span>
+          <span class="feat-tag">Price / SAC / Hamburguês / SACRE</span>
           <span class="feat-tag">Gráfico</span>
           <span class="feat-tag">BCB comparativo</span>
           <span class="feat-tag">Export PDF</span>
         </div>
       </a>
-      <a href="auth.html" class="feat-card reveal" style="transition-delay:.1s">
+      <a href="auth.html" class="feat-card reveal" style="border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface));transition-delay:.1s">
+        <div class="feat-premium-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Premium
+        </div>
+        <div class="feat-icon">⚖️</div>
+        <h3 class="feat-name">Apuração de Inadimplência</h3>
+        <p class="feat-desc">Calcule o valor atualizado de um contrato em atraso com integração à série histórica real do Banco Central. Compara os valores aplicados com o parâmetro de referência e a taxa média de mercado, mês a mês.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Série histórica BCB</span>
+          <span class="feat-tag">3 cenários</span>
+          <span class="feat-tag">IPCA / INPC / SELIC / TR</span>
+          <span class="feat-tag">PDF completo</span>
+        </div>
+      </a>
+      <a href="auth.html" class="feat-card reveal" style="transition-delay:.2s">
         <div class="feat-icon">💰</div>
         <h3 class="feat-name">Gestão Financeira</h3>
         <p class="feat-desc">Organize receitas e despesas, acompanhe seu fluxo de caixa mensal e visualize sua saúde financeira com gráficos intuitivos.</p>
@@ -301,10 +320,10 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
           <span class="feat-tag">Relatórios</span>
         </div>
       </a>
-      <div class="feat-card feat-soon reveal" style="transition-delay:.2s">
+      <div class="feat-card feat-soon reveal" style="transition-delay:.3s">
         <div class="feat-icon">🔄</div>
         <h3 class="feat-name">Portabilidade de Crédito</h3>
-        <p class="feat-desc">Compare a taxa do seu contrato atual com propostas de outros bancos. Calcule a economia real em reais ao longo do contrato.</p>
+        <p class="feat-desc">Compare a taxa do seu contrato atual com propostas de outros bancos. Calcule a diferença em reais ao longo do contrato.</p>
         <span class="feat-soon-badge">Em breve</span>
       </div>
     </div>
@@ -320,43 +339,52 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
       <p class="section-sub" style="margin:0 auto;text-align:center">Ativação única para começar com 30 dias de acesso. Assine mensalmente para continuar usando e ter sempre os dados mais recentes do Banco Central.</p>
     </div>
     <div class="pricing-grid">
+      <!-- Standard -->
       <div class="price-card reveal">
-        <div class="price-label">Acesso 30 dias</div>
-        <div class="price-val"><sup>R$</sup>49<span style="font-size:24px">,99</span></div>
-        <div class="price-period">pagamento único · 30 dias de acesso</div>
+        <div class="price-label">Standard</div>
+        <div style="margin-bottom:20px">
+          <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Ativação única</div>
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);line-height:1">R$ 49,99</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">+ R$ 19,90/mês para continuar</div>
+          </div>
+        </div>
         <ul class="price-items">
-          <li>Acesso ao Simulador de Taxa Real</li>
-          <li>Acesso à Gestão Financeira</li>
-          <li>Tabela de amortização Price e SAC</li>
-          <li>Exportação em PDF</li>
+          <li>Simulador de taxa real (TIR) com comparativo Bacen</li>
+          <li>Auditoria de contrato com saldo devedor atualizado</li>
+          <li>Sistemas Price, SAC, Hamburguês e SACRE</li>
+          <li>Relatório PDF com resultados e tabela de amortização resumida</li>
+          <li>Histórico de operações</li>
           <li>7 dias de garantia — reembolso total</li>
         </ul>
-        <a href="https://pay.kiwify.com.br/VISiBG7" class="price-cta secondary">Começar por R$ 49,99</a>
+        <a href="https://pay.kiwify.com.br/5QNQifx" class="price-cta secondary">Assinar Standard</a>
       </div>
+
+      <!-- Premium -->
       <div class="price-card featured reveal" style="transition-delay:.1s">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <div class="price-label" style="margin-bottom:0">Assinatura mensal</div>
-          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:#d4f03c;color:#0a0b0d;font-weight:600;padding:3px 10px;border-radius:99px">🏷 Lançamento</span>
+          <div class="price-label" style="margin-bottom:0">Premium</div>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:#d4f03c;color:#0a0b0d;font-weight:700;padding:3px 10px;border-radius:99px">Recomendado para profissionais</span>
         </div>
-        <div class="price-val"><sup>R$</sup>19<span style="font-size:24px">,90</span><span style="font-size:14px;color:var(--text2)">/mês</span></div>
-        <div style="background:rgba(212,240,60,0.08);border:1px solid rgba(212,240,60,0.2);border-radius:8px;padding:10px 14px;margin:10px 0 20px">
-          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:500">R$ 49,99</span>
-          <span style="font-size:12px;color:var(--text2)"> ativação</span>
-          <span style="font-size:12px;color:var(--text3);margin:0 4px">+</span>
-          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:500">R$ 19,90/mês</span>
-          <span style="font-size:12px;color:var(--text2)"> para continuar</span>
+        <div style="margin-bottom:20px">
+          <div style="background:var(--adim);border:1px solid rgba(212,240,60,.2);border-radius:8px;padding:10px 14px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Ativação única</div>
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--accent);line-height:1">R$ 69,90</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid rgba(212,240,60,.15)">+ R$ 39,90/mês (promocional)</div>
+          </div>
         </div>
         <ul class="price-items">
-          <li>Tudo do plano básico</li>
-          <li>Acesso contínuo sem interrupção</li>
-          <li>Taxas BCB atualizadas todo mês</li>
-          <li>Novas ferramentas assim que lançadas</li>
+          <li>Tudo do plano Standard</li>
+          <li>Apuração de Inadimplência com integração à série histórica do Banco Central (SGS)</li>
+          <li>Comparativo entre valores aplicados, parâmetro de referência e taxa média de mercado, mês a mês</li>
+          <li>PDF completo: comparativo de taxas (contratada vs. efetiva vs. Bacen) + tabela de amortização integral</li>
+          <li>Indicado para peritos, advogados e profissionais de análise financeira</li>
           <li>7 dias de garantia — reembolso total</li>
         </ul>
-        <a href="https://pay.kiwify.com.br/5QNQifx" class="price-cta primary">Assinar agora →</a>
+        <a href="https://pay.kiwify.com.br/1xAQ6ev" class="price-cta primary">Assinar Premium →</a>
       </div>
     </div>
-    <p class="price-note reveal">Pagamento processado com segurança pela Kiwify. Cancele quando quiser. Garantia de 7 dias conforme o Código de Defesa do Consumidor.</p>
+    <p class="price-note reveal">Pagamento processado com segurança pela Kiwify. Cancele quando quiser. Garantia de 7 dias.</p>
   </div>
 </section>
 
