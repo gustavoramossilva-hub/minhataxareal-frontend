@@ -877,6 +877,53 @@
     <!-- ══ MODO INADIMPLÊNCIA ══ -->
     <div id="mode-inadimplencia" style="display:none">
 
+      <p class="panel-title" style="margin-bottom:14px">Dados do Contrato Original <span class="form-hint">opcional</span></p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+        <div>
+          <label class="form-label">Valor financiado <span class="form-hint">R$</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="inad2-valor" placeholder="50.000,00" oninput="maskCurrency(this);atualizarIndicadorContrato()" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Nº total de parcelas</label>
+          <input type="number" id="inad2-parcelas" placeholder="36" min="1" step="1" style="width:100%" oninput="atualizarIndicadorContrato()" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+        <div>
+          <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="inad2-parcela-val" placeholder="1.750,00" oninput="maskCurrency(this);atualizarIndicadorContrato()" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Parcelas já pagas</label>
+          <input type="number" id="inad2-pagas" placeholder="5" min="0" step="1" style="width:100%" oninput="atualizarIndicadorContrato()" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Sistema de amortização</label>
+        <select id="inad2-sistema" onchange="atualizarIndicadorContrato()">
+          <option value="price">Tabela Price (parcelas fixas)</option>
+          <option value="sac">SAC (amortização constante)</option>
+        </select>
+      </div>
+
+      <div id="inad2-indicador" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text2)">
+        Taxa implícita: <strong id="inad2-taxa-label" style="color:var(--accent)">—</strong>
+        &nbsp;·&nbsp;
+        Saldo devedor ao inadimplir: <strong id="inad2-saldo-label" style="color:var(--text)">—</strong>
+      </div>
+
+      <hr class="form-divider">
+      <p class="panel-title" style="margin-bottom:14px">Período de Inadimplência</p>
+
       <div class="form-group">
         <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
         <select id="inad-modalidade">
@@ -3193,8 +3240,74 @@ function toggleIndiceFixo() {
   if (sec) sec.style.display = val === 'fixo' ? '' : 'none';
 }
 
+function atualizarIndicadorContrato() {
+  const valor   = parseBRL(document.getElementById('inad2-valor')?.value || '');
+  const n       = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
+  const pmt     = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
+  const pagasRaw = document.getElementById('inad2-pagas')?.value;
+  const pagas   = pagasRaw !== '' && pagasRaw !== null && pagasRaw !== undefined ? parseInt(pagasRaw) : NaN;
+  const sistema = document.getElementById('inad2-sistema')?.value || 'price';
+
+  const indicador  = document.getElementById('inad2-indicador');
+  const taxaLabel  = document.getElementById('inad2-taxa-label');
+  const saldoLabel = document.getElementById('inad2-saldo-label');
+  const principalEl = document.getElementById('inad-principal');
+
+  if (!valor || !n || !pmt || isNaN(pagas)) {
+    if (indicador) indicador.style.display = 'none';
+    if (principalEl && principalEl.dataset.autoFill === '1') {
+      principalEl.value = '';
+      delete principalEl.dataset.autoFill;
+      principalEl.readOnly = false;
+      principalEl.style.opacity = '';
+      principalEl.title = '';
+    }
+    return;
+  }
+
+  const taxa = sistema === 'sac'
+    ? calcularTIR_SAC(valor, n, pmt)
+    : calcularTIR(valor, n, pmt);
+
+  if (!taxa || isNaN(taxa)) {
+    if (indicador) indicador.style.display = 'none';
+    return;
+  }
+
+  const tabela = sistema === 'sac' ? gerarTabelaSAC(valor, taxa, n) : gerarTabelaPrice(valor, taxa, n);
+  const saldo  = pagas === 0 ? valor : (tabela[pagas - 1]?.saldo ?? valor);
+
+  if (indicador) indicador.style.display = '';
+  if (taxaLabel)  taxaLabel.textContent  = fmtPct(taxa * 100) + ' a.m.';
+  if (saldoLabel) saldoLabel.textContent = fmtBRL(saldo);
+
+  if (principalEl) {
+    principalEl.value = saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    principalEl.dataset.autoFill = '1';
+    principalEl.readOnly = true;
+    principalEl.style.opacity = '0.7';
+    principalEl.title = 'Calculado automaticamente a partir dos dados do contrato original';
+  }
+}
+
 function limparInadimplencia() {
-  document.getElementById('inad-principal').value = '';
+  // Contrato original
+  ['inad2-valor','inad2-parcelas','inad2-parcela-val','inad2-pagas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('inad2-sistema').value = 'price';
+  const indEl = document.getElementById('inad2-indicador');
+  if (indEl) indEl.style.display = 'none';
+  // Período
+  const principalEl = document.getElementById('inad-principal');
+  if (principalEl) {
+    principalEl.value = '';
+    principalEl.readOnly = false;
+    principalEl.style.opacity = '';
+    principalEl.title = '';
+    delete principalEl.dataset.autoFill;
+  }
   document.getElementById('inad-vencimento').value = '';
   document.getElementById('inad-apuracao').value  = new Date().toISOString().slice(0, 10);
   document.getElementById('inad-multa').value      = '2';
@@ -3271,6 +3384,13 @@ async function calcularInadimplencia() {
   const outros     = parseBRL(document.getElementById('inad-outros')?.value || '');
   const modalidade = document.getElementById('inad-modalidade')?.value || 'pessoal';
 
+  const inad2Valor  = parseBRL(document.getElementById('inad2-valor')?.value || '');
+  const inad2Parc   = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
+  const inad2Pmt    = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
+  const inad2PagasRaw = document.getElementById('inad2-pagas')?.value;
+  const inad2Pagas  = (inad2PagasRaw !== '' && inad2PagasRaw != null) ? parseInt(inad2PagasRaw) : NaN;
+  const inad2Sistema = document.getElementById('inad2-sistema')?.value || 'price';
+
   if (!principal || principal <= 0) { showAlert(alertEl, 'Informe o saldo principal.'); return; }
   if (!vencimento)  { showAlert(alertEl, 'Informe a data do vencimento.'); return; }
   if (!apuracao)    { showAlert(alertEl, 'Informe a data de apuração.'); return; }
@@ -3298,6 +3418,28 @@ async function calcularInadimplencia() {
                     : serieParaMap(serieIndice);
     const mapIPCA   = serieParaMap(serieIPCA);
     const mapBCB    = serieParaMap(serieBCB);
+
+    let contratoOriginal = null;
+    if (inad2Valor > 0 && inad2Parc > 0 && inad2Pmt > 0 && !isNaN(inad2Pagas)) {
+      const inad2Taxa = inad2Sistema === 'sac'
+        ? calcularTIR_SAC(inad2Valor, inad2Parc, inad2Pmt)
+        : calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
+      if (inad2Taxa && !isNaN(inad2Taxa)) {
+        const tabelaCompleta = inad2Sistema === 'sac'
+          ? gerarTabelaSAC(inad2Valor, inad2Taxa, inad2Parc)
+          : gerarTabelaPrice(inad2Valor, inad2Taxa, inad2Parc);
+        const saldoInicio = inad2Pagas === 0 ? inad2Valor : (tabelaCompleta[inad2Pagas - 1]?.saldo ?? inad2Valor);
+        const fluxoRemanescente = tabelaCompleta.slice(inad2Pagas);
+        contratoOriginal = {
+          valor: inad2Valor, parcelas: inad2Parc, parcela: inad2Pmt,
+          pagas: inad2Pagas, sistema: inad2Sistema,
+          taxa: inad2Taxa, tabelaCompleta, saldoInicio, fluxoRemanescente,
+          totalPmtRem:   fluxoRemanescente.reduce((s, r) => s + r.pmt,   0),
+          totalJurosRem: fluxoRemanescente.reduce((s, r) => s + r.juros, 0),
+          totalAmortRem: fluxoRemanescente.reduce((s, r) => s + r.amort, 0),
+        };
+      }
+    }
 
     // Cenário CREDOR
     let saldoC = principal * (1 + multaP / 100);
@@ -3358,6 +3500,16 @@ async function calcularInadimplencia() {
     const multaC = principal * (multaP / 100);
     const multaR = principal * 0.02;
 
+    const nMeses = meses.length;
+    let taxaEfetivaPeriodo = null, taxaMediaBCBPeriodo = null, diferencaPeriodo = null;
+    if (contratoOriginal && nMeses > 0 && principal > 0) {
+      const totalCfinal = saldoC + outros;
+      taxaEfetivaPeriodo = Math.pow(totalCfinal / principal, 1 / nMeses) - 1;
+      const taxasBCB = meses.map(m => m.key in mapBCB ? mapBCB[m.key] : BACEN[modalidade].taxaMes);
+      taxaMediaBCBPeriodo = taxasBCB.reduce((a, b) => a + b, 0) / taxasBCB.length;
+      diferencaPeriodo = taxaEfetivaPeriodo * 100 - taxaMediaBCBPeriodo;
+    }
+
     const indiceNomes = { ipca: 'IPCA', inpc: 'INPC', selic: 'SELIC', tr: 'TR',
                           fixo: `Taxa fixa (${fmtPct(taxaFixaP)} a.m.)` };
     const d = {
@@ -3370,6 +3522,7 @@ async function calcularInadimplencia() {
       linhasMes, mesesSemDado,
       indiceNome:    indiceNomes[indiceKey] || indiceKey,
       modalidadeNome: BACEN[modalidade]?.nome || modalidade,
+      contratoOriginal, taxaEfetivaPeriodo, taxaMediaBCBPeriodo, diferencaPeriodo,
     };
 
     window._inadState = d;
@@ -3411,6 +3564,29 @@ function renderResultadosInadimplencia(d) {
 
     ${d.mesesSemDado > 0 ? `<div class="alert show alert-warn" style="margin-bottom:16px">
       ⚠ ${d.mesesSemDado} mês(es) sem dado disponível no BCB para o índice "${d.indiceNome}" — 0% utilizado nesses períodos.
+    </div>` : ''}
+
+    ${d.taxaEfetivaPeriodo !== null ? `
+    <!-- Taxa efetiva no período -->
+    <div class="amort-section animate-in" style="margin-bottom:20px">
+      <div class="section-heading">Taxa Efetiva no Período de Inadimplência</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:12px">
+        <div class="metric-card danger">
+          <div class="mc-label">Taxa efetiva apurada no período</div>
+          <div class="mc-value danger" style="font-size:18px">${fmtPct(d.taxaEfetivaPeriodo * 100)} a.m.</div>
+          <div class="mc-sub">${fmtPct((Math.pow(1 + d.taxaEfetivaPeriodo, 12) - 1) * 100)} a.a.</div>
+        </div>
+        <div class="metric-card warn">
+          <div class="mc-label">Taxa média Bacen no período</div>
+          <div class="mc-value warn" style="font-size:18px">${fmtPct(d.taxaMediaBCBPeriodo)} a.m.</div>
+          <div class="mc-sub">${fmtPct((Math.pow(1 + d.taxaMediaBCBPeriodo / 100, 12) - 1) * 100)} a.a.</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Diferença</div>
+          <div class="mc-value" style="font-size:18px;color:${d.diferencaPeriodo > 1 ? 'var(--red)' : d.diferencaPeriodo > 0 ? 'var(--amber)' : 'var(--green)'}">${d.diferencaPeriodo >= 0 ? '+' : ''}${fmtPct(d.diferencaPeriodo)} p.p. a.m.</div>
+          <div class="mc-sub">${d.diferencaPeriodo <= 0 ? 'Dentro da média BCB' : 'Diferença de ' + fmtPct(Math.abs(d.diferencaPeriodo)) + ' p.p.'}</div>
+        </div>
+      </div>
     </div>` : ''}
 
     <!-- Quadro comparativo -->
@@ -3492,6 +3668,37 @@ function renderResultadosInadimplencia(d) {
         </table>
       </div>
     </div>
+
+    ${d.contratoOriginal ? `
+    <!-- Fluxo de amortização remanescente -->
+    <div class="amort-section animate-in delay-4">
+      <div class="section-heading">Fluxo de Amortização Remanescente — Cenário Original</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        Cronograma previsto a partir da parcela ${d.contratoOriginal.pagas + 1}, caso o contrato seguisse normalmente
+        (${d.contratoOriginal.sistema.toUpperCase()} · taxa ${fmtPct(d.contratoOriginal.taxa * 100)} a.m.):
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Parcela</th><th>Valor</th><th style="color:var(--red)">Juros</th><th>Amortização</th><th class="td-highlight">Saldo</th>
+          </tr></thead>
+          <tbody>
+            ${d.contratoOriginal.fluxoRemanescente.map(r => `<tr>
+              <td>${r.parc}</td>
+              <td>${fmtBRL(r.pmt)}</td>
+              <td class="td-juros">${fmtBRL(r.juros)}</td>
+              <td>${fmtBRL(r.amort)}</td>
+              <td class="td-highlight">${fmtBRL(r.saldo)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-top:10px;font-family:'DM Mono',monospace">
+        Total previsto: ${fmtBRL(d.contratoOriginal.totalPmtRem)} em ${d.contratoOriginal.fluxoRemanescente.length} parcela(s)
+        &nbsp;·&nbsp; juros: ${fmtBRL(d.contratoOriginal.totalJurosRem)}
+        &nbsp;·&nbsp; amortização: ${fmtBRL(d.contratoOriginal.totalAmortRem)}
+      </p>
+    </div>` : ''}
 
     <div class="disclaimer">
       Esta apuração é baseada em séries históricas do Banco Central do Brasil (SGS) e parâmetros informados pelo usuário. Os resultados têm finalidade exclusivamente técnica e informativa, e devem ser validados por profissional habilitado antes de qualquer uso formal.
@@ -3659,68 +3866,173 @@ function gerarPDFInadimplencia() {
     rowCnt++;
   });
 
-  // ── Seção 4 (Premium): Dados do Contrato Original ──
-  const tabelaContrato = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
-  if (tabelaContrato && tabelaContrato.length > 0) {
-    y = novaPagina();
+  // ── Seções 4-6: Contrato Original (quando informado no formulário) ──
+  if (d.contratoOriginal) {
+    const co = d.contratoOriginal;
 
+    if (y > 220) y = novaPagina();
     doc.setFillColor(212, 240, 60);
     doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(14, 15, 17);
     doc.text('4. DADOS DO CONTRATO ORIGINAL', lm + 3, y + 5);
     y += 11;
 
-    const bacenC  = BACEN[state.modalidade] || {};
-    const dadosC  = [
-      ['Principal',         fmtBRL(state.valorLiquido)],
-      ['Prazo',             (state.numParcelas || '?') + ' meses'],
-      ['Sistema',           (state.sistema || '?').toUpperCase()],
-      ['Taxa efetiva (TIR)',fmtPct((state.taxaCalculada || 0) * 100) + ' a.m.'],
-      ['Taxa média Bacen',  fmtPct(bacenC.taxaMes || 0) + ' a.m. — ' + (bacenC.nome || state.modalidade)],
+    const bacenRef = BACEN[d.modalidade] || {};
+    const dadosC4 = [
+      ['Valor financiado',     fmtBRL(co.valor)],
+      ['Nº de parcelas',       co.parcelas + ' parcelas · ' + co.pagas + ' pagas'],
+      ['Sistema',              co.sistema.toUpperCase()],
+      ['Taxa implícita (TIR)', fmtPct(co.taxa * 100) + ' a.m.'],
+      ['Saldo ao inadimplir',  fmtBRL(co.saldoInicio)],
+      ['Taxa média Bacen ref.',fmtPct(bacenRef.taxaMes || 0) + ' a.m. — ' + (bacenRef.nome || d.modalidade)],
     ];
     doc.setFontSize(9); doc.setTextColor(60, 60, 60);
-    dadosC.forEach(([k, v]) => {
+    dadosC4.forEach(([k, v]) => {
       doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 2, y);
       doc.setFont('helvetica', 'normal'); doc.text(v,       lm + 70, y);
       y += 6;
     });
     y += 8;
 
-    // Tabela de amortização completa paginada
-    doc.setFillColor(240, 240, 240);
-    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
-    doc.text('5. TABELA DE AMORTIZAÇÃO DO CONTRATO ORIGINAL — ' + (state.sistema || '').toUpperCase(), lm + 3, y + 5);
-    y += 11;
+    // ── Seção 5: Taxa efetiva no período ──
+    if (d.taxaEfetivaPeriodo !== null) {
+      if (y > 240) y = novaPagina();
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+      doc.text('5. TAXA EFETIVA NO PERÍODO DE INADIMPLÊNCIA', lm + 3, y + 5);
+      y += 12;
 
-    const colXsA = [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133];
-    function cabecalhoAmort() {
+      const col3 = [lm + 2, lm + 65, lm + 125];
       doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
       doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
-      ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo'].forEach((h, i) => doc.text(h, colXsA[i], y + 5));
+      ['Métrica', 'a.m.', 'a.a.'].forEach((h, i) => doc.text(h, col3[i], y + 5));
       y += 7;
-    }
-    cabecalhoAmort();
 
-    tabelaContrato.forEach((r, idx) => {
-      if (y > 265) {
-        doc.addPage();
-        doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
-        doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
-        doc.text('MinhaTaxaReal — Tabela de Amortização do Contrato Original (cont.)', lm, 12);
-        doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
-        y = 24;
-        cabecalhoAmort();
-      }
-      if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
-      doc.text(String(r.parc),    colXsA[0], y + 4.5);
-      doc.text(fmtBRL(r.pmt),    colXsA[1], y + 4.5);
-      doc.text(fmtBRL(r.juros),  colXsA[2], y + 4.5);
-      doc.text(fmtBRL(r.amort),  colXsA[3], y + 4.5);
-      doc.text(fmtBRL(r.saldo),  colXsA[4], y + 4.5);
+      const taxaAaEfet = (Math.pow(1 + d.taxaEfetivaPeriodo, 12) - 1) * 100;
+      const taxaAaBCB  = (Math.pow(1 + d.taxaMediaBCBPeriodo / 100, 12) - 1) * 100;
+      const rows5 = [
+        ['Taxa efetiva apurada', fmtPct(d.taxaEfetivaPeriodo * 100), fmtPct(taxaAaEfet)],
+        ['Taxa média Bacen',     fmtPct(d.taxaMediaBCBPeriodo),       fmtPct(taxaAaBCB)],
+        ['Diferença (p.p.)',     (d.diferencaPeriodo >= 0 ? '+' : '') + fmtPct(d.diferencaPeriodo), '—'],
+      ];
+      rows5.forEach((row, idx) => {
+        if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+        doc.setFont('helvetica', idx === 2 ? 'bold' : 'normal');
+        doc.setFontSize(8); doc.setTextColor(60, 60, 60);
+        row.forEach((cell, ci) => doc.text(cell, col3[ci], y + 4.5));
+        y += 6;
+      });
       y += 6;
-    });
+    }
+
+    // ── Seção 6: Fluxo de Amortização Remanescente ──
+    if (co.fluxoRemanescente.length > 0) {
+      if (y > 220) y = novaPagina();
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+      doc.text('6. FLUXO DE AMORTIZAÇÃO REMANESCENTE — ' + co.sistema.toUpperCase(), lm + 3, y + 5);
+      y += 11;
+
+      const colXsA = [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133];
+      function cabecalhoAmort() {
+        doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+        ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo'].forEach((h, i) => doc.text(h, colXsA[i], y + 5));
+        y += 7;
+      }
+      cabecalhoAmort();
+
+      co.fluxoRemanescente.forEach((r, idx) => {
+        if (y > 265) {
+          doc.addPage();
+          doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
+          doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+          doc.text('MinhaTaxaReal — Fluxo Remanescente do Contrato Original (cont.)', lm, 12);
+          doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
+          y = 24;
+          cabecalhoAmort();
+        }
+        if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+        doc.text(String(r.parc),   colXsA[0], y + 4.5);
+        doc.text(fmtBRL(r.pmt),   colXsA[1], y + 4.5);
+        doc.text(fmtBRL(r.juros), colXsA[2], y + 4.5);
+        doc.text(fmtBRL(r.amort), colXsA[3], y + 4.5);
+        doc.text(fmtBRL(r.saldo), colXsA[4], y + 4.5);
+        y += 6;
+      });
+
+      y += 4;
+      doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
+      doc.text('Total previsto: ' + fmtBRL(co.totalPmtRem) + '  ·  Juros: ' + fmtBRL(co.totalJurosRem) + '  ·  Amortização: ' + fmtBRL(co.totalAmortRem), lm + 2, y + 4);
+      y += 10;
+    }
+
+  } else {
+    // Fallback: contrato do simulador (aba principal), se disponível
+    const tabelaContrato = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
+    if (tabelaContrato && tabelaContrato.length > 0) {
+      y = novaPagina();
+
+      doc.setFillColor(212, 240, 60);
+      doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(14, 15, 17);
+      doc.text('4. DADOS DO CONTRATO ORIGINAL (SIMULADOR)', lm + 3, y + 5);
+      y += 11;
+
+      const bacenC  = BACEN[state.modalidade] || {};
+      const dadosC  = [
+        ['Principal',         fmtBRL(state.valorLiquido)],
+        ['Prazo',             (state.numParcelas || '?') + ' meses'],
+        ['Sistema',           (state.sistema || '?').toUpperCase()],
+        ['Taxa efetiva (TIR)',fmtPct((state.taxaCalculada || 0) * 100) + ' a.m.'],
+        ['Taxa média Bacen',  fmtPct(bacenC.taxaMes || 0) + ' a.m. — ' + (bacenC.nome || state.modalidade)],
+      ];
+      doc.setFontSize(9); doc.setTextColor(60, 60, 60);
+      dadosC.forEach(([k, v]) => {
+        doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 2, y);
+        doc.setFont('helvetica', 'normal'); doc.text(v,       lm + 70, y);
+        y += 6;
+      });
+      y += 8;
+
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+      doc.text('5. TABELA DE AMORTIZAÇÃO — ' + (state.sistema || '').toUpperCase(), lm + 3, y + 5);
+      y += 11;
+
+      const colXsA2 = [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133];
+      function cabecalhoAmort2() {
+        doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+        ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo'].forEach((h, i) => doc.text(h, colXsA2[i], y + 5));
+        y += 7;
+      }
+      cabecalhoAmort2();
+
+      tabelaContrato.forEach((r, idx) => {
+        if (y > 265) {
+          doc.addPage();
+          doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
+          doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+          doc.text('MinhaTaxaReal — Tabela de Amortização do Contrato Original (cont.)', lm, 12);
+          doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
+          y = 24;
+          cabecalhoAmort2();
+        }
+        if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+        doc.text(String(r.parc),   colXsA2[0], y + 4.5);
+        doc.text(fmtBRL(r.pmt),   colXsA2[1], y + 4.5);
+        doc.text(fmtBRL(r.juros), colXsA2[2], y + 4.5);
+        doc.text(fmtBRL(r.amort), colXsA2[3], y + 4.5);
+        doc.text(fmtBRL(r.saldo), colXsA2[4], y + 4.5);
+        y += 6;
+      });
+    }
   }
 
   rodape();
