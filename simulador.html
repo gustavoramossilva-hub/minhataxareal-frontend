@@ -915,10 +915,15 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">Data da 1ª parcela <span class="form-hint">ancora o calendário de vencimentos</span></label>
+        <input type="date" id="inad2-data-inicio" style="width:100%" onchange="atualizarIndicadorContrato()" />
+      </div>
+
       <div id="inad2-indicador" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text2)">
         Taxa implícita: <strong id="inad2-taxa-label" style="color:var(--accent)">—</strong>
         &nbsp;·&nbsp;
-        Saldo devedor ao inadimplir: <strong id="inad2-saldo-label" style="color:var(--text)">—</strong>
+        <span id="inad2-saldo-info">Saldo devedor ao inadimplir: <strong id="inad2-saldo-label" style="color:var(--text)">—</strong></span>
       </div>
 
       <hr class="form-divider">
@@ -937,7 +942,8 @@
         </select>
       </div>
 
-      <div class="form-group">
+      <!-- Modo simples: saldo único + data de vencimento -->
+      <div id="inad-principal-row" class="form-group">
         <label class="form-label">Saldo principal na data do vencimento <span class="form-hint">R$</span></label>
         <div class="input-prefix-wrap">
           <span class="input-prefix">R$</span>
@@ -945,15 +951,28 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
-        <div>
-          <label class="form-label">Data de vencimento da parcela em atraso</label>
-          <input type="date" id="inad-vencimento" style="width:100%" />
+      <div id="inad-vencimento-row" class="form-group">
+        <label class="form-label">Data de vencimento da parcela em atraso</label>
+        <input type="date" id="inad-vencimento" style="width:100%" />
+      </div>
+
+      <!-- Modo múltiplas parcelas: range de parcelas vencidas (visível quando contrato+data-inicio preenchidos) -->
+      <div id="inad-parcelas-row" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+          <div>
+            <label class="form-label">Parcela inicial em atraso</label>
+            <select id="inad2-parc-ini" style="width:100%"><option value="">—</option></select>
+          </div>
+          <div>
+            <label class="form-label">Parcela final em atraso</label>
+            <select id="inad2-parc-fim" style="width:100%"><option value="">—</option></select>
+          </div>
         </div>
-        <div>
-          <label class="form-label">Data de apuração</label>
-          <input type="date" id="inad-apuracao" style="width:100%" />
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data de apuração</label>
+        <input type="date" id="inad-apuracao" style="width:100%" />
       </div>
 
       <hr class="form-divider">
@@ -3240,20 +3259,35 @@ function toggleIndiceFixo() {
   if (sec) sec.style.display = val === 'fixo' ? '' : 'none';
 }
 
+function addMonthsYM(yyyyMmDd, months) {
+  const [y, m] = yyyyMmDd.slice(0, 7).split('-').map(Number);
+  const total = (y * 12 + (m - 1)) + months;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  return ny + '-' + String(nm).padStart(2, '0');
+}
+
 function atualizarIndicadorContrato() {
-  const valor   = parseBRL(document.getElementById('inad2-valor')?.value || '');
-  const n       = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
-  const pmt     = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
-  const pagasRaw = document.getElementById('inad2-pagas')?.value;
-  const pagas   = pagasRaw !== '' && pagasRaw !== null && pagasRaw !== undefined ? parseInt(pagasRaw) : NaN;
-  const sistema = document.getElementById('inad2-sistema')?.value || 'price';
+  const valor      = parseBRL(document.getElementById('inad2-valor')?.value || '');
+  const n          = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
+  const pmt        = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
+  const pagasRaw   = document.getElementById('inad2-pagas')?.value;
+  const pagas      = (pagasRaw !== '' && pagasRaw != null) ? parseInt(pagasRaw) : NaN;
+  const sistema    = document.getElementById('inad2-sistema')?.value || 'price';
+  const dataInicio = document.getElementById('inad2-data-inicio')?.value || '';
 
-  const indicador  = document.getElementById('inad2-indicador');
-  const taxaLabel  = document.getElementById('inad2-taxa-label');
-  const saldoLabel = document.getElementById('inad2-saldo-label');
-  const principalEl = document.getElementById('inad-principal');
+  const indicador    = document.getElementById('inad2-indicador');
+  const taxaLabel    = document.getElementById('inad2-taxa-label');
+  const saldoLabel   = document.getElementById('inad2-saldo-label');
+  const saldoInfo    = document.getElementById('inad2-saldo-info');
+  const principalRow = document.getElementById('inad-principal-row');
+  const principalEl  = document.getElementById('inad-principal');
+  const vencRow      = document.getElementById('inad-vencimento-row');
+  const parcRow      = document.getElementById('inad-parcelas-row');
 
-  if (!valor || !n || !pmt || isNaN(pagas)) {
+  const contratoCompleto = valor > 0 && n > 0 && pmt > 0 && !isNaN(pagas);
+
+  if (!contratoCompleto) {
     if (indicador) indicador.style.display = 'none';
     if (principalEl && principalEl.dataset.autoFill === '1') {
       principalEl.value = '';
@@ -3262,6 +3296,9 @@ function atualizarIndicadorContrato() {
       principalEl.style.opacity = '';
       principalEl.title = '';
     }
+    if (principalRow) principalRow.style.display = '';
+    if (vencRow)      vencRow.style.display = '';
+    if (parcRow)      parcRow.style.display = 'none';
     return;
   }
 
@@ -3277,28 +3314,79 @@ function atualizarIndicadorContrato() {
   const tabela = sistema === 'sac' ? gerarTabelaSAC(valor, taxa, n) : gerarTabelaPrice(valor, taxa, n);
   const saldo  = pagas === 0 ? valor : (tabela[pagas - 1]?.saldo ?? valor);
 
-  if (indicador) indicador.style.display = '';
-  if (taxaLabel)  taxaLabel.textContent  = fmtPct(taxa * 100) + ' a.m.';
-  if (saldoLabel) saldoLabel.textContent = fmtBRL(saldo);
+  if (taxaLabel) taxaLabel.textContent = fmtPct(taxa * 100) + ' a.m.';
 
-  if (principalEl) {
-    principalEl.value = saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    principalEl.dataset.autoFill = '1';
-    principalEl.readOnly = true;
-    principalEl.style.opacity = '0.7';
-    principalEl.title = 'Calculado automaticamente a partir dos dados do contrato original';
+  const multiMode = dataInicio !== '';
+
+  if (multiMode) {
+    // Modo múltiplas parcelas: popula selects de parc-ini / parc-fim
+    if (indicador) indicador.style.display = '';
+    if (saldoInfo) saldoInfo.style.display = 'none';
+
+    if (principalRow) principalRow.style.display = 'none';
+    if (vencRow)      vencRow.style.display = 'none';
+    if (parcRow)      parcRow.style.display = '';
+
+    const iniEl = document.getElementById('inad2-parc-ini');
+    const fimEl = document.getElementById('inad2-parc-fim');
+    if (iniEl && fimEl) {
+      const prevIni = iniEl.value;
+      const prevFim = fimEl.value;
+      iniEl.innerHTML = '';
+      fimEl.innerHTML = '';
+      for (let k = pagas + 1; k <= n; k++) {
+        const pmt_k   = tabela[k - 1]?.pmt ?? 0;
+        const dueYM_k = addMonthsYM(dataInicio, k - 1);
+        const label   = `Parc. ${k} — ${dueYM_k.split('-').reverse().join('/')} — ${fmtBRL(pmt_k)}`;
+        iniEl.add(new Option(label, k));
+        fimEl.add(new Option(label, k));
+      }
+      if (prevIni) iniEl.value = prevIni;
+      if (prevFim) fimEl.value = prevFim;
+      if (!iniEl.value && iniEl.options.length) iniEl.selectedIndex = 0;
+      if (!fimEl.value && fimEl.options.length) fimEl.selectedIndex = fimEl.options.length - 1;
+    }
+  } else {
+    // Modo simples: auto-fill principal com saldo calculado
+    if (indicador) indicador.style.display = '';
+    if (saldoInfo) saldoInfo.style.display = '';
+    if (saldoLabel) saldoLabel.textContent = fmtBRL(saldo);
+
+    if (principalRow) principalRow.style.display = '';
+    if (vencRow)      vencRow.style.display = '';
+    if (parcRow)      parcRow.style.display = 'none';
+
+    if (principalEl) {
+      principalEl.value = saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      principalEl.dataset.autoFill = '1';
+      principalEl.readOnly = true;
+      principalEl.style.opacity = '0.7';
+      principalEl.title = 'Calculado automaticamente a partir dos dados do contrato original';
+    }
   }
 }
 
 function limparInadimplencia() {
   // Contrato original
-  ['inad2-valor','inad2-parcelas','inad2-parcela-val','inad2-pagas'].forEach(id => {
+  ['inad2-valor','inad2-parcelas','inad2-parcela-val','inad2-pagas','inad2-data-inicio'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('inad2-sistema').value = 'price';
   const indEl = document.getElementById('inad2-indicador');
   if (indEl) indEl.style.display = 'none';
+  // Restaurar visibilidade das linhas
+  const principalRow = document.getElementById('inad-principal-row');
+  const vencRow      = document.getElementById('inad-vencimento-row');
+  const parcRow      = document.getElementById('inad-parcelas-row');
+  if (principalRow) principalRow.style.display = '';
+  if (vencRow)      vencRow.style.display = '';
+  if (parcRow)      parcRow.style.display = 'none';
+  // Limpar selects de parcelas
+  ['inad2-parc-ini','inad2-parc-fim'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = '<option value="">—</option>'; }
+  });
   // Período
   const principalEl = document.getElementById('inad-principal');
   if (principalEl) {
@@ -3373,8 +3461,6 @@ async function calcularInadimplencia() {
   const alertEl = document.getElementById('alert-input');
   alertEl.classList.remove('show');
 
-  const principal  = parseBRL(document.getElementById('inad-principal')?.value || '');
-  const vencimento = document.getElementById('inad-vencimento')?.value;
   const apuracao   = document.getElementById('inad-apuracao')?.value;
   const multaP     = parseFloat(document.getElementById('inad-multa')?.value)      || 0;
   const jurosMoraP = parseFloat(document.getElementById('inad-juros-mora')?.value) || 0;
@@ -3384,23 +3470,71 @@ async function calcularInadimplencia() {
   const outros     = parseBRL(document.getElementById('inad-outros')?.value || '');
   const modalidade = document.getElementById('inad-modalidade')?.value || 'pessoal';
 
-  const inad2Valor  = parseBRL(document.getElementById('inad2-valor')?.value || '');
-  const inad2Parc   = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
-  const inad2Pmt    = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
-  const inad2PagasRaw = document.getElementById('inad2-pagas')?.value;
-  const inad2Pagas  = (inad2PagasRaw !== '' && inad2PagasRaw != null) ? parseInt(inad2PagasRaw) : NaN;
-  const inad2Sistema = document.getElementById('inad2-sistema')?.value || 'price';
+  // Contrato original
+  const inad2Valor     = parseBRL(document.getElementById('inad2-valor')?.value || '');
+  const inad2Parc      = parseInt(document.getElementById('inad2-parcelas')?.value) || 0;
+  const inad2Pmt       = parseBRL(document.getElementById('inad2-parcela-val')?.value || '');
+  const inad2PagasRaw  = document.getElementById('inad2-pagas')?.value;
+  const inad2Pagas     = (inad2PagasRaw !== '' && inad2PagasRaw != null) ? parseInt(inad2PagasRaw) : NaN;
+  const inad2Sistema   = document.getElementById('inad2-sistema')?.value || 'price';
+  const inad2DataInicio = document.getElementById('inad2-data-inicio')?.value || '';
+  const parcIni        = parseInt(document.getElementById('inad2-parc-ini')?.value) || 0;
+  const parcFim        = parseInt(document.getElementById('inad2-parc-fim')?.value) || 0;
 
-  if (!principal || principal <= 0) { showAlert(alertEl, 'Informe o saldo principal.'); return; }
-  if (!vencimento)  { showAlert(alertEl, 'Informe a data do vencimento.'); return; }
-  if (!apuracao)    { showAlert(alertEl, 'Informe a data de apuração.'); return; }
-  if (apuracao < vencimento) { showAlert(alertEl, 'A data de apuração deve ser igual ou posterior ao vencimento.'); return; }
+  // Construir contratoOriginal (necessário para multi-modo)
+  let contratoOriginal = null;
+  if (inad2Valor > 0 && inad2Parc > 0 && inad2Pmt > 0 && !isNaN(inad2Pagas)) {
+    const inad2Taxa = inad2Sistema === 'sac'
+      ? calcularTIR_SAC(inad2Valor, inad2Parc, inad2Pmt)
+      : calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
+    if (inad2Taxa && !isNaN(inad2Taxa)) {
+      const tabelaCompleta = inad2Sistema === 'sac'
+        ? gerarTabelaSAC(inad2Valor, inad2Taxa, inad2Parc)
+        : gerarTabelaPrice(inad2Valor, inad2Taxa, inad2Parc);
+      const saldoInicio = inad2Pagas === 0 ? inad2Valor : (tabelaCompleta[inad2Pagas - 1]?.saldo ?? inad2Valor);
+      const fluxoRemanescente = tabelaCompleta.slice(inad2Pagas);
+      contratoOriginal = {
+        valor: inad2Valor, parcelas: inad2Parc, parcela: inad2Pmt,
+        pagas: inad2Pagas, sistema: inad2Sistema, dataInicio: inad2DataInicio,
+        taxa: inad2Taxa, tabelaCompleta, saldoInicio, fluxoRemanescente,
+        totalPmtRem:   fluxoRemanescente.reduce((s, r) => s + r.pmt,   0),
+        totalJurosRem: fluxoRemanescente.reduce((s, r) => s + r.juros, 0),
+        totalAmortRem: fluxoRemanescente.reduce((s, r) => s + r.amort, 0),
+      };
+    }
+  }
 
-  const meses = getMeses(vencimento.slice(0, 7), apuracao.slice(0, 7));
-  if (!meses.length) { showAlert(alertEl, 'Período inválido — verifique as datas.'); return; }
+  const multiMode = !!(contratoOriginal && inad2DataInicio && parcIni > 0 && parcFim > 0 && parcFim >= parcIni);
 
-  const dataIniBCB = meses[0].dataIniBCB;
-  const dataFimBCB = meses[meses.length - 1].dataFimBCB;
+  // ── Validação ──
+  if (!apuracao) { showAlert(alertEl, 'Informe a data de apuração.'); return; }
+
+  if (multiMode) {
+    const dueYM_ini = addMonthsYM(inad2DataInicio, parcIni - 1);
+    if (apuracao.slice(0, 7) < dueYM_ini) {
+      showAlert(alertEl, 'A data de apuração deve ser igual ou posterior ao vencimento da primeira parcela em atraso.'); return;
+    }
+  } else {
+    const principal  = parseBRL(document.getElementById('inad-principal')?.value || '');
+    const vencimento = document.getElementById('inad-vencimento')?.value;
+    if (!principal || principal <= 0) { showAlert(alertEl, 'Informe o saldo principal.'); return; }
+    if (!vencimento) { showAlert(alertEl, 'Informe a data do vencimento.'); return; }
+    if (apuracao < vencimento) { showAlert(alertEl, 'A data de apuração deve ser igual ou posterior ao vencimento.'); return; }
+  }
+
+  // ── Intervalo de datas para busca BCB ──
+  let mesesRef; // range máximo para buscar séries históricas
+  if (multiMode) {
+    const dueYM_ini = addMonthsYM(inad2DataInicio, parcIni - 1);
+    mesesRef = getMeses(dueYM_ini, apuracao.slice(0, 7));
+  } else {
+    const vencimento = document.getElementById('inad-vencimento')?.value;
+    mesesRef = getMeses(vencimento.slice(0, 7), apuracao.slice(0, 7));
+  }
+  if (!mesesRef.length) { showAlert(alertEl, 'Período inválido — verifique as datas.'); return; }
+
+  const dataIniBCB = mesesRef[0].dataIniBCB;
+  const dataFimBCB = mesesRef[mesesRef.length - 1].dataFimBCB;
 
   const loadEl = document.getElementById('inad-loading');
   if (loadEl) loadEl.style.display = '';
@@ -3413,120 +3547,169 @@ async function calcularInadimplencia() {
       buscarSerieHistorica(SGS_CODIGOS[modalidade], dataIniBCB, dataFimBCB),
     ]);
 
-    const mapIndice = indiceKey === 'ipca'  ? serieParaMap(serieIPCA)
-                    : indiceKey === 'fixo'  ? {}
+    const mapIndice = indiceKey === 'ipca' ? serieParaMap(serieIPCA)
+                    : indiceKey === 'fixo' ? {}
                     : serieParaMap(serieIndice);
-    const mapIPCA   = serieParaMap(serieIPCA);
-    const mapBCB    = serieParaMap(serieBCB);
-
-    let contratoOriginal = null;
-    if (inad2Valor > 0 && inad2Parc > 0 && inad2Pmt > 0 && !isNaN(inad2Pagas)) {
-      const inad2Taxa = inad2Sistema === 'sac'
-        ? calcularTIR_SAC(inad2Valor, inad2Parc, inad2Pmt)
-        : calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
-      if (inad2Taxa && !isNaN(inad2Taxa)) {
-        const tabelaCompleta = inad2Sistema === 'sac'
-          ? gerarTabelaSAC(inad2Valor, inad2Taxa, inad2Parc)
-          : gerarTabelaPrice(inad2Valor, inad2Taxa, inad2Parc);
-        const saldoInicio = inad2Pagas === 0 ? inad2Valor : (tabelaCompleta[inad2Pagas - 1]?.saldo ?? inad2Valor);
-        const fluxoRemanescente = tabelaCompleta.slice(inad2Pagas);
-        contratoOriginal = {
-          valor: inad2Valor, parcelas: inad2Parc, parcela: inad2Pmt,
-          pagas: inad2Pagas, sistema: inad2Sistema,
-          taxa: inad2Taxa, tabelaCompleta, saldoInicio, fluxoRemanescente,
-          totalPmtRem:   fluxoRemanescente.reduce((s, r) => s + r.pmt,   0),
-          totalJurosRem: fluxoRemanescente.reduce((s, r) => s + r.juros, 0),
-          totalAmortRem: fluxoRemanescente.reduce((s, r) => s + r.amort, 0),
-        };
-      }
-    }
-
-    // Cenário CREDOR
-    let saldoC = principal * (1 + multaP / 100);
-    let accCorrecaoC = 0, accJurosC = 0, mesesSemDado = 0;
-
-    // Cenário REFERÊNCIA (multa 2%, juros 1% a.m. compostos, IPCA)
-    let saldoR = principal * 1.02;
-    let accCorrecaoR = 0, accJurosR = 0;
-
-    // Cenário TAXA MÉDIA BCB (multa 2%, taxa histórica BCB)
-    let saldoB = principal * 1.02;
-    let accJurosB = 0;
-
-    const linhasMes = [];
-
-    meses.forEach(m => {
-      // Taxa do índice credor
-      let taxaIndC;
-      if (indiceKey === 'fixo') {
-        taxaIndC = taxaFixaP;
-      } else if (m.key in mapIndice) {
-        taxaIndC = mapIndice[m.key];
-      } else {
-        taxaIndC = 0;
-        mesesSemDado++;
-      }
-      const taxaIPCA = m.key in mapIPCA ? mapIPCA[m.key] : 0;
-      const taxaBCB  = m.key in mapBCB  ? mapBCB[m.key]  : BACEN[modalidade].taxaMes;
-
-      // CREDOR
-      const corrC  = saldoC * (taxaIndC / 100);
-      const baseJC = convencao === 'simples' ? principal : (saldoC + corrC);
-      const jurosC = baseJC * (jurosMoraP / 100);
-      accCorrecaoC += corrC;
-      accJurosC    += jurosC;
-      saldoC        = saldoC + corrC + jurosC;
-
-      // REFERÊNCIA
-      const corrR  = saldoR * (taxaIPCA / 100);
-      const jurosR = (saldoR + corrR) * 0.01;
-      accCorrecaoR += corrR;
-      accJurosR    += jurosR;
-      saldoR        = saldoR + corrR + jurosR;
-
-      // BCB
-      const jurosB = saldoB * (taxaBCB / 100);
-      accJurosB   += jurosB;
-      saldoB       = saldoB * (1 + taxaBCB / 100);
-
-      linhasMes.push({
-        label: m.label, key: m.key,
-        taxaIndC, corrC, jurosC, saldoC,
-        taxaIPCA, corrR, jurosR, saldoR,
-        taxaBCB,  jurosB, saldoB,
-      });
-    });
-
-    const multaC = principal * (multaP / 100);
-    const multaR = principal * 0.02;
-
-    const nMeses = meses.length;
-    let taxaEfetivaPeriodo = null, taxaMediaBCBPeriodo = null, diferencaPeriodo = null;
-    if (contratoOriginal && nMeses > 0 && principal > 0) {
-      const totalCfinal = saldoC + outros;
-      taxaEfetivaPeriodo = Math.pow(totalCfinal / principal, 1 / nMeses) - 1;
-      const taxasBCB = meses.map(m => m.key in mapBCB ? mapBCB[m.key] : BACEN[modalidade].taxaMes);
-      taxaMediaBCBPeriodo = taxasBCB.reduce((a, b) => a + b, 0) / taxasBCB.length;
-      diferencaPeriodo = taxaEfetivaPeriodo * 100 - taxaMediaBCBPeriodo;
-    }
+    const mapIPCA = serieParaMap(serieIPCA);
+    const mapBCB  = serieParaMap(serieBCB);
 
     const indiceNomes = { ipca: 'IPCA', inpc: 'INPC', selic: 'SELIC', tr: 'TR',
                           fixo: `Taxa fixa (${fmtPct(taxaFixaP)} a.m.)` };
-    const d = {
-      principal, vencimento, apuracao, meses, modalidade,
-      multaP, jurosMoraP, indiceKey, convencao, outros, taxaFixaP,
-      multaC, multaR,
-      accCorrecaoC, accJurosC, saldoC, totalC: saldoC + outros,
-      accCorrecaoR, accJurosR, saldoR, totalR: saldoR,
-      accJurosB,    saldoB,    totalB: saldoB,
-      linhasMes, mesesSemDado,
-      indiceNome:    indiceNomes[indiceKey] || indiceKey,
-      modalidadeNome: BACEN[modalidade]?.nome || modalidade,
-      contratoOriginal, taxaEfetivaPeriodo, taxaMediaBCBPeriodo, diferencaPeriodo,
-    };
 
-    window._inadState = d;
-    renderResultadosInadimplencia(d);
+    // ────────────────────────────────────────
+    //  MODO MÚLTIPLAS PARCELAS
+    // ────────────────────────────────────────
+    if (multiMode) {
+      const apuracaoYM = apuracao.slice(0, 7);
+      let totalC_all = 0, totalR_all = 0, totalB_all = 0;
+      let principal_total = 0, mesesSemDado = 0;
+      const linhasParcelas = [];
+
+      for (let k = parcIni; k <= parcFim; k++) {
+        const pmt_k   = contratoOriginal.tabelaCompleta[k - 1]?.pmt ?? 0;
+        const dueYM_k = addMonthsYM(inad2DataInicio, k - 1);
+        const meses_k = getMeses(dueYM_k, apuracaoYM);
+
+        let sC = pmt_k * (1 + multaP / 100);
+        let sR = pmt_k * 1.02;
+        let sB = pmt_k * 1.02;
+
+        meses_k.forEach(m => {
+          const taxaIndC = indiceKey === 'fixo' ? taxaFixaP : (m.key in mapIndice ? mapIndice[m.key] : (mesesSemDado++, 0));
+          const taxaIPCA = m.key in mapIPCA ? mapIPCA[m.key] : 0;
+          const taxaBCB  = m.key in mapBCB  ? mapBCB[m.key]  : BACEN[modalidade].taxaMes;
+
+          const corrC  = sC * (taxaIndC / 100);
+          const baseJC = convencao === 'simples' ? pmt_k : (sC + corrC);
+          sC = sC + corrC + baseJC * (jurosMoraP / 100);
+
+          const corrR = sR * (taxaIPCA / 100);
+          sR = sR + corrR + (sR + corrR) * 0.01;
+
+          sB *= (1 + taxaBCB / 100);
+        });
+
+        principal_total += pmt_k;
+        totalC_all += sC;
+        totalR_all += sR;
+        totalB_all += sB;
+
+        linhasParcelas.push({
+          parc: k,
+          pmt: pmt_k,
+          dueYM: dueYM_k,
+          meses: meses_k.length,
+          totalC: sC,
+          totalR: sR,
+          totalB: sB,
+        });
+      }
+
+      // Fluxo remanescente começa após parcFim (já pagas as inadimplentes)
+      const fluxoRemMulti = contratoOriginal.tabelaCompleta.slice(parcFim);
+
+      const d = {
+        principal: principal_total,
+        apuracao, modalidade,
+        multaP, jurosMoraP, indiceKey, convencao, outros, taxaFixaP,
+        totalC: totalC_all + outros, totalR: totalR_all, totalB: totalB_all,
+        meses: mesesRef, linhasMes: [], mesesSemDado,
+        indiceNome:     indiceNomes[indiceKey] || indiceKey,
+        modalidadeNome: BACEN[modalidade]?.nome || modalidade,
+        contratoOriginal: { ...contratoOriginal, fluxoRemanescente: fluxoRemMulti,
+          totalPmtRem:   fluxoRemMulti.reduce((s, r) => s + r.pmt,   0),
+          totalJurosRem: fluxoRemMulti.reduce((s, r) => s + r.juros, 0),
+          totalAmortRem: fluxoRemMulti.reduce((s, r) => s + r.amort, 0),
+        },
+        multiMode: true, parcIni, parcFim, linhasParcelas,
+        taxaEfetivaPeriodo: null, taxaMediaBCBPeriodo: null, diferencaPeriodo: null,
+        // multaC/multaR para o quadro comparativo (total das multas)
+        multaC: principal_total * (multaP / 100),
+        multaR: principal_total * 0.02,
+        accCorrecaoC: 0, accJurosC: 0, saldoC: totalC_all,
+        accCorrecaoR: 0, accJurosR: 0, saldoR: totalR_all,
+        accJurosB: 0,    saldoB: totalB_all,
+      };
+
+      window._inadState = d;
+      renderResultadosInadimplencia(d);
+
+    // ────────────────────────────────────────
+    //  MODO SIMPLES (parcela única)
+    // ────────────────────────────────────────
+    } else {
+      const principal  = parseBRL(document.getElementById('inad-principal')?.value || '');
+      const vencimento = document.getElementById('inad-vencimento')?.value;
+      const meses      = getMeses(vencimento.slice(0, 7), apuracao.slice(0, 7));
+
+      let saldoC = principal * (1 + multaP / 100);
+      let accCorrecaoC = 0, accJurosC = 0, mesesSemDado = 0;
+      let saldoR = principal * 1.02;
+      let accCorrecaoR = 0, accJurosR = 0;
+      let saldoB = principal * 1.02;
+      let accJurosB = 0;
+      const linhasMes = [];
+
+      meses.forEach(m => {
+        let taxaIndC;
+        if (indiceKey === 'fixo') { taxaIndC = taxaFixaP; }
+        else if (m.key in mapIndice) { taxaIndC = mapIndice[m.key]; }
+        else { taxaIndC = 0; mesesSemDado++; }
+        const taxaIPCA = m.key in mapIPCA ? mapIPCA[m.key] : 0;
+        const taxaBCB  = m.key in mapBCB  ? mapBCB[m.key]  : BACEN[modalidade].taxaMes;
+
+        const corrC  = saldoC * (taxaIndC / 100);
+        const baseJC = convencao === 'simples' ? principal : (saldoC + corrC);
+        const jurosC = baseJC * (jurosMoraP / 100);
+        accCorrecaoC += corrC; accJurosC += jurosC;
+        saldoC = saldoC + corrC + jurosC;
+
+        const corrR  = saldoR * (taxaIPCA / 100);
+        const jurosR = (saldoR + corrR) * 0.01;
+        accCorrecaoR += corrR; accJurosR += jurosR;
+        saldoR = saldoR + corrR + jurosR;
+
+        const jurosB = saldoB * (taxaBCB / 100);
+        accJurosB += jurosB;
+        saldoB = saldoB * (1 + taxaBCB / 100);
+
+        linhasMes.push({
+          label: m.label, key: m.key,
+          taxaIndC, corrC, jurosC, saldoC,
+          taxaIPCA, corrR, jurosR, saldoR,
+          taxaBCB, jurosB, saldoB,
+        });
+      });
+
+      const multaC = principal * (multaP / 100);
+      const multaR = principal * 0.02;
+      const nMeses = meses.length;
+
+      let taxaEfetivaPeriodo = null, taxaMediaBCBPeriodo = null, diferencaPeriodo = null;
+      if (contratoOriginal && nMeses > 0 && principal > 0) {
+        taxaEfetivaPeriodo = Math.pow((saldoC + outros) / principal, 1 / nMeses) - 1;
+        const taxasBCB = meses.map(m => m.key in mapBCB ? mapBCB[m.key] : BACEN[modalidade].taxaMes);
+        taxaMediaBCBPeriodo = taxasBCB.reduce((a, b) => a + b, 0) / taxasBCB.length;
+        diferencaPeriodo = taxaEfetivaPeriodo * 100 - taxaMediaBCBPeriodo;
+      }
+
+      const d = {
+        principal, vencimento, apuracao, meses, modalidade,
+        multaP, jurosMoraP, indiceKey, convencao, outros, taxaFixaP,
+        multaC, multaR,
+        accCorrecaoC, accJurosC, saldoC, totalC: saldoC + outros,
+        accCorrecaoR, accJurosR, saldoR, totalR: saldoR,
+        accJurosB,    saldoB,    totalB: saldoB,
+        linhasMes, mesesSemDado,
+        indiceNome:    indiceNomes[indiceKey] || indiceKey,
+        modalidadeNome: BACEN[modalidade]?.nome || modalidade,
+        contratoOriginal, taxaEfetivaPeriodo, taxaMediaBCBPeriodo, diferencaPeriodo,
+        multiMode: false,
+      };
+
+      window._inadState = d;
+      renderResultadosInadimplencia(d);
+    } // fim else modo simples
 
   } finally {
     if (loadEl) loadEl.style.display = 'none';
@@ -3550,11 +3733,15 @@ function renderResultadosInadimplencia(d) {
 
   const descIndiceC = `Multa ${fmtPct(d.multaP)} + juros ${fmtPct(d.jurosMoraP)} a.m. ${d.convencao === 'simples' ? 'simples' : 'compostos'} + ${d.indiceNome}`;
 
+  const subtitulo = d.multiMode
+    ? `${d.modalidadeNome} · ${d.linhasParcelas.length} parcela(s) em atraso (parc. ${d.parcIni}–${d.parcFim}) · apuração ${d.apuracao.split('-').reverse().join('/')}`
+    : `${d.modalidadeNome} · ${d.vencimento.split('-').reverse().join('/')} → ${d.apuracao.split('-').reverse().join('/')} · ${d.meses.length} mês(es)`;
+
   area.innerHTML = `
     <div class="results-header animate-in">
       <div>
         <div class="results-title">Apuração de Inadimplência</div>
-        <div class="results-subtitle">${d.modalidadeNome} · ${d.vencimento.split('-').reverse().join('/')} → ${d.apuracao.split('-').reverse().join('/')} · ${d.meses.length} mês(es)</div>
+        <div class="results-subtitle">${subtitulo}</div>
       </div>
       <button class="pdf-btn" onclick="gerarPDFInadimplencia()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -3638,7 +3825,42 @@ function renderResultadosInadimplencia(d) {
       </div>
     </div>
 
-    <!-- Evolução mês a mês -->
+    ${d.multiMode ? `
+    <!-- Detalhamento por parcela (modo multi) -->
+    <div class="amort-section animate-in delay-3">
+      <div class="section-heading">Detalhamento por Parcela em Atraso</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Parcela</th>
+            <th style="text-align:left">Vencimento</th>
+            <th>Meses em atraso</th>
+            <th>Valor original</th>
+            <th style="color:var(--red)">Total Credor</th>
+            <th style="color:var(--amber)">Total Referência</th>
+            <th>Total BCB</th>
+          </tr></thead>
+          <tbody>
+            ${d.linhasParcelas.map((l, idx) => `<tr ${idx % 2 === 1 ? 'style="background:var(--surface2)"' : ''}>
+              <td style="text-align:left;font-family:'DM Mono',monospace">Parc. ${l.parc}</td>
+              <td style="text-align:left;color:var(--text2)">${l.dueYM.split('-').reverse().join('/')}</td>
+              <td style="font-family:'DM Mono',monospace">${l.meses}</td>
+              <td>${fmtBRL(l.pmt)}</td>
+              <td class="td-juros">${fmtBRL(l.totalC)}</td>
+              <td style="color:var(--amber)">${fmtBRL(l.totalR)}</td>
+              <td>${fmtBRL(l.totalB)}</td>
+            </tr>`).join('')}
+            <tr style="border-top:2px solid var(--border2);background:var(--surface2)">
+              <td colspan="4" style="text-align:left;font-family:'Syne',sans-serif;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text2)">TOTAL</td>
+              <td style="color:var(--red);font-weight:600">${fmtBRL(d.totalC)}</td>
+              <td style="color:var(--amber);font-weight:600">${fmtBRL(d.totalR)}</td>
+              <td style="font-weight:600">${fmtBRL(d.totalB)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>` : `
+    <!-- Evolução mês a mês (modo simples) -->
     <div class="amort-section animate-in delay-3">
       <div class="section-heading">Evolução Mês a Mês</div>
       <div class="table-wrap">
@@ -3667,7 +3889,7 @@ function renderResultadosInadimplencia(d) {
           </tbody>
         </table>
       </div>
-    </div>
+    </div>`}
 
     ${d.contratoOriginal ? `
     <!-- Fluxo de amortização remanescente -->
@@ -3778,7 +4000,16 @@ function gerarPDFInadimplencia() {
   y += 12;
 
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60);
-  const dados1 = [
+  const dados1 = d.multiMode ? [
+    ['Modalidade',           d.modalidadeNome],
+    ['Parcelas em atraso',   `Parc. ${d.parcIni} a ${d.parcFim} (${d.linhasParcelas.length} parcela(s))`],
+    ['Valor total em atraso',fmtBRL(d.principal)],
+    ['Data de apuração',     d.apuracao.split('-').reverse().join('/')],
+    ['Multa aplicada',       fmtPct(d.multaP)],
+    ['Juros de mora',        fmtPct(d.jurosMoraP) + ' a.m. ' + (d.convencao === 'simples' ? 'simples' : 'compostos')],
+    ['Índice de correção',   d.indiceNome],
+    ...(d.outros > 0 ? [['Outros encargos', fmtBRL(d.outros)]] : []),
+  ] : [
     ['Modalidade',           d.modalidadeNome],
     ['Saldo principal',      fmtBRL(d.principal)],
     ['Data do vencimento',   d.vencimento.split('-').reverse().join('/')],
@@ -3836,35 +4067,67 @@ function gerarPDFInadimplencia() {
   doc.text('Diferença credor vs. taxa média BCB: '          + (difCB > 0 ? '+ ' : '') + fmtBRL(Math.abs(difCB)), lm + 2, y + 11);
   y += 20;
 
-  // ── Seção 3: Evolução mês a mês (paginada ~35 linhas) ──
+  // ── Seção 3: Detalhamento (multi) ou Evolução mês a mês (simples) ──
   if (y > 220) y = novaPagina();
   doc.setFillColor(240, 240, 240);
   doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
-  doc.text('3. EVOLUÇÃO MÊS A MÊS', lm + 3, y + 5);
+  doc.text(d.multiMode ? '3. DETALHAMENTO POR PARCELA' : '3. EVOLUÇÃO MÊS A MÊS', lm + 3, y + 5);
   y += 11;
 
-  const mesColXs = [lm + 2, lm + 27, lm + 65, lm + 90, lm + 115, lm + 140, lm + 158];
-  const ROWS_PP  = 35;
-
-  function cabecalhoMeses() {
+  if (d.multiMode) {
+    // ── Tabela por parcela ──
+    const pColXs = [lm + 2, lm + 22, lm + 48, lm + 75, lm + 105, lm + 135, lm + 158];
     doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
-    doc.setFontSize(6.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
-    ['Mês', '% Corr.C', 'Saldo Credor', '% IPCA', 'Saldo Ref.', 'Saldo BCB', 'Encarg.C'].forEach((h, i) => doc.text(h, mesColXs[i], y + 5));
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+    ['Parc.', 'Vencimento', 'Meses', 'Valor orig.', 'Total Credor', 'Total Ref.', 'Total BCB']
+      .forEach((h, i) => doc.text(h, pColXs[i], y + 5));
     y += 7;
-  }
-  cabecalhoMeses();
 
-  let rowCnt = 0;
-  d.linhasMes.forEach((l, idx) => {
-    if (rowCnt > 0 && rowCnt % ROWS_PP === 0) { y = novaPagina(); cabecalhoMeses(); }
-    if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 5.5, 'F'); }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(60, 60, 60);
-    [l.label, fmtPct(l.taxaIndC, 2), fmtBRL(l.saldoC), fmtPct(l.taxaIPCA, 2), fmtBRL(l.saldoR), fmtBRL(l.saldoB), fmtBRL(l.corrC + l.jurosC)]
-      .forEach((v, ci) => doc.text(v, mesColXs[ci], y + 4));
-    y += 5.5;
-    rowCnt++;
-  });
+    d.linhasParcelas.forEach((l, idx) => {
+      if (y > 265) { y = novaPagina(); }
+      if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+      [String(l.parc), l.dueYM.split('-').reverse().join('/'), String(l.meses),
+       fmtBRL(l.pmt), fmtBRL(l.totalC), fmtBRL(l.totalR), fmtBRL(l.totalB)]
+        .forEach((v, ci) => doc.text(v, pColXs[ci], y + 4.5));
+      y += 6;
+    });
+
+    // Linha de totais
+    doc.setFillColor(228, 228, 228); doc.rect(lm, y, pw, 6, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(30, 30, 30);
+    doc.text('TOTAL', pColXs[0], y + 4.5);
+    doc.text(fmtBRL(d.principal), pColXs[3], y + 4.5);
+    doc.text(fmtBRL(d.totalC),   pColXs[4], y + 4.5);
+    doc.text(fmtBRL(d.totalR),   pColXs[5], y + 4.5);
+    doc.text(fmtBRL(d.totalB),   pColXs[6], y + 4.5);
+    y += 8;
+
+  } else {
+    // ── Evolução mês a mês (simples) ──
+    const mesColXs = [lm + 2, lm + 27, lm + 65, lm + 90, lm + 115, lm + 140, lm + 158];
+    const ROWS_PP  = 35;
+
+    function cabecalhoMeses() {
+      doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+      doc.setFontSize(6.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+      ['Mês', '% Corr.C', 'Saldo Credor', '% IPCA', 'Saldo Ref.', 'Saldo BCB', 'Encarg.C'].forEach((h, i) => doc.text(h, mesColXs[i], y + 5));
+      y += 7;
+    }
+    cabecalhoMeses();
+
+    let rowCnt = 0;
+    d.linhasMes.forEach((l, idx) => {
+      if (rowCnt > 0 && rowCnt % ROWS_PP === 0) { y = novaPagina(); cabecalhoMeses(); }
+      if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 5.5, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(60, 60, 60);
+      [l.label, fmtPct(l.taxaIndC, 2), fmtBRL(l.saldoC), fmtPct(l.taxaIPCA, 2), fmtBRL(l.saldoR), fmtBRL(l.saldoB), fmtBRL(l.corrC + l.jurosC)]
+        .forEach((v, ci) => doc.text(v, mesColXs[ci], y + 4));
+      y += 5.5;
+      rowCnt++;
+    });
+  }
 
   // ── Seções 4-6: Contrato Original (quando informado no formulário) ──
   if (d.contratoOriginal) {
