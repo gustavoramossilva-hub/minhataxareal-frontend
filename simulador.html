@@ -613,11 +613,14 @@
       if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
         window.location.href = 'auth.html?reason=expired'; return;
       }
+      // Tier e status premium disponíveis globalmente
+      window.userTier    = me.tier || 'standard';
+      window.userPremium = (window.userTier === 'premium');
       // Injeta nome do usuário no header se existir
       const nameEl = document.getElementById('user-header-name');
       if (nameEl) nameEl.textContent = me.name;
       const planEl = document.getElementById('user-header-plan');
-      if (planEl) planEl.textContent = me.plan === 'subscription' ? 'assinante' : 'ativo';
+      if (planEl) planEl.textContent = window.userPremium ? 'premium' : (me.plan === 'subscription' ? 'assinante' : 'ativo');
     } catch (e) {
       localStorage.removeItem('mtr_token');
       localStorage.removeItem('mtr_user');
@@ -1083,6 +1086,37 @@
     <!-- ÁREA DE RESULTADOS INADIMPLÊNCIA -->
     <div id="inad-results-area" style="display:none;padding-bottom:40px"></div>
 
+    <!-- Upsell Premium — exibido quando userPremium === false na aba Inadimplência -->
+    <div id="inad-upsell" style="display:none;padding:40px 0">
+      <div style="max-width:480px;margin:0 auto;border:1.5px solid var(--accent);border-radius:16px;padding:36px 32px;text-align:center;background:var(--surface)">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--accent-dim2);border:1px solid var(--accent);border-radius:99px;padding:4px 14px;margin-bottom:24px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase">Premium</span>
+        </div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin:0 0 14px">Apuração de Inadimplência</h2>
+        <p style="color:var(--text2);font-size:14px;line-height:1.7;margin:0 0 24px">Apure o período de inadimplência de um contrato com integração à série histórica do Banco Central, comparando os valores aplicados com parâmetros de referência e a taxa média de mercado.</p>
+        <ul style="list-style:none;padding:0;margin:0 0 32px;display:flex;flex-direction:column;gap:10px;text-align:left">
+          <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Série histórica real do BCB integrada automaticamente
+          </li>
+          <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Comparativo entre três cenários (credor, referência e média BCB)
+          </li>
+          <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Relatório PDF completo com tabela de amortização
+          </li>
+        </ul>
+        <p style="color:var(--text3);font-size:12.5px;margin:0 0 20px;font-family:'DM Mono',monospace">Disponível no plano Premium — ativação R$69,90 + assinatura R$39,90/mês (promocional)</p>
+        <button class="calc-btn" style="width:100%;justify-content:center" onclick="window.open('PREMIUM_CHECKOUT_URL_PLACEHOLDER','_blank')">
+          Fazer Upgrade para Premium
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+
   </div><!-- /right-panel -->
 </div><!-- /app-shell -->
 
@@ -1268,21 +1302,32 @@ function switchTab(tab) {
   document.getElementById('tab-inadimplencia').classList.toggle('active', tab === 'inadimplencia');
   document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
   document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
-  document.getElementById('mode-inadimplencia').style.display = tab === 'inadimplencia' ? '' : 'none';
+  // mode-inadimplencia é controlado individualmente abaixo (depende do gate premium)
+  if (tab !== 'inadimplencia') {
+    document.getElementById('mode-inadimplencia').style.display = 'none';
+  }
 
   const mainBtns = document.getElementById('main-calc-buttons');
   if (mainBtns) mainBtns.style.display = tab === 'inadimplencia' ? 'none' : '';
 
   if (tab === 'inadimplencia') {
-    // Oculta resultados do simulador
     document.getElementById('results-area').style.display = 'none';
-    const iadArea = document.getElementById('inad-results-area');
-    if (window._inadState) {
+    document.getElementById('inad-results-area').style.display = 'none';
+    const upsellEl = document.getElementById('inad-upsell');
+    const formEl   = document.getElementById('mode-inadimplencia');
+    if (window.userPremium === false) {
+      formEl.style.display = 'none';
+      if (upsellEl) upsellEl.style.display = '';
       document.getElementById('empty-state').style.display = 'none';
-      iadArea.style.display = '';
     } else {
-      document.getElementById('empty-state').style.display = '';
-      iadArea.style.display = 'none';
+      if (upsellEl) upsellEl.style.display = 'none';
+      formEl.style.display = '';
+      if (window._inadState) {
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('inad-results-area').style.display = '';
+      } else {
+        document.getElementById('empty-state').style.display = '';
+      }
     }
   } else {
     document.getElementById('inad-results-area').style.display = 'none';
@@ -1802,16 +1847,103 @@ function gerarPDF() {
     doc.text(fmtBRL(r.saldo), lm + 133, y + 4.5);
     y += 6;
   });
-  if (tabela.length > 12) {
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(7);
-    doc.text('... tabela completa disponível no app (' + tabela.length + ' parcelas)', lm + 2, y + 4);
-    y += 8;
+  // Para premium: tabela completa paginada; para standard: só 12 linhas + nota
+  if (window.userPremium) {
+    // Premium já renderizou as primeiras 12 linhas acima — agora continua o resto
+    tabela.slice(12).forEach((r, idx) => {
+      if (y > 265) {
+        doc.addPage();
+        doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
+        doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+        doc.text('MinhaTaxaReal — Tabela de Amortização (cont.)', lm, 12);
+        doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
+        y = 24;
+        // Reinicia cabeçalho
+        doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+        ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo Devedor'].forEach((h, i) => {
+          doc.text(h, [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133][i], y + 5);
+        });
+        y += 7;
+      }
+      if ((idx + 12) % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+      doc.text(String(r.parc), lm + 2, y + 4.5);
+      doc.text(fmtBRL(r.pmt),  lm + 18, y + 4.5);
+      doc.text(fmtBRL(r.juros), lm + 58, y + 4.5);
+      doc.text(fmtBRL(r.amort), lm + 95, y + 4.5);
+      doc.text(fmtBRL(r.saldo), lm + 133, y + 4.5);
+      y += 6;
+    });
+  } else {
+    if (tabela.length > 12) {
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(7);
+      doc.text('... tabela completa disponível no plano Premium (' + tabela.length + ' parcelas)', lm + 2, y + 4);
+      y += 8;
+    }
   }
 
   y += 6;
 
+  // ── Seções Premium: Comparativo de Taxas ──
+  if (window.userPremium) {
+    if (y > 220) {
+      doc.addPage();
+      doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
+      doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+      doc.text('MinhaTaxaReal — Comparativo de Taxas (Premium)', lm, 12);
+      doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
+      y = 28;
+    }
+    doc.setTextColor(50, 50, 50);
+    doc.setFillColor(212, 240, 60);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(14, 15, 17);
+    doc.text('COMPARATIVO DE TAXAS (PREMIUM)', lm + 3, y + 5);
+    y += 11;
+
+    // Cabeçalho tabela
+    const txColXs = [lm + 2, lm + 90, lm + 132];
+    doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+    ['Taxa', 'a.m.', 'a.a.'].forEach((h, i) => doc.text(h, txColXs[i], y + 5));
+    y += 7;
+
+    const taxaNomEl  = document.getElementById('taxa-nominal');
+    const taxaNomVal = taxaNomEl ? parseFloat(taxaNomEl.value) : null;
+    const txRows = [];
+    if (taxaNomVal && !isNaN(taxaNomVal)) {
+      const taxaNomAno = (Math.pow(1 + taxaNomVal / 100, 12) - 1) * 100;
+      txRows.push(['Taxa Contratada', fmtPct(taxaNomVal) + ' a.m.', fmtPct(taxaNomAno) + ' a.a.']);
+    }
+    txRows.push(['Taxa Efetiva Calculada (TIR)', fmtPct(taxa * 100) + ' a.m.', fmtPct(taxaAno) + ' a.a.']);
+    txRows.push(['Taxa Média Bacen — ' + bacen.nome, fmtPct(bacen.taxaMes) + ' a.m.', fmtPct(bacen.taxaAno) + ' a.a.']);
+    txRows.forEach((row, idx) => {
+      if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+      doc.setFont('helvetica', idx === txRows.length - 1 ? 'italic' : 'normal');
+      doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+      row.forEach((cell, ci) => doc.text(cell, txColXs[ci], y + 4.5));
+      y += 6;
+    });
+    y += 4;
+
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70);
+    if (taxaNomVal && !isNaN(taxaNomVal)) {
+      const difNom = taxa * 100 - taxaNomVal;
+      doc.text('Diferença taxa efetiva vs. taxa contratada: ' + (difNom >= 0 ? '+' : '') + fmtPct(difNom) + ' a.m.', lm + 2, y);
+      y += 6;
+    }
+    const extraJuros = (taxa * 100 - bacen.taxaMes) / 100 * state.valorLiquido * state.numParcelas;
+    doc.text('Diferença taxa efetiva vs. taxa média Bacen: ' + (diff >= 0 ? '+' : '') + fmtPct(diff) + ' a.m.' +
+      (Math.abs(extraJuros) > 0.01 ? ', equivalente a ' + fmtBRL(Math.abs(extraJuros)) + ' ao longo do contrato' : ''), lm + 2, y);
+    y += 10;
+  }
+
   // Seção 4 — Direitos
+  if (y > 230) {
+    doc.addPage(); y = 20;
+  }
   doc.setTextColor(50, 50, 50);
   doc.setFillColor(240, 240, 240);
   doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
@@ -1837,13 +1969,23 @@ function gerarPDF() {
 
   y += 6;
 
-  // Disclaimer
+  // Disclaimer + plano no rodapé
+  const totalPagesMain = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPagesMain; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(160, 160, 160);
+    doc.text('MinhaTaxaReal · Cálculo matemático para fins técnicos · Fonte: Banco Central do Brasil (dadosabertos.bcb.gov.br)', lm, 291);
+    doc.text('Plano: ' + (window.userPremium ? 'Premium' : 'Standard') + '  ·  Página ' + p + ' de ' + totalPagesMain, 190, 291, { align: 'right' });
+  }
+  doc.setPage(totalPagesMain);
+
+  if (y > 250) { doc.addPage(); y = 20; }
   doc.setFillColor(250, 248, 240);
   doc.roundedRect(lm, y, pw, 18, 2, 2, 'F');
   doc.setTextColor(140, 120, 60);
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'italic');
-  const disclaimer = 'AVISO LEGAL: Este relatório tem fins exclusivamente educativos e informativos. Os cálculos são baseados nos dados fornecidos pelo usuário e nas taxas médias oficiais do Banco Central do Brasil (ref.: Mai/2026). Não constitui consultoria jurídica, financeira ou assessoria de investimentos. As taxas Bacen são atualizadas mensalmente.';
+  const disclaimer = 'AVISO: Este relatório tem fins exclusivamente educativos e informativos. Os cálculos são baseados nos dados fornecidos pelo usuário e nas taxas médias oficiais do Banco Central do Brasil. Não constitui consultoria jurídica, financeira ou assessoria de investimentos.';
   doc.text(doc.splitTextToSize(disclaimer, pw - 4), lm + 2, y + 5);
 
   doc.save('MinhaTaxaReal-Simulacao-' + new Date().toISOString().slice(0, 10) + '.pdf');
@@ -3516,6 +3658,70 @@ function gerarPDFInadimplencia() {
     y += 5.5;
     rowCnt++;
   });
+
+  // ── Seção 4 (Premium): Dados do Contrato Original ──
+  const tabelaContrato = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
+  if (tabelaContrato && tabelaContrato.length > 0) {
+    y = novaPagina();
+
+    doc.setFillColor(212, 240, 60);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(14, 15, 17);
+    doc.text('4. DADOS DO CONTRATO ORIGINAL', lm + 3, y + 5);
+    y += 11;
+
+    const bacenC  = BACEN[state.modalidade] || {};
+    const dadosC  = [
+      ['Principal',         fmtBRL(state.valorLiquido)],
+      ['Prazo',             (state.numParcelas || '?') + ' meses'],
+      ['Sistema',           (state.sistema || '?').toUpperCase()],
+      ['Taxa efetiva (TIR)',fmtPct((state.taxaCalculada || 0) * 100) + ' a.m.'],
+      ['Taxa média Bacen',  fmtPct(bacenC.taxaMes || 0) + ' a.m. — ' + (bacenC.nome || state.modalidade)],
+    ];
+    doc.setFontSize(9); doc.setTextColor(60, 60, 60);
+    dadosC.forEach(([k, v]) => {
+      doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 2, y);
+      doc.setFont('helvetica', 'normal'); doc.text(v,       lm + 70, y);
+      y += 6;
+    });
+    y += 8;
+
+    // Tabela de amortização completa paginada
+    doc.setFillColor(240, 240, 240);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+    doc.text('5. TABELA DE AMORTIZAÇÃO DO CONTRATO ORIGINAL — ' + (state.sistema || '').toUpperCase(), lm + 3, y + 5);
+    y += 11;
+
+    const colXsA = [lm + 2, lm + 18, lm + 58, lm + 95, lm + 133];
+    function cabecalhoAmort() {
+      doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+      ['#', 'Parcela', 'Juros', 'Amortização', 'Saldo'].forEach((h, i) => doc.text(h, colXsA[i], y + 5));
+      y += 7;
+    }
+    cabecalhoAmort();
+
+    tabelaContrato.forEach((r, idx) => {
+      if (y > 265) {
+        doc.addPage();
+        doc.setFillColor(14, 15, 17); doc.rect(0, 0, 210, 18, 'F');
+        doc.setTextColor(212, 240, 60); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+        doc.text('MinhaTaxaReal — Tabela de Amortização do Contrato Original (cont.)', lm, 12);
+        doc.setFillColor(212, 240, 60); doc.rect(lm, 16, pw, 0.5, 'F');
+        y = 24;
+        cabecalhoAmort();
+      }
+      if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+      doc.text(String(r.parc),    colXsA[0], y + 4.5);
+      doc.text(fmtBRL(r.pmt),    colXsA[1], y + 4.5);
+      doc.text(fmtBRL(r.juros),  colXsA[2], y + 4.5);
+      doc.text(fmtBRL(r.amort),  colXsA[3], y + 4.5);
+      doc.text(fmtBRL(r.saldo),  colXsA[4], y + 4.5);
+      y += 6;
+    });
+  }
 
   rodape();
   doc.save('inadimplencia-' + d.vencimento + '.pdf');
