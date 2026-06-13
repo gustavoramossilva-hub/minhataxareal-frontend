@@ -1795,13 +1795,13 @@ function gerarPDF() {
   y += 4;
   let situacaoTxt, situacaoColor;
   if (diff > 2) {
-    situacaoTxt = 'SITUAÇÃO: Taxa calculada significativamente acima da média Bacen para esta modalidade.';
+    situacaoTxt = 'COMPARATIVO: Taxa efetiva calculada está acima da média Bacen para esta modalidade.';
     situacaoColor = [200, 50, 50];
   } else if (diff > 0.5) {
-    situacaoTxt = 'SITUAÇÃO: Taxa calculada acima da média Bacen para esta modalidade.';
+    situacaoTxt = 'COMPARATIVO: Taxa efetiva calculada está acima da média Bacen para esta modalidade.';
     situacaoColor = [180, 120, 0];
   } else {
-    situacaoTxt = 'SITUAÇÃO: Taxa dentro ou abaixo da média de mercado Bacen.';
+    situacaoTxt = 'COMPARATIVO: Taxa efetiva calculada está dentro ou abaixo da média Bacen para esta modalidade.';
     situacaoColor = [30, 140, 80];
   }
   doc.setFillColor(...situacaoColor, 20);
