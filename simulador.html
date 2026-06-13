@@ -114,7 +114,7 @@
   /* ── TABS ── */
   .tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     background: var(--surface2);
     border-radius: var(--radius-sm);
     padding: 4px;
@@ -154,7 +154,7 @@
   }
   .form-hint { color: var(--text3); font-size: 11px; font-family: 'DM Mono', monospace; }
 
-  input[type="text"], input[type="number"], select {
+  input[type="text"], input[type="number"], input[type="date"], select {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border2);
@@ -662,7 +662,8 @@
     <!-- tabs: simular / auditar -->
     <div class="tabs">
       <button class="tab-btn active" id="tab-simular" onclick="switchTab('simular')">Simular</button>
-      <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Auditar Contrato</button>
+      <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Auditar</button>
+      <button class="tab-btn" id="tab-inadimplencia" onclick="switchTab('inadimplencia')">Inadimplência</button>
     </div>
 
     <!-- MODO SIMULAR -->
@@ -870,10 +871,109 @@
       </div>
     </div>
 
+    <!-- ══ MODO INADIMPLÊNCIA ══ -->
+    <div id="mode-inadimplencia" style="display:none">
+
+      <div class="form-group">
+        <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
+        <select id="inad-modalidade">
+          <option value="veiculo">Financiamento de Veículos</option>
+          <option value="pessoal">Crédito Pessoal</option>
+          <option value="habitacional">Crédito Habitacional</option>
+          <option value="capital">Capital de Giro (PJ)</option>
+          <option value="consignado">Crédito Consignado</option>
+          <option value="cheque">Cheque Especial</option>
+          <option value="cartao">Cartão de Crédito Rotativo</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Saldo principal na data do vencimento <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="inad-principal" placeholder="10.000,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+        <div>
+          <label class="form-label">Data do vencimento</label>
+          <input type="date" id="inad-vencimento" style="width:100%" />
+        </div>
+        <div>
+          <label class="form-label">Data de apuração</label>
+          <input type="date" id="inad-apuracao" style="width:100%" />
+        </div>
+      </div>
+
+      <hr class="form-divider">
+      <p class="panel-title" style="margin-bottom:14px">Encargos do credor</p>
+
+      <div class="form-group">
+        <label class="form-label">Multa aplicada <span class="form-hint">% sobre o saldo</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="inad-multa" value="2" step="0.01" min="0" max="100" />
+          <span class="input-suffix">%</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Juros de mora <span class="form-hint">% a.m.</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="inad-juros-mora" value="1" step="0.01" min="0" />
+          <span class="input-suffix">% a.m.</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Índice de correção monetária <span class="form-hint">credor</span></label>
+        <select id="inad-indice" onchange="toggleIndiceFixo()">
+          <option value="ipca">IPCA (SGS 433)</option>
+          <option value="inpc">INPC (SGS 188)</option>
+          <option value="selic">SELIC acumulada (SGS 4390)</option>
+          <option value="tr">TR (SGS 226)</option>
+          <option value="fixo">Taxa fixa informada</option>
+        </select>
+      </div>
+
+      <div id="inad-taxa-fixa-section" style="display:none" class="form-group">
+        <label class="form-label">Taxa fixa de correção <span class="form-hint">% a.m.</span></label>
+        <div class="input-suffix-wrap">
+          <input type="number" id="inad-taxa-fixa" placeholder="0,50" step="0.01" min="0" />
+          <span class="input-suffix">% a.m.</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Convenção dos juros de mora</label>
+        <select id="inad-convencao">
+          <option value="composto">Juros compostos (capitalização)</option>
+          <option value="simples">Juros simples (linear)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Outros encargos <span class="form-hint">opcional — R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="inad-outros" placeholder="0,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+
+      <div id="inad-loading" style="display:none;font-size:12px;color:var(--amber);font-family:'DM Mono',monospace;padding:10px 0;text-align:center;letter-spacing:.03em">
+        ⟳ Buscando séries históricas no Banco Central…
+      </div>
+
+      <button class="calc-btn" onclick="calcularInadimplencia()">▶ Apurar Inadimplência</button>
+      <button class="clear-btn" onclick="limparInadimplencia()">↺ Limpar campos</button>
+    </div>
+
     <div id="alert-input" class="alert alert-danger"></div>
 
-    <button class="calc-btn" onclick="calcular()">▶ Calcular Agora</button>
-    <button class="clear-btn" onclick="limpar()">↺ Limpar campos</button>
+    <div id="main-calc-buttons">
+      <button class="calc-btn" onclick="calcular()">▶ Calcular Agora</button>
+      <button class="clear-btn" onclick="limpar()">↺ Limpar campos</button>
+    </div>
   </div>
 
   <!-- ══ PAINEL DIREITO (resultados) ══ -->
@@ -979,6 +1079,10 @@
       </div>
 
     </div><!-- /results-area -->
+
+    <!-- ÁREA DE RESULTADOS INADIMPLÊNCIA -->
+    <div id="inad-results-area" style="display:none;padding-bottom:40px"></div>
+
   </div><!-- /right-panel -->
 </div><!-- /app-shell -->
 
@@ -1013,6 +1117,9 @@ const SGS_CODIGOS = {
   veiculo: 25471, pessoal: 25464, habitacional: 25468,
   capital: 20714, consignado: 25469, cheque: 25403, cartao: 20754,
 };
+
+// Códigos SGS dos índices de correção (módulo inadimplência)
+const SGS_INDICES = { ipca: 433, inpc: 188, selic: 4390, tr: 226 };
 
 // BACEN dinâmico — começa com fallback, preenchido pela API
 let BACEN = JSON.parse(JSON.stringify(BACEN_FALLBACK));
@@ -1158,9 +1265,29 @@ function switchTab(tab) {
   state.modo = tab;
   document.getElementById('tab-simular').classList.toggle('active', tab === 'simular');
   document.getElementById('tab-auditar').classList.toggle('active', tab === 'auditar');
+  document.getElementById('tab-inadimplencia').classList.toggle('active', tab === 'inadimplencia');
   document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
   document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
-  resetResultados();
+  document.getElementById('mode-inadimplencia').style.display = tab === 'inadimplencia' ? '' : 'none';
+
+  const mainBtns = document.getElementById('main-calc-buttons');
+  if (mainBtns) mainBtns.style.display = tab === 'inadimplencia' ? 'none' : '';
+
+  if (tab === 'inadimplencia') {
+    // Oculta resultados do simulador
+    document.getElementById('results-area').style.display = 'none';
+    const iadArea = document.getElementById('inad-results-area');
+    if (window._inadState) {
+      document.getElementById('empty-state').style.display = 'none';
+      iadArea.style.display = '';
+    } else {
+      document.getElementById('empty-state').style.display = '';
+      iadArea.style.display = 'none';
+    }
+  } else {
+    document.getElementById('inad-results-area').style.display = 'none';
+    resetResultados();
+  }
 }
 
 function limpar() {
@@ -2915,14 +3042,496 @@ function renderGraficoSACRE(r) {
 })();
 
 // ════════════════════════════════════════════
+//  MÓDULO INADIMPLÊNCIA
+// ════════════════════════════════════════════
+
+function toggleIndiceFixo() {
+  const val = document.getElementById('inad-indice')?.value;
+  const sec = document.getElementById('inad-taxa-fixa-section');
+  if (sec) sec.style.display = val === 'fixo' ? '' : 'none';
+}
+
+function limparInadimplencia() {
+  document.getElementById('inad-principal').value = '';
+  document.getElementById('inad-vencimento').value = '';
+  document.getElementById('inad-apuracao').value  = new Date().toISOString().slice(0, 10);
+  document.getElementById('inad-multa').value      = '2';
+  document.getElementById('inad-juros-mora').value = '1';
+  document.getElementById('inad-outros').value     = '';
+  document.getElementById('inad-taxa-fixa').value  = '';
+  document.getElementById('inad-indice').value     = 'ipca';
+  toggleIndiceFixo();
+  window._inadState = null;
+  document.getElementById('inad-results-area').style.display = 'none';
+  document.getElementById('empty-state').style.display = '';
+  document.getElementById('alert-input').classList.remove('show');
+}
+
+async function buscarSerieHistorica(codigo, dataInicial, dataFinal) {
+  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigo}/dados?formato=json&dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('[SGS] Erro ao buscar série', codigo, ':', e.message);
+    return [];
+  }
+}
+
+function serieParaMap(serie) {
+  const map = {};
+  (serie || []).forEach(item => {
+    const parts = (item.data || '').split('/');
+    if (parts.length === 3) {
+      const key = parts[2] + '-' + parts[1]; // "AAAA-MM"
+      map[key] = parseFloat(item.valor) || 0;
+    }
+  });
+  return map;
+}
+
+function getMeses(aaaaMmVenc, aaaaMmApur) {
+  const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const [ayv, amv] = aaaaMmVenc.split('-').map(Number);
+  const [aya, ama] = aaaaMmApur.split('-').map(Number);
+  const meses = [];
+  let ano = ayv, mes = amv;
+  while (ano < aya || (ano === aya && mes <= ama)) {
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    const mm = String(mes).padStart(2, '0');
+    meses.push({
+      ano, mes,
+      key:        `${ano}-${mm}`,
+      label:      `${mesesNomes[mes - 1]}/${ano}`,
+      dataIniBCB: `01/${mm}/${ano}`,
+      dataFimBCB: `${ultimoDia}/${mm}/${ano}`,
+    });
+    mes++;
+    if (mes > 12) { mes = 1; ano++; }
+  }
+  return meses;
+}
+
+async function calcularInadimplencia() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  const principal  = parseBRL(document.getElementById('inad-principal')?.value || '');
+  const vencimento = document.getElementById('inad-vencimento')?.value;
+  const apuracao   = document.getElementById('inad-apuracao')?.value;
+  const multaP     = parseFloat(document.getElementById('inad-multa')?.value)      || 0;
+  const jurosMoraP = parseFloat(document.getElementById('inad-juros-mora')?.value) || 0;
+  const indiceKey  = document.getElementById('inad-indice')?.value  || 'ipca';
+  const taxaFixaP  = parseFloat(document.getElementById('inad-taxa-fixa')?.value)  || 0;
+  const convencao  = document.getElementById('inad-convencao')?.value || 'composto';
+  const outros     = parseBRL(document.getElementById('inad-outros')?.value || '');
+  const modalidade = document.getElementById('inad-modalidade')?.value || 'pessoal';
+
+  if (!principal || principal <= 0) { showAlert(alertEl, 'Informe o saldo principal.'); return; }
+  if (!vencimento)  { showAlert(alertEl, 'Informe a data do vencimento.'); return; }
+  if (!apuracao)    { showAlert(alertEl, 'Informe a data de apuração.'); return; }
+  if (apuracao < vencimento) { showAlert(alertEl, 'A data de apuração deve ser igual ou posterior ao vencimento.'); return; }
+
+  const meses = getMeses(vencimento.slice(0, 7), apuracao.slice(0, 7));
+  if (!meses.length) { showAlert(alertEl, 'Período inválido — verifique as datas.'); return; }
+
+  const dataIniBCB = meses[0].dataIniBCB;
+  const dataFimBCB = meses[meses.length - 1].dataFimBCB;
+
+  const loadEl = document.getElementById('inad-loading');
+  if (loadEl) loadEl.style.display = '';
+
+  try {
+    const codigoIndice = SGS_INDICES[indiceKey];
+    const [serieIndice, serieIPCA, serieBCB] = await Promise.all([
+      codigoIndice ? buscarSerieHistorica(codigoIndice, dataIniBCB, dataFimBCB) : Promise.resolve([]),
+      buscarSerieHistorica(SGS_INDICES.ipca, dataIniBCB, dataFimBCB),
+      buscarSerieHistorica(SGS_CODIGOS[modalidade], dataIniBCB, dataFimBCB),
+    ]);
+
+    const mapIndice = indiceKey === 'ipca'  ? serieParaMap(serieIPCA)
+                    : indiceKey === 'fixo'  ? {}
+                    : serieParaMap(serieIndice);
+    const mapIPCA   = serieParaMap(serieIPCA);
+    const mapBCB    = serieParaMap(serieBCB);
+
+    // Cenário CREDOR
+    let saldoC = principal * (1 + multaP / 100);
+    let accCorrecaoC = 0, accJurosC = 0, mesesSemDado = 0;
+
+    // Cenário REFERÊNCIA (multa 2%, juros 1% a.m. compostos, IPCA)
+    let saldoR = principal * 1.02;
+    let accCorrecaoR = 0, accJurosR = 0;
+
+    // Cenário TAXA MÉDIA BCB (multa 2%, taxa histórica BCB)
+    let saldoB = principal * 1.02;
+    let accJurosB = 0;
+
+    const linhasMes = [];
+
+    meses.forEach(m => {
+      // Taxa do índice credor
+      let taxaIndC;
+      if (indiceKey === 'fixo') {
+        taxaIndC = taxaFixaP;
+      } else if (m.key in mapIndice) {
+        taxaIndC = mapIndice[m.key];
+      } else {
+        taxaIndC = 0;
+        mesesSemDado++;
+      }
+      const taxaIPCA = m.key in mapIPCA ? mapIPCA[m.key] : 0;
+      const taxaBCB  = m.key in mapBCB  ? mapBCB[m.key]  : BACEN[modalidade].taxaMes;
+
+      // CREDOR
+      const corrC  = saldoC * (taxaIndC / 100);
+      const baseJC = convencao === 'simples' ? principal : (saldoC + corrC);
+      const jurosC = baseJC * (jurosMoraP / 100);
+      accCorrecaoC += corrC;
+      accJurosC    += jurosC;
+      saldoC        = saldoC + corrC + jurosC;
+
+      // REFERÊNCIA
+      const corrR  = saldoR * (taxaIPCA / 100);
+      const jurosR = (saldoR + corrR) * 0.01;
+      accCorrecaoR += corrR;
+      accJurosR    += jurosR;
+      saldoR        = saldoR + corrR + jurosR;
+
+      // BCB
+      const jurosB = saldoB * (taxaBCB / 100);
+      accJurosB   += jurosB;
+      saldoB       = saldoB * (1 + taxaBCB / 100);
+
+      linhasMes.push({
+        label: m.label, key: m.key,
+        taxaIndC, corrC, jurosC, saldoC,
+        taxaIPCA, corrR, jurosR, saldoR,
+        taxaBCB,  jurosB, saldoB,
+      });
+    });
+
+    const multaC = principal * (multaP / 100);
+    const multaR = principal * 0.02;
+
+    const indiceNomes = { ipca: 'IPCA', inpc: 'INPC', selic: 'SELIC', tr: 'TR',
+                          fixo: `Taxa fixa (${fmtPct(taxaFixaP)} a.m.)` };
+    const d = {
+      principal, vencimento, apuracao, meses, modalidade,
+      multaP, jurosMoraP, indiceKey, convencao, outros, taxaFixaP,
+      multaC, multaR,
+      accCorrecaoC, accJurosC, saldoC, totalC: saldoC + outros,
+      accCorrecaoR, accJurosR, saldoR, totalR: saldoR,
+      accJurosB,    saldoB,    totalB: saldoB,
+      linhasMes, mesesSemDado,
+      indiceNome:    indiceNomes[indiceKey] || indiceKey,
+      modalidadeNome: BACEN[modalidade]?.nome || modalidade,
+    };
+
+    window._inadState = d;
+    renderResultadosInadimplencia(d);
+
+  } finally {
+    if (loadEl) loadEl.style.display = 'none';
+  }
+}
+
+function renderResultadosInadimplencia(d) {
+  const area = document.getElementById('inad-results-area');
+  document.getElementById('empty-state').style.display  = 'none';
+  document.getElementById('results-area').style.display = 'none';
+  area.style.display = '';
+
+  const difCR = d.totalC - d.totalR;
+  const difCB = d.totalC - d.totalB;
+  const fmtDif  = v => v > 0.005
+    ? `Diferença: + ${fmtBRL(v)}`
+    : `<span style="color:var(--green)">✓ Dentro do parâmetro de referência</span>`;
+  const fmtDifB = v => v > 0.005
+    ? `Diferença: + ${fmtBRL(v)}`
+    : `<span style="color:var(--green)">✓ Dentro da média BCB</span>`;
+
+  const descIndiceC = `Multa ${fmtPct(d.multaP)} + juros ${fmtPct(d.jurosMoraP)} a.m. ${d.convencao === 'simples' ? 'simples' : 'compostos'} + ${d.indiceNome}`;
+
+  area.innerHTML = `
+    <div class="results-header animate-in">
+      <div>
+        <div class="results-title">Apuração de Inadimplência</div>
+        <div class="results-subtitle">${d.modalidadeNome} · ${d.vencimento.split('-').reverse().join('/')} → ${d.apuracao.split('-').reverse().join('/')} · ${d.meses.length} mês(es)</div>
+      </div>
+      <button class="pdf-btn" onclick="gerarPDFInadimplencia()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Exportar PDF
+      </button>
+    </div>
+
+    ${d.mesesSemDado > 0 ? `<div class="alert show alert-warn" style="margin-bottom:16px">
+      ⚠ ${d.mesesSemDado} mês(es) sem dado disponível no BCB para o índice "${d.indiceNome}" — 0% utilizado nesses períodos.
+    </div>` : ''}
+
+    <!-- Quadro comparativo -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px" class="animate-in delay-1">
+      <div class="metric-card danger">
+        <div class="mc-label">Valores apurados pelo credor</div>
+        <div class="mc-value danger" style="font-size:20px">${fmtBRL(d.totalC)}</div>
+        <div class="mc-sub" style="margin-top:8px;line-height:1.65">${descIndiceC}${d.outros > 0 ? ' + outros encargos' : ''}</div>
+      </div>
+      <div class="metric-card warn">
+        <div class="mc-label">Parâmetro de Referência</div>
+        <div class="mc-value warn" style="font-size:20px">${fmtBRL(d.totalR)}</div>
+        <div class="mc-sub" style="margin-top:6px;line-height:1.65">Multa 2% + juros 1% a.m. compostos + IPCA</div>
+        <div style="font-size:12px;margin-top:8px;font-family:'DM Mono',monospace">${fmtDif(difCR)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-label">Taxa Média BCB</div>
+        <div class="mc-value" style="font-size:20px">${fmtBRL(d.totalB)}</div>
+        <div class="mc-sub" style="margin-top:6px;line-height:1.65">Multa 2% + taxa média histórica ${d.modalidadeNome}</div>
+        <div style="font-size:12px;margin-top:8px;font-family:'DM Mono',monospace">${fmtDifB(difCB)}</div>
+      </div>
+    </div>
+
+    <!-- Detalhamento por componente -->
+    <div class="amort-section animate-in delay-2">
+      <div class="section-heading">Detalhamento por Componente</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Componente</th>
+            <th style="color:var(--red)">Credor</th>
+            <th style="color:var(--amber)">Referência</th>
+            <th>Média BCB</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="text-align:left">Principal</td><td class="td-highlight">${fmtBRL(d.principal)}</td><td class="td-highlight">${fmtBRL(d.principal)}</td><td class="td-highlight">${fmtBRL(d.principal)}</td></tr>
+            <tr><td style="text-align:left">Multa</td><td class="td-juros">${fmtBRL(d.multaC)}</td><td>${fmtBRL(d.multaR)}</td><td>${fmtBRL(d.multaR)}</td></tr>
+            <tr><td style="text-align:left">Correção monetária</td><td class="td-juros">${fmtBRL(d.accCorrecaoC)}</td><td>${fmtBRL(d.accCorrecaoR)}</td><td style="color:var(--text3)">—</td></tr>
+            <tr><td style="text-align:left">Juros de mora</td><td class="td-juros">${fmtBRL(d.accJurosC)}</td><td>${fmtBRL(d.accJurosR)}</td><td>${fmtBRL(d.accJurosB)}</td></tr>
+            ${d.outros > 0 ? `<tr><td style="text-align:left">Outros encargos</td><td class="td-juros">${fmtBRL(d.outros)}</td><td style="color:var(--text3)">—</td><td style="color:var(--text3)">—</td></tr>` : ''}
+            <tr style="border-top:2px solid var(--border2);background:var(--surface2)">
+              <td style="text-align:left;font-family:'Syne',sans-serif;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text2)">TOTAL</td>
+              <td style="color:var(--red);font-weight:600">${fmtBRL(d.totalC)}</td>
+              <td style="color:var(--amber);font-weight:600">${fmtBRL(d.totalR)}</td>
+              <td style="color:var(--text);font-weight:600">${fmtBRL(d.totalB)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Evolução mês a mês -->
+    <div class="amort-section animate-in delay-3">
+      <div class="section-heading">Evolução Mês a Mês</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Mês</th>
+            <th style="color:var(--red)">% Corr. Credor</th>
+            <th style="color:var(--red)">Encargos Credor</th>
+            <th style="color:var(--red)">Saldo Credor</th>
+            <th style="color:var(--amber)">% IPCA</th>
+            <th style="color:var(--amber)">Encargos Ref.</th>
+            <th style="color:var(--amber)">Saldo Ref.</th>
+            <th>Saldo BCB</th>
+          </tr></thead>
+          <tbody>
+            ${d.linhasMes.map(l => `<tr>
+              <td style="text-align:left;color:var(--text2)">${l.label}</td>
+              <td style="color:var(--red)">${fmtPct(l.taxaIndC, 3)}</td>
+              <td style="color:var(--red)">${fmtBRL(l.corrC + l.jurosC)}</td>
+              <td style="color:var(--red)">${fmtBRL(l.saldoC)}</td>
+              <td style="color:var(--amber)">${fmtPct(l.taxaIPCA, 3)}</td>
+              <td style="color:var(--amber)">${fmtBRL(l.corrR + l.jurosR)}</td>
+              <td style="color:var(--amber)">${fmtBRL(l.saldoR)}</td>
+              <td>${fmtBRL(l.saldoB)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      Esta apuração é baseada em séries históricas do Banco Central do Brasil (SGS) e parâmetros informados pelo usuário. Os resultados têm finalidade exclusivamente técnica e informativa, e devem ser validados por profissional habilitado antes de qualquer uso formal.
+      <strong>Fonte: Banco Central do Brasil — SGS (dadosabertos.bcb.gov.br)</strong>
+    </div>
+  `;
+
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ────────────────────────────────────────────
+//  PDF INADIMPLÊNCIA
+// ────────────────────────────────────────────
+function gerarPDFInadimplencia() {
+  const d = window._inadState;
+  if (!d) { showAlert(document.getElementById('alert-input'), 'Execute a apuração antes de exportar o PDF.', 'alert-warn'); return; }
+
+  let jsPDF;
+  try {
+    jsPDF = window.jspdf?.jsPDF;
+    if (!jsPDF) throw new Error('não carregada');
+  } catch(e) {
+    showAlert(document.getElementById('alert-input'), 'Biblioteca de PDF não disponível. Verifique a conexão e tente novamente.', 'alert-warn');
+    return;
+  }
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const lm = 20, pw = 170;
+  let y = 0;
+
+  function rodape() {
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(160, 160, 160);
+      doc.text('MinhaTaxaReal · Cálculo matemático para fins técnicos · Fonte: Banco Central do Brasil — SGS (dadosabertos.bcb.gov.br)', lm, 291);
+      doc.text('Página ' + p + ' de ' + totalPages, 190, 291, { align: 'right' });
+    }
+  }
+
+  function novaPagina() {
+    doc.addPage();
+    doc.setFillColor(14, 15, 17);
+    doc.rect(0, 0, 210, 18, 'F');
+    doc.setTextColor(212, 240, 60);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MinhaTaxaReal — Apuração de Inadimplência (cont.)', lm, 12);
+    doc.setFillColor(212, 240, 60);
+    doc.rect(lm, 16, pw, 0.5, 'F');
+    return 24;
+  }
+
+  // ── Cabeçalho página 1 ──
+  doc.setFillColor(14, 15, 17);
+  doc.rect(0, 0, 210, 40, 'F');
+  doc.setTextColor(212, 240, 60);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('MinhaTaxaReal', lm, 16);
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Apuração de Inadimplência — Memória de Cálculo', lm, 23);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: Banco Central do Brasil — SGS', lm, 29);
+  doc.setFillColor(212, 240, 60);
+  doc.rect(lm, 34, pw, 1, 'F');
+  y = 50;
+
+  // ── Seção 1: Dados da Operação ──
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+  doc.text('1. DADOS DA OPERAÇÃO', lm + 3, y + 5);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60);
+  const dados1 = [
+    ['Modalidade',           d.modalidadeNome],
+    ['Saldo principal',      fmtBRL(d.principal)],
+    ['Data do vencimento',   d.vencimento.split('-').reverse().join('/')],
+    ['Data de apuração',     d.apuracao.split('-').reverse().join('/')],
+    ['Período apurado',      d.meses.length + ' mês(es)'],
+    ['Multa aplicada',       fmtPct(d.multaP)],
+    ['Juros de mora',        fmtPct(d.jurosMoraP) + ' a.m. ' + (d.convencao === 'simples' ? 'simples' : 'compostos')],
+    ['Índice de correção',   d.indiceNome],
+    ...(d.outros > 0 ? [['Outros encargos', fmtBRL(d.outros)]] : []),
+  ];
+  dados1.forEach(([k, v]) => {
+    doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 2, y);
+    doc.setFont('helvetica', 'normal'); doc.text(v,       lm + 70, y);
+    y += 6;
+  });
+  y += 6;
+
+  // ── Seção 2: Quadro Comparativo ──
+  if (y > 230) y = novaPagina();
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+  doc.text('2. QUADRO COMPARATIVO', lm + 3, y + 5);
+  y += 12;
+
+  const colXs = [lm + 2, lm + 68, lm + 108, lm + 148];
+  doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+  ['Componente', 'Credor', 'Referência', 'Média BCB'].forEach((h, i) => doc.text(h, colXs[i], y + 5));
+  y += 7;
+
+  const rowsComp = [
+    ['Principal',         fmtBRL(d.principal),    fmtBRL(d.principal),    fmtBRL(d.principal)],
+    ['Multa',             fmtBRL(d.multaC),        fmtBRL(d.multaR),        fmtBRL(d.multaR)],
+    ['Correção monetária',fmtBRL(d.accCorrecaoC),  fmtBRL(d.accCorrecaoR),  '—'],
+    ['Juros de mora',     fmtBRL(d.accJurosC),     fmtBRL(d.accJurosR),     fmtBRL(d.accJurosB)],
+    ...(d.outros > 0 ? [['Outros encargos', fmtBRL(d.outros), '—', '—']] : []),
+    ['TOTAL',             fmtBRL(d.totalC),        fmtBRL(d.totalR),        fmtBRL(d.totalB)],
+  ];
+  rowsComp.forEach((row, idx) => {
+    const isTotal = idx === rowsComp.length - 1;
+    if (isTotal)       { doc.setFillColor(228, 228, 228); doc.rect(lm, y, pw, 6, 'F'); }
+    else if (idx % 2)  { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 6, 'F'); }
+    doc.setFont('helvetica', isTotal ? 'bold' : 'normal');
+    doc.setFontSize(7.5); doc.setTextColor(isTotal ? 30 : 60, isTotal ? 30 : 60, isTotal ? 30 : 60);
+    row.forEach((cell, ci) => doc.text(cell, colXs[ci], y + 4.5));
+    y += 6;
+  });
+  y += 4;
+
+  const difCR = d.totalC - d.totalR;
+  const difCB = d.totalC - d.totalB;
+  doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(140, 80, 0);
+  doc.text('Diferença credor vs. parâmetro de referência: ' + (difCR > 0 ? '+ ' : '') + fmtBRL(Math.abs(difCR)), lm + 2, y + 5);
+  doc.text('Diferença credor vs. taxa média BCB: '          + (difCB > 0 ? '+ ' : '') + fmtBRL(Math.abs(difCB)), lm + 2, y + 11);
+  y += 20;
+
+  // ── Seção 3: Evolução mês a mês (paginada ~35 linhas) ──
+  if (y > 220) y = novaPagina();
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+  doc.text('3. EVOLUÇÃO MÊS A MÊS', lm + 3, y + 5);
+  y += 11;
+
+  const mesColXs = [lm + 2, lm + 27, lm + 65, lm + 90, lm + 115, lm + 140, lm + 158];
+  const ROWS_PP  = 35;
+
+  function cabecalhoMeses() {
+    doc.setFillColor(220, 220, 220); doc.rect(lm, y, pw, 7, 'F');
+    doc.setFontSize(6.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(50, 50, 50);
+    ['Mês', '% Corr.C', 'Saldo Credor', '% IPCA', 'Saldo Ref.', 'Saldo BCB', 'Encarg.C'].forEach((h, i) => doc.text(h, mesColXs[i], y + 5));
+    y += 7;
+  }
+  cabecalhoMeses();
+
+  let rowCnt = 0;
+  d.linhasMes.forEach((l, idx) => {
+    if (rowCnt > 0 && rowCnt % ROWS_PP === 0) { y = novaPagina(); cabecalhoMeses(); }
+    if (idx % 2 === 0) { doc.setFillColor(248, 248, 248); doc.rect(lm, y, pw, 5.5, 'F'); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(60, 60, 60);
+    [l.label, fmtPct(l.taxaIndC, 2), fmtBRL(l.saldoC), fmtPct(l.taxaIPCA, 2), fmtBRL(l.saldoR), fmtBRL(l.saldoB), fmtBRL(l.corrC + l.jurosC)]
+      .forEach((v, ci) => doc.text(v, mesColXs[ci], y + 4));
+    y += 5.5;
+    rowCnt++;
+  });
+
+  rodape();
+  doc.save('inadimplencia-' + d.vencimento + '.pdf');
+}
+
+// ════════════════════════════════════════════
 //  INIT — dispara ao carregar
 // ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   updateBacenRef();
   updateBacenRefAud();
   renderHistorico();
-  // Busca taxas atualizadas do Bacen automaticamente
   atualizarBacen();
+  // Data de apuração padrão = hoje
+  const inadApur = document.getElementById('inad-apuracao');
+  if (inadApur) inadApur.value = new Date().toISOString().slice(0, 10);
 });
 </script>
 </body>
