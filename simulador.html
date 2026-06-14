@@ -1008,7 +1008,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+      <div id="inad2-parcela-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
         <div>
           <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
           <div class="input-prefix-wrap">
@@ -1024,10 +1024,51 @@
 
       <div class="form-group">
         <label class="form-label">Sistema de amortização</label>
-        <select id="inad2-sistema" onchange="atualizarIndicadorContrato()">
+        <select id="inad2-sistema" onchange="onSistemaInadChange()">
           <option value="price">Tabela Price (parcelas fixas)</option>
           <option value="sac">SAC (amortização constante)</option>
+          <option value="hamburguês">Método Hamburguês (saldo devedor diário)</option>
+          <option value="sacre">SACRE (amortização crescente — SFH)</option>
+          <option value="leasing">⭐ Leasing com VRG (Premium)</option>
+          <option value="ipca_plus">⭐ Financiamento IPCA+ (Premium)</option>
         </select>
+      </div>
+
+      <!-- Campos extras SACRE -->
+      <div id="inad2-section-sacre" style="display:none" class="form-group">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">TR mensal <span class="form-hint">%</span></label>
+            <input type="number" id="inad2-sacre-tr" placeholder="0,00" step="0.01" min="0" value="0" oninput="atualizarIndicadorContrato()" />
+          </div>
+          <div>
+            <label class="form-label">Tamanho do bloco <span class="form-hint">meses</span></label>
+            <input type="number" id="inad2-sacre-bloco" value="12" min="1" max="60" oninput="atualizarIndicadorContrato()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos extras Leasing -->
+      <div id="inad2-section-leasing" style="display:none" class="form-group">
+        <label class="form-label">VRG — Valor Residual Garantido <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="inad2-leasing-vrg" placeholder="5.000,00" oninput="maskCurrency(this);atualizarIndicadorContrato()" />
+        </div>
+      </div>
+
+      <!-- Campos extras IPCA+ (substitui campo de parcela) -->
+      <div id="inad2-section-ipca" style="display:none" class="form-group">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Taxa fixa mensal <span class="form-hint">%</span></label>
+            <input type="number" id="inad2-ipca-taxa" placeholder="0,50" step="0.01" min="0" oninput="atualizarIndicadorContrato()" />
+          </div>
+          <div>
+            <label class="form-label">IPCA projetado mensal <span class="form-hint">%</span></label>
+            <input type="number" id="inad2-ipca-proj" placeholder="0,38" step="0.01" min="0" oninput="atualizarIndicadorContrato()" />
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1762,6 +1803,46 @@ function gerarTabelaIPCAPlus(pv, taxaFixaMes, ipcaMes, n) {
     rows.push({ parc: k, pmt, juros, amort, corr, saldo });
   }
   return { rows, totalJuros, totalCorr };
+}
+
+// Tabela SACRE — extrai lógica de calcularSACRE para uso no módulo inadimplência
+function gerarTabelaSACRE(pv, i, n, tr, B) {
+  const rows = [];
+  let saldo = pv, prestacaoAtual = 0, blocoNum = 0;
+  for (let m = 1; m <= n; m++) {
+    const trCorr = saldo * tr;
+    saldo += trCorr;
+    const ehInicioBloco = ((m - 1) % B === 0);
+    if (ehInicioBloco) {
+      blocoNum++;
+      const prazoRest = n - (m - 1);
+      prestacaoAtual = saldo / prazoRest + saldo * i;
+    }
+    const juros = saldo * i;
+    const amort = prestacaoAtual - juros;
+    saldo = Math.max(0, saldo - amort);
+    rows.push({ parc: m, pmt: prestacaoAtual, juros, amort, saldo, trCorr });
+  }
+  return rows;
+}
+
+// TIR para Leasing — último fluxo é pmt + vrg
+function calcularTIR_Leasing(pv, n, pmt, vrg) {
+  let i = 0.02;
+  for (let iter = 0; iter < 300; iter++) {
+    let npv = -pv, dnpv = 0;
+    for (let k = 1; k <= n; k++) {
+      const disc = Math.pow(1 + i, k);
+      const flow = k === n ? pmt + vrg : pmt;
+      npv  += flow / disc;
+      dnpv -= k * flow / (disc * (1 + i));
+    }
+    if (Math.abs(npv) < 1e-8) return i;
+    if (Math.abs(dnpv) < 1e-14) break;
+    i -= npv / dnpv;
+    if (i <= 0) i = 1e-6;
+  }
+  return i;
 }
 
 // CET real: TIR com IOF + tarifas + seguros (Res. CMN 4.601/2017)
@@ -3667,6 +3748,23 @@ function renderGraficoSACRE(r) {
 //  MÓDULO INADIMPLÊNCIA
 // ════════════════════════════════════════════
 
+function onSistemaInadChange() {
+  const sel = document.getElementById('inad2-sistema');
+  let s = sel?.value || 'price';
+  if ((s === 'leasing' || s === 'ipca_plus') && window.userPremium === false) {
+    const alertEl = document.getElementById('alert-input');
+    showAlert(alertEl, '⭐ Leasing com VRG e IPCA+ são exclusivos do plano Premium.', 'alert-warn');
+    sel.value = 'price';
+    s = 'price';
+  }
+  document.getElementById('inad2-section-sacre').style.display   = s === 'sacre'     ? '' : 'none';
+  document.getElementById('inad2-section-leasing').style.display = s === 'leasing'   ? '' : 'none';
+  document.getElementById('inad2-section-ipca').style.display    = s === 'ipca_plus' ? '' : 'none';
+  const pmtRow = document.getElementById('inad2-parcela-row');
+  if (pmtRow) pmtRow.style.display = s === 'ipca_plus' ? 'none' : '';
+  atualizarIndicadorContrato();
+}
+
 function toggleIndiceFixo() {
   const val = document.getElementById('inad-indice')?.value;
   const sec = document.getElementById('inad-taxa-fixa-section');
@@ -3699,7 +3797,9 @@ function atualizarIndicadorContrato() {
   const vencRow      = document.getElementById('inad-vencimento-row');
   const parcRow      = document.getElementById('inad-parcelas-row');
 
-  const contratoCompleto = valor > 0 && n > 0 && pmt > 0 && !isNaN(pagas);
+  const contratoCompleto = sistema === 'ipca_plus'
+    ? (valor > 0 && n > 0 && !isNaN(pagas))
+    : (valor > 0 && n > 0 && pmt > 0 && !isNaN(pagas));
 
   if (!contratoCompleto) {
     if (indicador) indicador.style.display = 'none';
@@ -3716,16 +3816,83 @@ function atualizarIndicadorContrato() {
     return;
   }
 
-  const taxa = sistema === 'sac'
-    ? calcularTIR_SAC(valor, n, pmt)
-    : calcularTIR(valor, n, pmt);
+  // IPCA+: usa taxa fixa + IPCA em vez de PMT
+  if (sistema === 'ipca_plus') {
+    const taxaFixaP = parseFloat(document.getElementById('inad2-ipca-taxa')?.value) || 0;
+    const ipcaP     = parseFloat(document.getElementById('inad2-ipca-proj')?.value) || 0;
+    if (!taxaFixaP || !valor || !n || isNaN(pagas)) {
+      if (indicador) indicador.style.display = 'none';
+      return;
+    }
+    const t = gerarTabelaIPCAPlus(valor, taxaFixaP / 100, ipcaP, n);
+    const saldo = pagas === 0 ? valor : (t.rows[pagas - 1]?.saldo ?? valor);
+    if (taxaLabel) taxaLabel.textContent = fmtPct(taxaFixaP) + ' a.m. (fixa) + IPCA ' + fmtPct(ipcaP) + '/mês';
+    if (indicador) indicador.style.display = '';
+    if (dataInicio !== '') {
+      if (saldoInfo) saldoInfo.style.display = 'none';
+      if (principalRow) principalRow.style.display = 'none';
+      if (vencRow)      vencRow.style.display = 'none';
+      if (parcRow)      parcRow.style.display = '';
+      const iniEl = document.getElementById('inad2-parc-ini');
+      const fimEl = document.getElementById('inad2-parc-fim');
+      if (iniEl && fimEl) {
+        const prevIni = iniEl.value, prevFim = fimEl.value;
+        iniEl.innerHTML = ''; fimEl.innerHTML = '';
+        for (let k = pagas + 1; k <= n; k++) {
+          const pmt_k = t.rows[k - 1]?.pmt ?? 0;
+          const dueYM_k = addMonthsYM(dataInicio, k - 1);
+          const label = `Parc. ${k} — ${dueYM_k.split('-').reverse().join('/')} — ${fmtBRL(pmt_k)}`;
+          iniEl.add(new Option(label, k)); fimEl.add(new Option(label, k));
+        }
+        if (prevIni) iniEl.value = prevIni; if (prevFim) fimEl.value = prevFim;
+        if (!iniEl.value && iniEl.options.length) iniEl.selectedIndex = 0;
+        if (!fimEl.value && fimEl.options.length) fimEl.selectedIndex = fimEl.options.length - 1;
+      }
+    } else {
+      if (saldoInfo) saldoInfo.style.display = '';
+      if (saldoLabel) saldoLabel.textContent = fmtBRL(saldo);
+      if (principalRow) principalRow.style.display = '';
+      if (vencRow)      vencRow.style.display = '';
+      if (parcRow)      parcRow.style.display = 'none';
+      if (principalEl) {
+        principalEl.value = saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        principalEl.dataset.autoFill = '1'; principalEl.readOnly = true;
+        principalEl.style.opacity = '0.7';
+        principalEl.title = 'Calculado automaticamente a partir dos dados do contrato original';
+      }
+    }
+    return;
+  }
+
+  let taxa;
+  if (sistema === 'sac') {
+    taxa = calcularTIR_SAC(valor, n, pmt);
+  } else if (sistema === 'leasing') {
+    const vrg = parseBRL(document.getElementById('inad2-leasing-vrg')?.value || '');
+    taxa = vrg > 0 ? calcularTIR_Leasing(valor, n, pmt, vrg) : calcularTIR(valor, n, pmt);
+  } else {
+    taxa = calcularTIR(valor, n, pmt);
+  }
 
   if (!taxa || isNaN(taxa)) {
     if (indicador) indicador.style.display = 'none';
     return;
   }
 
-  const tabela = sistema === 'sac' ? gerarTabelaSAC(valor, taxa, n) : gerarTabelaPrice(valor, taxa, n);
+  let tabela;
+  if (sistema === 'sac') {
+    tabela = gerarTabelaSAC(valor, taxa, n);
+  } else if (sistema === 'sacre') {
+    const tr = (parseFloat(document.getElementById('inad2-sacre-tr')?.value) || 0) / 100;
+    const B  = parseInt(document.getElementById('inad2-sacre-bloco')?.value) || 12;
+    tabela = gerarTabelaSACRE(valor, taxa, n, tr, B);
+  } else if (sistema === 'leasing') {
+    const vrg = parseBRL(document.getElementById('inad2-leasing-vrg')?.value || '');
+    tabela = gerarTabelaLeasing(valor, taxa, n, vrg).rows;
+  } else {
+    // price e hamburguês — saldos mensais idênticos
+    tabela = gerarTabelaPrice(valor, taxa, n);
+  }
   const saldo  = pagas === 0 ? valor : (tabela[pagas - 1]?.saldo ?? valor);
 
   if (taxaLabel) taxaLabel.textContent = fmtPct(taxa * 100) + ' a.m.';
@@ -3895,16 +4062,48 @@ async function calcularInadimplencia() {
   const parcIni        = parseInt(document.getElementById('inad2-parc-ini')?.value) || 0;
   const parcFim        = parseInt(document.getElementById('inad2-parc-fim')?.value) || 0;
 
+  // Parâmetros extras por sistema
+  const inad2SacreTr    = (parseFloat(document.getElementById('inad2-sacre-tr')?.value)    || 0) / 100;
+  const inad2SacreBloco = parseInt(document.getElementById('inad2-sacre-bloco')?.value)    || 12;
+  const inad2LeasingVrg = parseBRL(document.getElementById('inad2-leasing-vrg')?.value     || '');
+  const inad2IpcaTaxa   = (parseFloat(document.getElementById('inad2-ipca-taxa')?.value)   || 0);
+  const inad2IpcaProj   = (parseFloat(document.getElementById('inad2-ipca-proj')?.value)   || 0);
+
   // Construir contratoOriginal (necessário para multi-modo)
   let contratoOriginal = null;
-  if (inad2Valor > 0 && inad2Parc > 0 && inad2Pmt > 0 && !isNaN(inad2Pagas)) {
-    const inad2Taxa = inad2Sistema === 'sac'
-      ? calcularTIR_SAC(inad2Valor, inad2Parc, inad2Pmt)
-      : calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
-    if (inad2Taxa && !isNaN(inad2Taxa)) {
-      const tabelaCompleta = inad2Sistema === 'sac'
-        ? gerarTabelaSAC(inad2Valor, inad2Taxa, inad2Parc)
-        : gerarTabelaPrice(inad2Valor, inad2Taxa, inad2Parc);
+  const podeContrato = inad2Sistema === 'ipca_plus'
+    ? (inad2Valor > 0 && inad2Parc > 0 && !isNaN(inad2Pagas) && inad2IpcaTaxa > 0)
+    : (inad2Valor > 0 && inad2Parc > 0 && inad2Pmt > 0 && !isNaN(inad2Pagas));
+
+  if (podeContrato) {
+    let inad2Taxa = null;
+    let tabelaCompleta = null;
+
+    if (inad2Sistema === 'ipca_plus') {
+      inad2Taxa = inad2IpcaTaxa / 100;
+      tabelaCompleta = gerarTabelaIPCAPlus(inad2Valor, inad2Taxa, inad2IpcaProj, inad2Parc).rows;
+    } else if (inad2Sistema === 'sac') {
+      inad2Taxa = calcularTIR_SAC(inad2Valor, inad2Parc, inad2Pmt);
+      if (inad2Taxa && !isNaN(inad2Taxa))
+        tabelaCompleta = gerarTabelaSAC(inad2Valor, inad2Taxa, inad2Parc);
+    } else if (inad2Sistema === 'sacre') {
+      inad2Taxa = calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
+      if (inad2Taxa && !isNaN(inad2Taxa))
+        tabelaCompleta = gerarTabelaSACRE(inad2Valor, inad2Taxa, inad2Parc, inad2SacreTr, inad2SacreBloco);
+    } else if (inad2Sistema === 'leasing') {
+      inad2Taxa = inad2LeasingVrg > 0
+        ? calcularTIR_Leasing(inad2Valor, inad2Parc, inad2Pmt, inad2LeasingVrg)
+        : calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
+      if (inad2Taxa && !isNaN(inad2Taxa))
+        tabelaCompleta = gerarTabelaLeasing(inad2Valor, inad2Taxa, inad2Parc, inad2LeasingVrg).rows;
+    } else {
+      // price e hamburguês — saldos mensais idênticos ao Price
+      inad2Taxa = calcularTIR(inad2Valor, inad2Parc, inad2Pmt);
+      if (inad2Taxa && !isNaN(inad2Taxa))
+        tabelaCompleta = gerarTabelaPrice(inad2Valor, inad2Taxa, inad2Parc);
+    }
+
+    if (inad2Taxa && !isNaN(inad2Taxa) && tabelaCompleta) {
       const saldoInicio = inad2Pagas === 0 ? inad2Valor : (tabelaCompleta[inad2Pagas - 1]?.saldo ?? inad2Valor);
       const fluxoRemanescente = tabelaCompleta.slice(inad2Pagas);
       contratoOriginal = {
