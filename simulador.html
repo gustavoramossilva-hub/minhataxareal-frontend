@@ -626,8 +626,8 @@
       const sisAtual = document.getElementById('sistema-amort')?.value;
       const showCETInit = sisAtual && !['hamburguês','sacre','ipca_plus'].includes(sisAtual);
       if (showCETInit) {
-        document.getElementById('section-cet').style.display  = window.userPremium ? '' : 'none';
-        document.getElementById('upsell-cet').style.display   = window.userPremium ? 'none' : '';
+        document.getElementById('section-cet').style.display  = '';
+        document.getElementById('upsell-cet').style.display   = 'none';
       }
       // Injeta nome do usuário no header se existir
       const nameEl = document.getElementById('user-header-name');
@@ -931,7 +931,7 @@
       <div id="upsell-cet" style="display:none">
         <hr class="form-divider">
         <div class="premium-upsell-inline">
-          <p>⭐ <strong style="color:var(--text)">CET Completo, Leasing com VRG e IPCA+</strong> disponíveis no plano Premium.</p>
+          <p>⭐ <strong style="color:var(--text)">Leasing com VRG e IPCA+</strong> disponíveis no plano Premium.</p>
           <button onclick="window.open('https://pay.kiwify.com.br/3iaNH0k','_blank')">Fazer upgrade →</button>
         </div>
       </div>
@@ -1283,7 +1283,7 @@
           </li>
           <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            CET Real — IOF + tarifas + seguros no custo efetivo (Res. CMN 4.601/2017)
+            CET — IOF + tarifas + seguros no custo efetivo (Res. CMN 4.601/2017)
           </li>
           <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1832,8 +1832,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
     ${cetAnoReal !== null ? `
     <div class="metric-card" style="border-color:var(--accent);background:var(--accent-dim)">
       <div class="mc-label" style="display:flex;align-items:center;gap:6px">
-        CET Real (com encargos)
-        <span style="font-size:9px;background:var(--accent);color:#0e0f11;padding:1px 6px;border-radius:99px;font-weight:700;font-family:'Syne',sans-serif">PREMIUM</span>
+        CET (com encargos)
       </div>
       <div class="mc-value accent" style="font-size:19px">${fmtPct(cetAnoReal)} a.a.</div>
       <div class="mc-sub">IOF ${fmtBRL(state.cetEncargos.iof)} · tar. ${fmtBRL(state.cetEncargos.tarifas)} · seg. ${fmtBRL(state.cetEncargos.seguros)}/mês</div>
@@ -3050,8 +3049,6 @@ function onSistemaChange() {
     document.getElementById('sistema-amort').value = 'price';
     const alertEl = document.getElementById('alert-input');
     showAlert(alertEl, '⭐ Leasing com VRG e IPCA+ são exclusivos do plano Premium.', 'alert-warn');
-    document.getElementById('upsell-cet').style.display = '';
-    document.getElementById('section-cet').style.display = 'none';
     resetResultados();
     return;
   }
@@ -3063,18 +3060,8 @@ function onSistemaChange() {
 
   // CET completo visível em Price/SAC/Leasing (não faz sentido em Hamburguês/SACRE/IPCA+)
   const showCET = !isHamb && !isSacre && !isIPCAPlus;
-  if (showCET) {
-    if (window.userPremium === false) {
-      document.getElementById('section-cet').style.display   = 'none';
-      document.getElementById('upsell-cet').style.display    = '';
-    } else {
-      document.getElementById('section-cet').style.display   = '';
-      document.getElementById('upsell-cet').style.display    = 'none';
-    }
-  } else {
-    document.getElementById('section-cet').style.display  = 'none';
-    document.getElementById('upsell-cet').style.display   = 'none';
-  }
+  document.getElementById('section-cet').style.display = showCET ? '' : 'none';
+  document.getElementById('upsell-cet').style.display  = 'none';
 
   // Hamburguês não usa parcelas/valor-parcela (usa eventos próprios)
   const fgParc = document.getElementById('fg-num-parcelas');
