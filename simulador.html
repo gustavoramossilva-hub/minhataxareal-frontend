@@ -1209,7 +1209,7 @@ const BACEN_FALLBACK = {
   capital:      { nome: 'Capital de Giro (PJ)',         taxaMes: 1.42, taxaAno: 18.47, ref: 'fallback' },
   consignado:   { nome: 'Crédito Consignado',           taxaMes: 1.80, taxaAno: 23.87, ref: 'fallback' },
   cheque:       { nome: 'Cheque Especial',              taxaMes: 7.22, taxaAno: 131.5, ref: 'fallback' },
-  cartao:       { nome: 'Cartão de Crédito Rotativo',  taxaMes: 14.3, taxaAno: 439.8, ref: 'fallback' },
+  cartao:       { nome: 'Cartão de Crédito Rotativo',  taxaMes: 14.3, taxaAno: 397.3, ref: 'fallback' },
 };
 
 // Códigos SGS de cada modalidade
@@ -1614,9 +1614,9 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
       <div class="mc-sub">vs. média de mercado</div>
     </div>
     <div class="metric-card">
-      <div class="mc-label">CET Anual</div>
+      <div class="mc-label">Taxa Efetiva a.a.</div>
       <div class="mc-value" style="font-size:19px;color:var(--text)">${fmtPct(cetAno)} a.a.</div>
-      <div class="mc-sub">base no fluxo calculado</div>
+      <div class="mc-sub">equivalência composta da TIR mensal</div>
     </div>
   `;
 
@@ -1656,7 +1656,10 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
   `;
 
   const difAnual = (Math.pow(1 + diff / 100, 12) - 1) * 100;
-  const extraJuros = totalJuros - (pv * (Math.pow(1 + bacen.taxaMes / 100, n) - 1));
+  // Custo de juros de um Price com taxa Bacen (comparação justa com o cenário do usuário)
+  const iBacen = bacen.taxaMes / 100;
+  const pmtBacen = pv * iBacen * Math.pow(1 + iBacen, n) / (Math.pow(1 + iBacen, n) - 1);
+  const extraJuros = totalJuros - (pmtBacen * n - pv);
   document.getElementById('differential-box').innerHTML = `
     <span class="diff-text">
       Diferença de <strong>${fmtPct(Math.abs(diff))} a.m.</strong> 
@@ -2737,22 +2740,28 @@ function calcularHamburguês() {
   if (!eventos.length) { showAlert(alertEl, 'Adicione ao menos um período na tabela de movimentações.'); return; }
 
   const diasBase  = parseInt(convencao); // 30, 360 ou 365
-  // i_diária = taxa_mensal / 30 (conv=30) ou taxa_anual / diasBase (conv=360|365)
+  // Taxa diária proporcional (juros simples — Hamburguês puro)
   const taxaAnual = taxaMensal * 12 / 100;
-  const iDiaria   = diasBase === 30
+  const iDiariaProp = diasBase === 30
     ? (taxaMensal / 100) / 30
     : taxaAnual / diasBase;
+  // Taxa diária equivalente (juros compostos — apenas quando capitaliza=true)
+  const iDiariaEq = diasBase === 30
+    ? Math.pow(1 + taxaMensal / 100, 1 / 30) - 1
+    : Math.pow(1 + taxaAnual, 1 / diasBase) - 1;
+  const iDiaria = iDiariaProp; // puro usa proporcional; composto usa equivalente abaixo
 
   const linhas = [];
   let sd = sd0;
-  let totalJuros = 0, totalND = 0, totalDias = 0, totalIOF = 0;
+  // IOF adicional flat 0,38% incide uma vez sobre o valor do crédito (Decreto 6.306/2007 art. 8° §3°)
+  let totalJuros = 0, totalND = 0, totalDias = 0, totalIOF = usaIOF ? sd0 * 0.0038 : 0;
 
   for (let k = 0; k < eventos.length; k++) {
     const ev = eventos[k];
     const nd     = sd * ev.dias;       // número devedor do intervalo
     const juros  = capitaliza
-      ? sd * (Math.pow(1 + iDiaria, ev.dias) - 1)   // composto (com aviso)
-      : nd * iDiaria;                                 // simples puro
+      ? sd * (Math.pow(1 + iDiariaEq, ev.dias) - 1)  // composto com taxa equivalente
+      : nd * iDiaria;                                  // simples puro (proporcional)
     const iof    = usaIOF ? sd * (taxaIOF / 100) * ev.dias : 0;
 
     totalND    += nd;
@@ -2773,7 +2782,7 @@ function calcularHamburguês() {
 
   const montante = sd0 + totalJuros + totalIOF;
 
-  renderResultadosHamburguês({ sd0, taxaMensal, iDiaria, convencao, diasBase,
+  renderResultadosHamburguês({ sd0, taxaMensal, iDiaria, iDiariaEq, convencao, diasBase,
     totalJuros, totalND, totalDias, totalIOF, montante, linhas, capitaliza, usaIOF });
 }
 
@@ -2806,7 +2815,7 @@ function renderResultadosHamburguês(r) {
     <div class="metric-card warn">
       <div class="mc-label">IOF Total</div>
       <div class="mc-value warn" style="font-size:20px">${fmtBRL(r.totalIOF)}</div>
-      <div class="mc-sub">Incide sobre SD diário</div>
+      <div class="mc-sub">Diário s/ SD + adicional 0,38%</div>
     </div>` : ''}
     <div class="metric-card">
       <div class="mc-label">Montante Final</div>
@@ -2823,10 +2832,10 @@ function renderResultadosHamburguês(r) {
   const alertSit = document.getElementById('alert-situacao');
   if (r.capitaliza) {
     alertSit.className = 'alert show alert-warn';
-    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> em vez de simples. Conforme STJ REsp 198.502/MT, a mera menção ao Método Hamburguês não autoriza capitalização — é necessária cláusula contratual expressa e previsão legal. O Método Hamburguês <em>puro</em> usa sempre juros simples: <em>J = i_diária × Σ(SD × dias)</em>.`;
+    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> com taxa diária equivalente (${fmtPct(r.iDiariaEq * 100, 4)} a.d. = <em>(1 + ${fmtPct(r.taxaMensal)}/mês)^(1/30) − 1</em>). Conforme STJ REsp 198.502/MT, a mera menção ao Método Hamburguês não autoriza capitalização — é necessária cláusula contratual expressa e previsão legal. O Método Hamburguês <em>puro</em> usa sempre juros simples: <em>J = i_diária × Σ(SD × dias)</em>.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
   } else {
     alertSit.className = 'alert show alert-info';
-    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — em conformidade com a jurisprudência do STJ.`;
+    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — em conformidade com a jurisprudência do STJ.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
   }
 
   // ── Ocultar seções inapropriadas ──
