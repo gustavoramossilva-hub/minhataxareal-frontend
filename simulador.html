@@ -572,6 +572,12 @@
   .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
   .sacre-bloco-start td { border-top: 2px solid rgba(212,240,60,0.22) !important; }
   .metodo-info-box { background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-size: 11px; color: var(--text2); line-height: 1.65; margin-bottom: 14px; }
+  .premium-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .badge-premium { font-size: 10px; background: var(--accent); color: #0e0f11; padding: 2px 8px; border-radius: 99px; font-weight: 700; font-family: 'Syne', sans-serif; letter-spacing: .05em; text-transform: uppercase; flex-shrink: 0; }
+  .premium-upsell-inline { background: var(--surface2); border: 1.5px dashed rgba(212,240,60,.3); border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 8px; text-align: center; }
+  .premium-upsell-inline p { font-size: 12px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
+  .premium-upsell-inline button { background: var(--accent); color: #0e0f11; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 8px 20px; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+  .cet-result-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-dim2); border: 1px solid var(--accent); border-radius: 99px; padding: 4px 14px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); margin-top: 10px; }
 
   @media (max-width: 900px) {
     .app-shell { grid-template-columns: 1fr; }
@@ -616,6 +622,13 @@
       // Tier e status premium disponíveis globalmente
       window.userTier    = me.tier || 'standard';
       window.userPremium = (window.userTier === 'premium');
+      // Inicializa visibilidade de features premium no sistema atual
+      const sisAtual = document.getElementById('sistema-amort')?.value;
+      const showCETInit = sisAtual && !['hamburguês','sacre','ipca_plus'].includes(sisAtual);
+      if (showCETInit) {
+        document.getElementById('section-cet').style.display  = window.userPremium ? '' : 'none';
+        document.getElementById('upsell-cet').style.display   = window.userPremium ? 'none' : '';
+      }
       // Injeta nome do usuário no header se existir
       const nameEl = document.getElementById('user-header-name');
       if (nameEl) nameEl.textContent = me.name;
@@ -717,6 +730,8 @@
           <option value="sac">SAC (amortização constante)</option>
           <option value="hamburguês">Método Hamburguês (saldo devedor diário)</option>
           <option value="sacre">SACRE (amortização crescente — SFH)</option>
+          <option value="leasing">⭐ Leasing com VRG (Premium)</option>
+          <option value="ipca_plus">⭐ Financiamento IPCA+ (Premium)</option>
         </select>
       </div>
 
@@ -818,6 +833,106 @@
 
         <div class="stj-badge">
           <strong>Súmula 450/STJ:</strong> A TR deve corrigir o saldo devedor <em>antes</em> da amortização, não após. A prestação é recalculada a cada bloco com base no novo saldo e prazo remanescente.
+        </div>
+      </div>
+
+      <!-- ══ LEASING COM VRG (Premium) ══ -->
+      <div id="section-leasing" style="display:none">
+        <hr class="form-divider">
+        <div class="premium-title">
+          <p class="panel-title" style="margin-bottom:0">Leasing — Valor Residual Garantido</p>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <div class="metodo-info-box">
+          O VRG (balão final) reduz as parcelas mensais. A PMT é calculada sobre <strong>PV − VRG/(1+i)ⁿ</strong>. Na última parcela o arrendatário paga o VRG para exercer a opção de compra.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Taxa mensal do leasing <span class="form-hint">% a.m.</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="leasing-taxa" placeholder="1,50" step="0.01" min="0" />
+            <span class="input-suffix">% a.m.</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">VRG — Valor Residual Garantido <span class="form-hint">R$</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="leasing-vrg" placeholder="5.000,00" oninput="maskCurrency(this)" />
+          </div>
+        </div>
+        <div class="stj-badge">
+          <strong>Leasing financeiro:</strong> PMT = (PV − VRG/(1+i)ⁿ) × i(1+i)ⁿ / ((1+i)ⁿ − 1). Ao final, o arrendatário paga o VRG e adquire o bem.
+        </div>
+      </div>
+
+      <!-- ══ FINANCIAMENTO IPCA+ (Premium) ══ -->
+      <div id="section-ipca-plus" style="display:none">
+        <hr class="form-divider">
+        <div class="premium-title">
+          <p class="panel-title" style="margin-bottom:0">Financiamento IPCA+</p>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <div class="metodo-info-box">
+          Modalidade usada pela Caixa e bancos no SFH pós-2019. O saldo devedor é corrigido mensalmente pelo IPCA antes do cálculo da prestação. A taxa fixa (spread) incide sobre o saldo corrigido.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Taxa fixa mensal (spread) <span class="form-hint">% a.m.</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="ipca-taxa-fixa" placeholder="0,50" step="0.01" min="0" />
+            <span class="input-suffix">% a.m.</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">IPCA projetado <span class="form-hint">% a.m. médio esperado</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="ipca-projecao" placeholder="0,38" step="0.01" min="0" />
+            <span class="input-suffix">% a.m.</span>
+          </div>
+        </div>
+        <div class="stj-badge">
+          <strong>Projeção:</strong> tabela gerada com IPCA constante. O custo real depende da variação mensal efetiva do IPCA ao longo do contrato.
+        </div>
+      </div>
+
+      <!-- ══ CET COMPLETO (Premium) ══ -->
+      <div id="section-cet" style="display:none">
+        <hr class="form-divider">
+        <div class="premium-title">
+          <p class="panel-title" style="margin-bottom:0">CET — Custo Efetivo Total</p>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <div class="metodo-info-box">
+          O CET (Res. CMN 4.601/2017) inclui juros + IOF + tarifas + seguros. Preencha os encargos adicionais do seu contrato para calcular o custo real da operação.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">IOF total <span class="form-hint">R$</span></label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">R$</span>
+              <input type="text" id="cet-iof" placeholder="0,00" oninput="maskCurrency(this)" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tarifas / cadastro <span class="form-hint">R$ única vez</span></label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">R$</span>
+              <input type="text" id="cet-tarifas" placeholder="0,00" oninput="maskCurrency(this)" />
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Seguro mensal <span class="form-hint">R$ por parcela</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="cet-seguros" placeholder="0,00" oninput="maskCurrency(this)" />
+          </div>
+        </div>
+      </div>
+      <div id="upsell-cet" style="display:none">
+        <hr class="form-divider">
+        <div class="premium-upsell-inline">
+          <p>⭐ <strong style="color:var(--text)">CET Completo, Leasing com VRG e IPCA+</strong> disponíveis no plano Premium.</p>
+          <button onclick="window.open('https://pay.kiwify.com.br/3iaNH0k','_blank')">Fazer upgrade →</button>
         </div>
       </div>
     </div>
@@ -1159,20 +1274,28 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase">Premium</span>
         </div>
-        <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin:0 0 14px">Apuração de Inadimplência</h2>
-        <p style="color:var(--text2);font-size:14px;line-height:1.7;margin:0 0 24px">Apure o período de inadimplência de um contrato com integração à série histórica do Banco Central, comparando os valores aplicados com parâmetros de referência e a taxa média de mercado.</p>
+        <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin:0 0 14px">Recursos Exclusivos Premium</h2>
+        <p style="color:var(--text2);font-size:14px;line-height:1.7;margin:0 0 24px">Desbloqueie ferramentas avançadas de análise financeira com integração ao Banco Central e metodologias utilizadas por profissionais.</p>
         <ul style="list-style:none;padding:0;margin:0 0 32px;display:flex;flex-direction:column;gap:10px;text-align:left">
           <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Série histórica real do BCB integrada automaticamente
+            Apuração de Inadimplência com série histórica do BCB
           </li>
           <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Comparativo entre três cenários (credor, referência e média BCB)
+            CET Real — IOF + tarifas + seguros no custo efetivo (Res. CMN 4.601/2017)
           </li>
           <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Relatório PDF completo com tabela de amortização
+            Leasing com VRG (Valor Residual Garantido)
+          </li>
+          <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Financiamento IPCA+ com projeção mensal indexada
+          </li>
+          <li style="display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Relatório PDF completo com tabela de amortização integral
           </li>
         </ul>
         <p style="color:var(--text3);font-size:12.5px;margin:0 0 20px;font-family:'DM Mono',monospace">Disponível no plano Premium — ativação R$69,90 + assinatura R$39,90/mês (promocional)</p>
@@ -1442,6 +1565,39 @@ function calcular() {
   if (!pmt || pmt <= 0){ showAlert(alertEl, 'Informe o valor de cada parcela.'); return; }
   if (pmt * n <= pv)   { showAlert(alertEl, 'O total pago deve ser maior que o valor recebido (verrifique os valores).'); return; }
 
+  // ── Leasing com VRG ──
+  if (sistema === 'leasing') {
+    const taxaLeas = parseFloat(document.getElementById('leasing-taxa').value) || 0;
+    const vrg      = parseBRL(document.getElementById('leasing-vrg').value);
+    if (!taxaLeas) { showAlert(alertEl, 'Informe a taxa mensal do leasing.'); return; }
+    if (vrg < 0 || vrg >= pv) { showAlert(alertEl, 'VRG deve ser positivo e menor que o valor do bem.'); return; }
+    const iLeas = taxaLeas / 100;
+    const leasingData = gerarTabelaLeasing(pv, iLeas, n, vrg);
+    state.valorLiquido = pv; state.numParcelas = n;
+    state.valorParcela = leasingData.pmt; state.taxaCalculada = iLeas;
+    state.modalidade = modalidade; state.sistema = sistema;
+    state.tabelaPrice = leasingData.rows; state.tabelaSAC = leasingData.rows;
+    renderResultadosLeasing(leasingData, pv, n, iLeas, vrg, modalidade);
+    return;
+  }
+
+  // ── IPCA+ ──
+  if (sistema === 'ipca_plus') {
+    const taxaFixa = parseFloat(document.getElementById('ipca-taxa-fixa').value) || 0;
+    const ipcaProj = parseFloat(document.getElementById('ipca-projecao').value) || 0;
+    if (!taxaFixa) { showAlert(alertEl, 'Informe a taxa fixa (spread) mensal.'); return; }
+    const iFixa = taxaFixa / 100;
+    const iIPCA = ipcaProj / 100;
+    const ipcaData = gerarTabelaIPCAPlus(pv, iFixa, ipcaProj, n);
+    const taxaTotal = (1 + iFixa) * (1 + iIPCA) - 1;
+    state.valorLiquido = pv; state.numParcelas = n;
+    state.valorParcela = ipcaData.rows[0]?.pmt || 0; state.taxaCalculada = taxaTotal;
+    state.modalidade = modalidade; state.sistema = sistema;
+    state.tabelaPrice = ipcaData.rows; state.tabelaSAC = ipcaData.rows;
+    renderResultadosIPCAPlus(ipcaData, pv, n, iFixa, iIPCA, modalidade);
+    return;
+  }
+
   // TIR (Newton-Raphson)
   // Usa TIR específica para SAC quando necessário (fluxo decrescente real)
   const taxaMes = sistema === 'sac'
@@ -1453,6 +1609,13 @@ function calcular() {
     return;
   }
 
+  // CET completo (Premium) — calculado quando encargos informados
+  const cetIof     = parseBRL(document.getElementById('cet-iof')?.value || '');
+  const cetTarifas = parseBRL(document.getElementById('cet-tarifas')?.value || '');
+  const cetSeguros = parseBRL(document.getElementById('cet-seguros')?.value || '');
+  const temCET = (cetIof + cetTarifas + cetSeguros) > 0;
+  const cetMes = temCET ? calcularCET(pv, n, pmt, cetTarifas, cetIof, cetSeguros) : null;
+
   // Armazena estado
   state.valorLiquido = pv;
   state.numParcelas  = n;
@@ -1460,6 +1623,8 @@ function calcular() {
   state.taxaCalculada = taxaMes;
   state.modalidade   = modalidade;
   state.sistema      = sistema;
+  state.cetMes       = cetMes;
+  state.cetEncargos  = temCET ? { iof: cetIof, tarifas: cetTarifas, seguros: cetSeguros } : null;
 
   // Gera tabelas
   state.tabelaPrice = gerarTabelaPrice(pv, taxaMes, n);
@@ -1562,6 +1727,50 @@ function gerarTabelaSAC(pv, i, n) {
   return rows;
 }
 
+// Tabela Leasing com VRG
+function gerarTabelaLeasing(pv, i, n, vrg) {
+  const pvVrg = vrg / Math.pow(1 + i, n);
+  const pvEfetivo = pv - pvVrg;
+  const pmt = pvEfetivo * i * Math.pow(1 + i, n) / (Math.pow(1 + i, n) - 1);
+  const rows = [];
+  let saldo = pv;
+  for (let k = 1; k <= n; k++) {
+    const juros = saldo * i;
+    const amort = pmt - juros;
+    saldo = Math.max(0, saldo - amort);
+    const isUltima = k === n;
+    rows.push({ parc: k, pmt: isUltima ? pmt + vrg : pmt, juros, amort, saldo: isUltima ? 0 : saldo, vrg: isUltima ? vrg : 0 });
+  }
+  return { pmt, vrg, rows };
+}
+
+// Projeção IPCA+ (Price com correção mensal do saldo)
+function gerarTabelaIPCAPlus(pv, taxaFixaMes, ipcaMes, n) {
+  const rows = [];
+  let saldo = pv;
+  let totalJuros = 0, totalCorr = 0;
+  for (let k = 1; k <= n; k++) {
+    const corr = saldo * (ipcaMes / 100);
+    saldo += corr;
+    totalCorr += corr;
+    const prazoRest = n - k + 1;
+    const pmt = saldo * taxaFixaMes * Math.pow(1 + taxaFixaMes, prazoRest) / (Math.pow(1 + taxaFixaMes, prazoRest) - 1);
+    const juros = saldo * taxaFixaMes;
+    const amort = pmt - juros;
+    saldo = Math.max(0, saldo - amort);
+    totalJuros += juros;
+    rows.push({ parc: k, pmt, juros, amort, corr, saldo });
+  }
+  return { rows, totalJuros, totalCorr };
+}
+
+// CET real: TIR com IOF + tarifas + seguros (Res. CMN 4.601/2017)
+function calcularCET(pv, n, pmt, tarifas, iof, seguros) {
+  const pvLiq = pv - tarifas - iof;
+  if (pvLiq <= 0) return null;
+  return calcularTIR(pvLiq, n, pmt + seguros);
+}
+
 // ════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════
@@ -1574,6 +1783,8 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
   const totalPago   = pmt * n;
   const totalJuros  = totalPago - pv;
   const cetAno      = taxaAnoUser;
+  const cetMes      = state.cetMes || null;
+  const cetAnoReal  = cetMes ? (Math.pow(1 + cetMes, 12) - 1) * 100 : null;
 
   // Título
   document.getElementById('res-titulo').textContent = bacen.nome;
@@ -1618,6 +1829,15 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
       <div class="mc-value" style="font-size:19px;color:var(--text)">${fmtPct(cetAno)} a.a.</div>
       <div class="mc-sub">equivalência composta da TIR mensal</div>
     </div>
+    ${cetAnoReal !== null ? `
+    <div class="metric-card" style="border-color:var(--accent);background:var(--accent-dim)">
+      <div class="mc-label" style="display:flex;align-items:center;gap:6px">
+        CET Real (com encargos)
+        <span style="font-size:9px;background:var(--accent);color:#0e0f11;padding:1px 6px;border-radius:99px;font-weight:700;font-family:'Syne',sans-serif">PREMIUM</span>
+      </div>
+      <div class="mc-value accent" style="font-size:19px">${fmtPct(cetAnoReal)} a.a.</div>
+      <div class="mc-sub">IOF ${fmtBRL(state.cetEncargos.iof)} · tar. ${fmtBRL(state.cetEncargos.tarifas)} · seg. ${fmtBRL(state.cetEncargos.seguros)}/mês</div>
+    </div>` : ''}
   `;
 
   // ── Alert de situação ──
@@ -1714,6 +1934,174 @@ function renderTabela(tipo, btn) {
 
   html += '</tbody></table>';
   document.getElementById('table-wrap').innerHTML = html;
+}
+
+// ════════════════════════════════════════════
+//  RENDER LEASING
+// ════════════════════════════════════════════
+function renderResultadosLeasing(d, pv, n, i, vrg, modalidade) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-area').style.display = '';
+
+  const bacen = BACEN[modalidade];
+  const totalPago  = d.rows.reduce((s, r) => s + r.pmt, 0);
+  const totalJuros = totalPago - pv;
+  const taxaAno    = (Math.pow(1 + i, 12) - 1) * 100;
+  const diff       = i * 100 - bacen.taxaMes;
+
+  document.getElementById('res-titulo').textContent    = 'Leasing com VRG — Valor Residual Garantido';
+  document.getElementById('res-subtitulo').textContent =
+    `${fmtBRL(pv)} · ${n} parcelas · VRG ${fmtBRL(vrg)} · ${fmtPct(i * 100)} a.m.`;
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card highlight">
+      <div class="mc-label">Prestação Mensal</div>
+      <div class="mc-value accent" style="font-size:20px">${fmtBRL(d.pmt)}</div>
+      <div class="mc-sub">parcelas 1 a ${n - 1} · última + VRG ${fmtBRL(vrg)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Total de Juros</div>
+      <div class="mc-value" style="font-size:20px;color:var(--red)">${fmtBRL(totalJuros)}</div>
+      <div class="mc-sub">${fmtPct(totalJuros / pv * 100)} do valor do bem</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Montante Total</div>
+      <div class="mc-value" style="font-size:18px;color:var(--text)">${fmtBRL(totalPago)}</div>
+      <div class="mc-sub">incl. VRG na última parcela</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Taxa Efetiva a.a.</div>
+      <div class="mc-value" style="font-size:18px">${fmtPct(taxaAno)} a.a.</div>
+      <div class="mc-sub">${fmtPct(i * 100)} a.m. informado</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">VRG / Valor do Bem</div>
+      <div class="mc-value" style="font-size:18px;color:var(--blue)">${fmtPct(vrg / pv * 100)}</div>
+      <div class="mc-sub">${fmtBRL(vrg)} de ${fmtBRL(pv)}</div>
+    </div>
+    <div class="metric-card ${diff > 1 ? 'danger' : diff > 0.3 ? 'warn' : 'good'}">
+      <div class="mc-label">vs. Média Bacen</div>
+      <div class="mc-value ${diff > 1 ? 'danger' : diff > 0.3 ? 'warn' : 'good'}" style="font-size:18px">${diff >= 0 ? '+' : ''}${fmtPct(diff)} a.m.</div>
+      <div class="mc-sub">Bacen ${bacen.nome}: ${fmtPct(bacen.taxaMes)} a.m.</div>
+    </div>`;
+
+  document.getElementById('alert-situacao').className = 'alert show alert-info';
+  document.getElementById('alert-situacao').innerHTML =
+    `<strong>ℹ Leasing com VRG.</strong> PMT = (PV − VRG/(1+i)ⁿ) × i(1+i)ⁿ / ((1+i)ⁿ − 1) = <strong>${fmtBRL(d.pmt)}/mês</strong>. Na parcela ${n}, além da PMT normal, o arrendatário paga o VRG de ${fmtBRL(vrg)} para adquirir o bem.`;
+
+  document.getElementById('compare-section').style.display = 'none';
+  document.getElementById('antec-section').style.display   = 'none';
+
+  // Tabela
+  const amortSec = document.getElementById('amort-section');
+  amortSec.style.display = '';
+  amortSec.querySelector('.section-heading').textContent = 'Tabela de Amortização — Leasing com VRG';
+  document.getElementById('amort-tabs').style.display = 'none';
+
+  let html = `<table><thead><tr>
+    <th>#</th><th>Parcela</th>
+    <th style="color:var(--red)">Juros</th>
+    <th style="color:var(--green)">Amortização</th>
+    <th style="color:var(--blue)">VRG</th>
+    <th>Saldo Devedor</th>
+  </tr></thead><tbody>`;
+  d.rows.forEach(r => {
+    html += `<tr>
+      <td>${r.parc}</td>
+      <td class="td-highlight">${fmtBRL(r.pmt)}</td>
+      <td class="td-juros">${fmtBRL(r.juros)}</td>
+      <td class="td-amort">${fmtBRL(r.amort)}</td>
+      <td style="color:var(--blue)">${r.vrg > 0 ? fmtBRL(r.vrg) : '—'}</td>
+      <td class="td-saldo">${fmtBRL(r.saldo)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ════════════════════════════════════════════
+//  RENDER IPCA+
+// ════════════════════════════════════════════
+function renderResultadosIPCAPlus(d, pv, n, iFixa, iIPCA, modalidade) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-area').style.display = '';
+
+  const bacen     = BACEN[modalidade];
+  const totalPago = d.rows.reduce((s, r) => s + r.pmt, 0);
+  const iTotal    = (1 + iFixa) * (1 + iIPCA) - 1;
+  const taxaAno   = (Math.pow(1 + iTotal, 12) - 1) * 100;
+  const pmt1      = d.rows[0]?.pmt || 0;
+  const pmtN      = d.rows[d.rows.length - 1]?.pmt || 0;
+
+  document.getElementById('res-titulo').textContent    = 'Financiamento IPCA+ — Projeção';
+  document.getElementById('res-subtitulo').textContent =
+    `${fmtBRL(pv)} · ${n} meses · IPCA ${fmtPct(iIPCA * 100)} a.m. + spread ${fmtPct(iFixa * 100)} a.m.`;
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card highlight">
+      <div class="mc-label">1ª Prestação (projetada)</div>
+      <div class="mc-value accent" style="font-size:20px">${fmtBRL(pmt1)}</div>
+      <div class="mc-sub">cresce com a correção pelo IPCA</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Última Prestação (projetada)</div>
+      <div class="mc-value" style="font-size:20px;color:var(--amber)">${fmtBRL(pmtN)}</div>
+      <div class="mc-sub">se o IPCA se mantiver em ${fmtPct(iIPCA * 100)} a.m.</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Total de Juros</div>
+      <div class="mc-value" style="font-size:18px;color:var(--red)">${fmtBRL(d.totalJuros)}</div>
+      <div class="mc-sub">spread sobre saldo corrigido</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Correção Monetária Total</div>
+      <div class="mc-value" style="font-size:18px;color:var(--blue)">${fmtBRL(d.totalCorr)}</div>
+      <div class="mc-sub">IPCA projetado ${fmtPct(iIPCA * 100)} a.m.</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Montante Total</div>
+      <div class="mc-value" style="font-size:18px;color:var(--text)">${fmtBRL(totalPago)}</div>
+      <div class="mc-sub">${fmtPct((totalPago - pv) / pv * 100)} acima do principal</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Taxa Total Efetiva a.a.</div>
+      <div class="mc-value" style="font-size:18px">${fmtPct(taxaAno)} a.a.</div>
+      <div class="mc-sub">spread ${fmtPct(iFixa * 100)} a.m. × IPCA ${fmtPct(iIPCA * 100)} a.m.</div>
+    </div>`;
+
+  document.getElementById('alert-situacao').className = 'alert show alert-warn';
+  document.getElementById('alert-situacao').innerHTML =
+    `<strong>⚠ Projeção com IPCA constante.</strong> A tabela assume IPCA de ${fmtPct(iIPCA * 100)} a.m. em todos os meses. Na prática, a variação real do IPCA altera as prestações mensalmente. Saldo corrigido mensalmente <em>antes</em> do cálculo da prestação, conforme modelo Price indexado.`;
+
+  document.getElementById('compare-section').style.display = 'none';
+  document.getElementById('antec-section').style.display   = 'none';
+
+  const amortSec = document.getElementById('amort-section');
+  amortSec.style.display = '';
+  amortSec.querySelector('.section-heading').textContent = 'Tabela IPCA+ — Projeção Mensal';
+  document.getElementById('amort-tabs').style.display = 'none';
+
+  let html = `<table><thead><tr>
+    <th>#</th><th>Prestação</th>
+    <th style="color:var(--blue)">Correção IPCA</th>
+    <th style="color:var(--red)">Juros (spread)</th>
+    <th style="color:var(--green)">Amortização</th>
+    <th>Saldo Devedor</th>
+  </tr></thead><tbody>`;
+  d.rows.forEach(r => {
+    html += `<tr>
+      <td>${r.parc}</td>
+      <td class="td-highlight">${fmtBRL(r.pmt)}</td>
+      <td style="color:var(--blue)">${fmtBRL(r.corr)}</td>
+      <td class="td-juros">${fmtBRL(r.juros)}</td>
+      <td class="td-amort">${fmtBRL(r.amort)}</td>
+      <td class="td-saldo">${fmtBRL(r.saldo)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+  document.getElementById('right-panel').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ════════════════════════════════════════════
@@ -2650,12 +3038,42 @@ function calcularSaldoAuditoria() {
 
 function onSistemaChange() {
   const s = document.getElementById('sistema-amort').value;
-  const isHamb  = s === 'hamburguês';
-  const isSacre = s === 'sacre';
-  const isEspecial = isHamb || isSacre;
+  const isHamb     = s === 'hamburguês';
+  const isSacre    = s === 'sacre';
+  const isLeasing  = s === 'leasing';
+  const isIPCAPlus = s === 'ipca_plus';
+  const isPremiumSystem = isLeasing || isIPCAPlus;
 
-  document.getElementById('section-hamburguês').style.display = isHamb  ? '' : 'none';
-  document.getElementById('section-sacre').style.display      = isSacre ? '' : 'none';
+  // Gate premium para sistemas exclusivos
+  if (isPremiumSystem && window.userPremium === false) {
+    document.getElementById('sistema-amort').value = 'price';
+    const alertEl = document.getElementById('alert-input');
+    showAlert(alertEl, '⭐ Leasing com VRG e IPCA+ são exclusivos do plano Premium.', 'alert-warn');
+    document.getElementById('upsell-cet').style.display = '';
+    document.getElementById('section-cet').style.display = 'none';
+    resetResultados();
+    return;
+  }
+
+  document.getElementById('section-hamburguês').style.display  = isHamb     ? '' : 'none';
+  document.getElementById('section-sacre').style.display       = isSacre    ? '' : 'none';
+  document.getElementById('section-leasing').style.display     = isLeasing  ? '' : 'none';
+  document.getElementById('section-ipca-plus').style.display   = isIPCAPlus ? '' : 'none';
+
+  // CET completo visível em Price/SAC/Leasing (não faz sentido em Hamburguês/SACRE/IPCA+)
+  const showCET = !isHamb && !isSacre && !isIPCAPlus;
+  if (showCET) {
+    if (window.userPremium === false) {
+      document.getElementById('section-cet').style.display   = 'none';
+      document.getElementById('upsell-cet').style.display    = '';
+    } else {
+      document.getElementById('section-cet').style.display   = '';
+      document.getElementById('upsell-cet').style.display    = 'none';
+    }
+  } else {
+    document.getElementById('section-cet').style.display  = 'none';
+    document.getElementById('upsell-cet').style.display   = 'none';
+  }
 
   // Hamburguês não usa parcelas/valor-parcela (usa eventos próprios)
   const fgParc = document.getElementById('fg-num-parcelas');
@@ -2663,7 +3081,6 @@ function onSistemaChange() {
   if (fgParc) fgParc.style.display = isHamb ? 'none' : '';
   if (fgPmt)  fgPmt.style.display  = isHamb ? 'none' : '';
 
-  // Resetar resultados ao trocar método
   resetResultados();
 }
 
