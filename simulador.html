@@ -800,7 +800,7 @@
         </div>
 
         <div class="stj-badge-warn" id="hamb-aviso-cap" style="display:none">
-          <strong>⚠ Atenção (STJ REsp 198.502/MT):</strong> A capitalização composta de juros é vedada em contratos civis, salvo disposição legal expressa. O Método Hamburguês puro usa <em>juros simples</em>.
+          <strong>⚠ Atenção:</strong> O Método Hamburguês puro opera com juros <em>simples</em> (proporcional diário). A capitalização composta altera o custo final da operação e deve estar expressamente prevista no instrumento contratual para ser utilizada neste cálculo.
         </div>
         <div class="stj-badge">
           <strong>Como preencher:</strong> Cada linha é um período entre eventos. "Dias" = duração do intervalo. Tipo "Débito" = novo saque/encargo que aumenta o saldo devedor; "Crédito" = pagamento/depósito que reduz o saldo.
@@ -812,7 +812,7 @@
         <hr class="form-divider">
         <p class="panel-title" style="margin-bottom:10px">SACRE — Amortização Crescente</p>
         <div class="metodo-info-box">
-          Prestação fixa por blocos de meses; amortização recalculada como <strong>saldo ÷ prazo remanescente</strong>. TR corrige o saldo <em>antes</em> da amortização (Súmula 450/STJ).
+          Prestação fixa por blocos de meses; amortização recalculada como <strong>saldo ÷ prazo remanescente</strong>. TR corrige o saldo <em>antes</em> da amortização — a sequência de operações é: correção monetária, depois amortização.
         </div>
 
         <div class="form-group">
@@ -832,7 +832,7 @@
         </div>
 
         <div class="stj-badge">
-          <strong>Súmula 450/STJ:</strong> A TR deve corrigir o saldo devedor <em>antes</em> da amortização, não após. A prestação é recalculada a cada bloco com base no novo saldo e prazo remanescente.
+          <strong>Ordem de operações:</strong> A TR corrige o saldo devedor <em>antes</em> da amortização, não após. A prestação é recalculada no início de cada bloco com base no novo saldo e prazo remanescente.
         </div>
       </div>
 
@@ -1237,23 +1237,23 @@
 
       <!-- Educativo -->
       <div class="edu-section animate-in delay-5">
-        <div class="section-heading">Direitos do Consumidor</div>
+        <div class="section-heading">Conceitos Técnicos</div>
         <div class="edu-grid">
           <div class="edu-card">
+            <h4>Taxa Nominal vs. Taxa Efetiva</h4>
+            <p>A taxa nominal é a informada no contrato, geralmente expressa ao ano ou ao mês de forma proporcional. A taxa efetiva (TIR) é calculada matematicamente a partir do fluxo real da operação — valor recebido e parcelas pagas — e reflete o custo real do capital no período.</p>
+          </div>
+          <div class="edu-card">
             <h4>Portabilidade de Crédito</h4>
-            <p>A portabilidade de crédito é um mecanismo regulado que permite ao tomador solicitar a transferência de operação entre instituições financeiras. Para informações sobre condições e procedimentos, consulte seu banco ou o site do Banco Central.</p>
+            <p>A portabilidade permite transferir uma operação de crédito para outra instituição financeira. O banco receptor quita a dívida original pelo saldo devedor e emite novo contrato. A taxa efetiva calculada aqui é o parâmetro objetivo para essa comparação.</p>
           </div>
           <div class="edu-card">
-            <h4>Quitação Antecipada</h4>
-            <p>A quitação antecipada é uma modalidade de encerramento de contratos de crédito antes do prazo original. Para conhecer as condições aplicáveis ao seu contrato específico, consulte sua instituição financeira.</p>
+            <h4>Amortização Antecipada</h4>
+            <p>Na quitação ou amortização antecipada de contratos no sistema Price, o valor a pagar corresponde ao saldo devedor na data da liquidação — sem os juros vincendos. O simulador de antecipação calcula exatamente esse valor para cada intervalo de parcelas.</p>
           </div>
           <div class="edu-card">
-            <h4>Taxa de Juros Efetiva</h4>
-            <p>A taxa de juros efetiva é o parâmetro calculado matematicamente a partir do fluxo real da operação — valor recebido e parcelas pagas. É diferente da taxa nominal informada no contrato e é o indicador utilizado pelo Banco Central nas estatísticas mensais de crédito.</p>
-          </div>
-          <div class="edu-card">
-            <h4>Canais de Informação ao Consumidor</h4>
-            <p>Dúvidas sobre contratos de crédito podem ser esclarecidas no <strong>Procon</strong> ou no canal <strong>Bacen Consumidor (0800 979 2345)</strong>. Consulte sempre um profissional habilitado.</p>
+            <h4>CET — Custo Efetivo Total</h4>
+            <p>O CET (Res. CMN 4.601/2017) é a taxa que iguala o valor presente de todos os fluxos de saída (prestações, IOF, tarifas e seguros) ao valor líquido recebido. É a métrica mais completa de custo de uma operação de crédito.</p>
           </div>
         </div>
       </div>
@@ -2406,17 +2406,18 @@ function gerarPDF() {
   doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('4. DIREITOS E BASE NORMATIVA', lm + 3, y + 5);
+  doc.text('4. REFERÊNCIAS TÉCNICAS', lm + 3, y + 5);
   y += 12;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(70, 70, 70);
   const direitos = [
-    '• Portabilidade de crédito: Resolução CMN nº 4.292/2013 — direito de transferir dívida para outro banco com taxa menor.',
-    '• Quitação antecipada com redução de juros: Art. 52 §2º do CDC — sem multa, com desconto proporcional dos juros vincendos.',
-    '• Taxa efetiva: o Banco Central divulga mensalmente as taxas médias por modalidade em dadosabertos.bcb.gov.br',
-    '• Para dúvidas sobre contratos: Bacen Consumidor: 0800 979 2345 | Consumidor.gov.br',
+    '• Taxa efetiva (TIR): calculada pelo método de Newton-Raphson sobre o fluxo real de caixa da operação.',
+    '• Taxas médias de referência: Banco Central do Brasil — Sistema Gerenciador de Séries Temporais (SGS/BCB), dadosabertos.bcb.gov.br',
+    '• CET (Custo Efetivo Total): Resolução CMN nº 4.601/2017 — inclui juros, IOF, tarifas e seguros no fluxo de caixa.',
+    '• Portabilidade de crédito: Resolução CMN nº 4.292/2013 — transferência de operação entre instituições pelo saldo devedor.',
+    '• SACRE / TR: correção monetária aplicada ao saldo devedor antes da amortização, conforme modelo do SFH.',
   ];
   direitos.forEach(d => {
     const lines = doc.splitTextToSize(d, pw - 4);
@@ -3249,10 +3250,10 @@ function renderResultadosHamburguês(r) {
   const alertSit = document.getElementById('alert-situacao');
   if (r.capitaliza) {
     alertSit.className = 'alert show alert-warn';
-    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> com taxa diária equivalente (${fmtPct(r.iDiariaEq * 100, 4)} a.d. = <em>(1 + ${fmtPct(r.taxaMensal)}/mês)^(1/30) − 1</em>). Conforme STJ REsp 198.502/MT, a mera menção ao Método Hamburguês não autoriza capitalização — é necessária cláusula contratual expressa e previsão legal. O Método Hamburguês <em>puro</em> usa sempre juros simples: <em>J = i_diária × Σ(SD × dias)</em>.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
+    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> com taxa diária equivalente (${fmtPct(r.iDiariaEq * 100, 4)} a.d. = <em>(1 + ${fmtPct(r.taxaMensal)}/mês)^(1/30) − 1</em>). O Método Hamburguês em sua forma original (puro) opera com juros <em>simples</em>: <em>J = i_diária × Σ(SD × dias)</em>. A capitalização composta eleva o custo final e deve estar expressamente prevista no instrumento contratual.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
   } else {
     alertSit.className = 'alert show alert-info';
-    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — em conformidade com a jurisprudência do STJ.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
+    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — taxa proporcional diária sobre saldo devedor.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
   }
 
   // ── Ocultar seções inapropriadas ──
@@ -3417,7 +3418,7 @@ function renderResultadosSACRE(r) {
     <div class="metric-card danger">
       <div class="mc-label">Amortização Negativa</div>
       <div class="mc-value danger">${r.qtdAmortNeg} mês(es)</div>
-      <div class="mc-sub">Prestação &lt; juros → risco jurídico</div>
+      <div class="mc-sub">Prestação &lt; juros → saldo devedor cresce</div>
     </div>` : `
     <div class="metric-card good">
       <div class="mc-label">Amortização Negativa</div>
@@ -3429,10 +3430,10 @@ function renderResultadosSACRE(r) {
   const alertSit = document.getElementById('alert-situacao');
   if (r.qtdAmortNeg > 0) {
     alertSit.className = 'alert show alert-danger';
-    alertSit.innerHTML = `<strong>⚠ Amortização negativa detectada em ${r.qtdAmortNeg} mês(es).</strong> A prestação é menor que os juros do período, fazendo o saldo devedor crescer. Isso pode configurar anatocismo (juros sobre juros) e é objeto de discussão nos tribunais. Verifique a taxa e os parâmetros informados.`;
+    alertSit.innerHTML = `<strong>⚠ Amortização negativa detectada em ${r.qtdAmortNeg} mês(es).</strong> A prestação é menor que os juros do período, fazendo o saldo devedor crescer em vez de reduzir. Os juros não estão sendo integralmente cobertos pela prestação — verifique a taxa e os parâmetros informados.`;
   } else if (r.trMensal > 0) {
     alertSit.className = 'alert show alert-info';
-    alertSit.innerHTML = `<strong>ℹ SACRE com TR mensal de ${fmtPct(r.trMensal)}.</strong> A TR foi aplicada mensalmente sobre o saldo devedor <em>antes</em> da amortização, conforme Súmula 450/STJ. Nenhuma amortização negativa detectada com os parâmetros informados.`;
+    alertSit.innerHTML = `<strong>ℹ SACRE com TR mensal de ${fmtPct(r.trMensal)}.</strong> A TR foi aplicada mensalmente sobre o saldo devedor <em>antes</em> da amortização — ordem: correção monetária, depois cálculo da prestação e amortização. Nenhuma amortização negativa detectada com os parâmetros informados.`;
   } else {
     alertSit.className = 'alert show alert-success';
     alertSit.innerHTML = `<strong>✓ SACRE sem correção monetária.</strong> A prestação decresce em degraus a cada bloco de ${r.B} meses, com amortização crescente. Compare com SAC (parcela decrescente contínua) e Price (parcela fixa) usando a tabela abaixo.`;
