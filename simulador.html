@@ -629,6 +629,8 @@
         document.getElementById('section-cet').style.display  = '';
         document.getElementById('upsell-cet').style.display   = 'none';
       }
+      // Inicializa gate de carência (Premium)
+      initCarenciaGate();
       // Injeta nome do usuário no header se existir
       const nameEl = document.getElementById('user-header-name');
       if (nameEl) nameEl.textContent = me.name;
@@ -749,25 +751,39 @@
         </div>
       </div>
 
-      <!-- ══ CARÊNCIA ══ -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
-        <div>
-          <label class="form-label">Carência <span class="form-hint">meses</span></label>
-          <div class="input-suffix-wrap">
-            <input type="number" id="carencia-meses" placeholder="0" min="0" max="60" value="0" oninput="onCarenciaChange()" />
-            <span class="input-suffix">meses</span>
+      <!-- ══ CARÊNCIA (Premium) ══ -->
+      <div id="section-carencia">
+        <div class="premium-title">
+          <p class="panel-title" style="margin-bottom:0">Período de Carência</p>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <div id="carencia-fields" style="margin-top:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+            <div>
+              <label class="form-label">Carência <span class="form-hint">meses</span></label>
+              <div class="input-suffix-wrap">
+                <input type="number" id="carencia-meses" placeholder="0" min="0" max="60" value="0" oninput="onCarenciaChange()" />
+                <span class="input-suffix">meses</span>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Tipo de carência</label>
+              <select id="carencia-tipo" onchange="onCarenciaChange()">
+                <option value="juros">Juros correndo (padrão bancário)</option>
+                <option value="total">Carência total (sem juros)</option>
+              </select>
+            </div>
+          </div>
+          <div id="carencia-info" style="display:none;font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--amber)">
+            Durante a carência o saldo cresce com juros — o principal aumenta antes da amortização começar.
           </div>
         </div>
-        <div>
-          <label class="form-label">Tipo de carência</label>
-          <select id="carencia-tipo" onchange="onCarenciaChange()">
-            <option value="juros">Juros correndo (padrão bancário)</option>
-            <option value="total">Carência total (sem juros)</option>
-          </select>
+        <div id="upsell-carencia" style="display:none">
+          <div class="premium-upsell-inline">
+            <p>⭐ <strong style="color:var(--text)">Simulação com período de carência</strong> disponível no plano Premium.</p>
+            <button onclick="window.open('https://pay.kiwify.com.br/1xAQ6ev','_blank')">Fazer upgrade →</button>
+          </div>
         </div>
-      </div>
-      <div id="carencia-info" style="display:none;font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--amber)">
-        Durante a carência o saldo cresce com juros — o principal aumenta antes da amortização começar.
       </div>
 
       <!-- ══ MÉTODO HAMBURGUÊS ══ -->
@@ -1747,8 +1763,8 @@ function calcular() {
     return;
   }
 
-  // Carência (apenas no modo simular)
-  const carenciaMeses = state.modo === 'simular'
+  // Carência (apenas no modo simular, exclusivo Premium)
+  const carenciaMeses = (state.modo === 'simular' && window.userPremium === true)
     ? (parseInt(document.getElementById('carencia-meses')?.value) || 0) : 0;
   const carenciaTipo  = state.modo === 'simular'
     ? (document.getElementById('carencia-tipo')?.value || 'juros') : 'juros';
@@ -2022,6 +2038,27 @@ function onCarenciaChange() {
   const info = document.getElementById('carencia-info');
   if (info) {
     info.style.display = (meses > 0 && tipo === 'juros') ? '' : 'none';
+  }
+}
+
+function initCarenciaGate() {
+  const isPremium = window.userPremium === true;
+  const fields   = document.getElementById('carencia-fields');
+  const upsell   = document.getElementById('upsell-carencia');
+  if (!fields || !upsell) return;
+  if (isPremium) {
+    fields.style.display  = '';
+    upsell.style.display  = 'none';
+    // Garante que os inputs estejam habilitados
+    fields.querySelectorAll('input, select').forEach(el => el.removeAttribute('disabled'));
+  } else {
+    // Mostra campos desabilitados + upsell
+    fields.style.display  = '';
+    upsell.style.display  = '';
+    fields.querySelectorAll('input, select').forEach(el => el.setAttribute('disabled', 'disabled'));
+    // Zera carência para não vazar no cálculo
+    const mesesEl = document.getElementById('carencia-meses');
+    if (mesesEl) mesesEl.value = '0';
   }
 }
 
