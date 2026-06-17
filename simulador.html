@@ -1125,6 +1125,28 @@
         <input type="date" id="inad2-data-inicio" style="width:100%" onchange="atualizarIndicadorContrato()" />
       </div>
 
+      <div class="form-group">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Carência contratual <span class="form-hint">meses</span></label>
+            <div class="input-suffix-wrap">
+              <input type="number" id="inad2-carencia-meses" placeholder="0" min="0" max="60" value="0" oninput="atualizarIndicadorContrato()" />
+              <span class="input-suffix">meses</span>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Tipo de carência</label>
+            <select id="inad2-carencia-tipo" onchange="atualizarIndicadorContrato()">
+              <option value="juros">Juros correndo (padrão bancário)</option>
+              <option value="total">Carência total (sem juros)</option>
+            </select>
+          </div>
+        </div>
+        <div id="inad2-carencia-aviso" style="display:none;font-size:10.5px;color:var(--amber);font-family:'DM Mono',monospace;margin-top:6px">
+          ⓘ Cada mês de carência usa a taxa BCB daquele período — reconstituição pericial mês a mês.
+        </div>
+      </div>
+
       <div id="inad2-indicador" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text2)">
         Taxa implícita: <strong id="inad2-taxa-label" style="color:var(--accent)">—</strong>
         &nbsp;·&nbsp;
@@ -4176,23 +4198,42 @@ function atualizarIndicadorContrato() {
     return;
   }
 
+  // Carência — estimativa com TIR (será refinada com BCB no cálculo)
+  const carenciaMesesInd = parseInt(document.getElementById('inad2-carencia-meses')?.value) || 0;
+  const carenciaTipoInd  = document.getElementById('inad2-carencia-tipo')?.value || 'juros';
+  const avisoCarencia    = document.getElementById('inad2-carencia-aviso');
+  if (avisoCarencia) avisoCarencia.style.display = (carenciaMesesInd > 0 && carenciaTipoInd === 'juros') ? '' : 'none';
+
+  // Saldo pós-carência estimado com TIR (proxy antes da busca BCB)
+  let saldoAposCarenciaEst = valor;
+  if (carenciaMesesInd > 0 && carenciaTipoInd === 'juros') {
+    saldoAposCarenciaEst = valor * Math.pow(1 + taxa, carenciaMesesInd);
+  }
+
   let tabela;
   if (sistema === 'sac') {
-    tabela = gerarTabelaSAC(valor, taxa, n);
+    tabela = gerarTabelaSAC(saldoAposCarenciaEst, taxa, n);
   } else if (sistema === 'sacre') {
     const tr = (parseFloat(document.getElementById('inad2-sacre-tr')?.value) || 0) / 100;
     const B  = parseInt(document.getElementById('inad2-sacre-bloco')?.value) || 12;
-    tabela = gerarTabelaSACRE(valor, taxa, n, tr, B);
+    tabela = gerarTabelaSACRE(saldoAposCarenciaEst, taxa, n, tr, B);
   } else if (sistema === 'leasing') {
     const vrg = parseBRL(document.getElementById('inad2-leasing-vrg')?.value || '');
-    tabela = gerarTabelaLeasing(valor, taxa, n, vrg).rows;
+    tabela = gerarTabelaLeasing(saldoAposCarenciaEst, taxa, n, vrg).rows;
   } else {
-    // price e hamburguês — saldos mensais idênticos
-    tabela = gerarTabelaPrice(valor, taxa, n);
+    tabela = gerarTabelaPrice(saldoAposCarenciaEst, taxa, n);
   }
-  const saldo  = pagas === 0 ? valor : (tabela[pagas - 1]?.saldo ?? valor);
 
-  if (taxaLabel) taxaLabel.textContent = fmtPct(taxa * 100) + ' a.m.';
+  // Tabela combinada: linhas de carência (estimadas) + amortização
+  let tabelaIndicador = tabela;
+  if (carenciaMesesInd > 0) {
+    const carRows = gerarRowsCarencia(valor, taxa, carenciaMesesInd, carenciaTipoInd).rows;
+    tabelaIndicador = [...carRows, ...tabela.map((r, i) => ({ ...r, parc: i + 1 + carenciaMesesInd }))];
+  }
+  const totalParcelas = carenciaMesesInd + n;
+  const saldo = pagas === 0 ? valor : (tabelaIndicador[pagas - 1]?.saldo ?? valor);
+
+  if (taxaLabel) taxaLabel.textContent = fmtPct(taxa * 100) + ' a.m.' + (carenciaMesesInd > 0 ? ` · carência ${carenciaMesesInd}m (est.)` : '');
 
   const multiMode = dataInicio !== '';
 
@@ -4225,21 +4266,26 @@ function atualizarIndicadorContrato() {
       if (!fimEl.value && fimEl.options.length) fimEl.selectedIndex = fimEl.options.length - 1;
     }
   } else {
-    // Modo simples: auto-fill principal com saldo calculado
+    // Modo simples: auto-fill principal com saldo calculado (pós-carência se houver)
     if (indicador) indicador.style.display = '';
     if (saldoInfo) saldoInfo.style.display = '';
-    if (saldoLabel) saldoLabel.textContent = fmtBRL(saldo);
+    const saldoLabel2 = document.getElementById('inad2-saldo-label');
+    const saldoDisplay = carenciaMesesInd > 0 ? saldo : saldo;
+    if (saldoLabel2) saldoLabel2.textContent = fmtBRL(saldoDisplay)
+      + (carenciaMesesInd > 0 ? ` (após ${carenciaMesesInd}m carência — estimado)` : '');
 
     if (principalRow) principalRow.style.display = '';
     if (vencRow)      vencRow.style.display = '';
     if (parcRow)      parcRow.style.display = 'none';
 
     if (principalEl) {
-      principalEl.value = saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      principalEl.value = saldoDisplay.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       principalEl.dataset.autoFill = '1';
       principalEl.readOnly = true;
       principalEl.style.opacity = '0.7';
-      principalEl.title = 'Calculado automaticamente a partir dos dados do contrato original';
+      principalEl.title = carenciaMesesInd > 0
+        ? 'Saldo estimado após carência — será refinado com taxas BCB reais no cálculo'
+        : 'Calculado automaticamente a partir dos dados do contrato original';
     }
   }
 }
@@ -4356,6 +4402,8 @@ async function calcularInadimplencia() {
   const inad2Pagas     = (inad2PagasRaw !== '' && inad2PagasRaw != null) ? parseInt(inad2PagasRaw) : NaN;
   const inad2Sistema   = document.getElementById('inad2-sistema')?.value || 'price';
   const inad2DataInicio = document.getElementById('inad2-data-inicio')?.value || '';
+  const inad2CarenciaMeses = parseInt(document.getElementById('inad2-carencia-meses')?.value) || 0;
+  const inad2CarenciaTipo  = document.getElementById('inad2-carencia-tipo')?.value || 'juros';
   const parcIni        = parseInt(document.getElementById('inad2-parc-ini')?.value) || 0;
   const parcFim        = parseInt(document.getElementById('inad2-parc-fim')?.value) || 0;
 
@@ -4434,7 +4482,7 @@ async function calcularInadimplencia() {
   }
 
   // ── Intervalo de datas para busca BCB ──
-  let mesesRef; // range máximo para buscar séries históricas
+  let mesesRef; // range do período de inadimplência (sem carência)
   if (multiMode) {
     const dueYM_ini = addMonthsYM(inad2DataInicio, parcIni - 1);
     mesesRef = getMeses(dueYM_ini, apuracao.slice(0, 7));
@@ -4444,8 +4492,22 @@ async function calcularInadimplencia() {
   }
   if (!mesesRef.length) { showAlert(alertEl, 'Período inválido — verifique as datas.'); return; }
 
-  const dataIniBCB = mesesRef[0].dataIniBCB;
-  const dataFimBCB = mesesRef[mesesRef.length - 1].dataFimBCB;
+  // Carência: calcular meses e estender range BCB para incluí-los
+  let mesesCarenciaInad = [];
+  if (inad2CarenciaMeses > 0 && inad2DataInicio) {
+    const carInicioYM = inad2DataInicio.slice(0, 7);
+    const carFimYM    = addMonthsYM(carInicioYM, inad2CarenciaMeses - 1);
+    mesesCarenciaInad = getMeses(carInicioYM, carFimYM);
+  }
+
+  // Range de fetch = carência + inadimplência (evita duplicatas por key)
+  const mesesFetch = [
+    ...mesesCarenciaInad.filter(mc => !mesesRef.find(mr => mr.key === mc.key)),
+    ...mesesRef,
+  ];
+
+  const dataIniBCB = mesesFetch[0].dataIniBCB;
+  const dataFimBCB = mesesFetch[mesesFetch.length - 1].dataFimBCB;
 
   const loadEl = document.getElementById('inad-loading');
   if (loadEl) loadEl.style.display = '';
@@ -4466,6 +4528,82 @@ async function calcularInadimplencia() {
 
     const indiceNomes = { ipca: 'IPCA', inpc: 'INPC', selic: 'SELIC', tr: 'TR',
                           fixo: `Taxa fixa (${fmtPct(taxaFixaP)} a.m.)` };
+
+    // ────────────────────────────────────────
+    //  CARÊNCIA: reconstituição mês a mês com taxas BCB reais
+    // ────────────────────────────────────────
+    let carenciaData = null;
+    if (inad2CarenciaMeses > 0 && mesesCarenciaInad.length > 0 && contratoOriginal) {
+      let saldoCar = inad2Valor;
+      let jurosCarTotal = 0;
+      const rowsCar = mesesCarenciaInad.map(m => {
+        if (inad2CarenciaTipo === 'total') {
+          return { mes: m.label, key: m.key, taxa: 0, juros: 0, saldo: saldoCar, isCarencia: true };
+        }
+        const taxa   = m.key in mapBCB ? mapBCB[m.key] : BACEN[modalidade].taxaMes;
+        const juros  = saldoCar * (taxa / 100);
+        jurosCarTotal += juros;
+        saldoCar     += juros;
+        return { mes: m.label, key: m.key, taxa, juros, saldo: saldoCar, isCarencia: true };
+      });
+      const saldoAposCarencia = saldoCar;
+      const acrescimoPct      = inad2Valor > 0 ? (saldoAposCarencia - inad2Valor) / inad2Valor * 100 : 0;
+
+      // CET sem carência: taxa contratada anualizada
+      const cetSemCar = (Math.pow(1 + contratoOriginal.taxa, 12) - 1) * 100;
+      // CET com carência calculado após reconstrução da tabela (precisa do pmt com saldoApos)
+      // será adicionado abaixo, após rebuild da tabelaCompleta
+
+      carenciaData = {
+        meses:            inad2CarenciaMeses,
+        tipo:             inad2CarenciaTipo,
+        saldoOriginal:    inad2Valor,
+        saldoApos:        saldoAposCarencia,
+        jurosTotal:       jurosCarTotal,
+        acrescimoPct,
+        rows:             rowsCar,
+        cetSem:           cetSemCar,
+        cetCom:           null,
+        cetDiff:          null,
+      };
+
+      // Reconstruir tabelaCompleta do contrato com saldo pós-carência real
+      if (contratoOriginal.taxa && !isNaN(contratoOriginal.taxa)) {
+        const taxa2 = contratoOriginal.taxa;
+        let amortRows;
+        if (inad2Sistema === 'sac')    amortRows = gerarTabelaSAC(saldoAposCarencia, taxa2, inad2Parc);
+        else if (inad2Sistema === 'sacre') amortRows = gerarTabelaSACRE(saldoAposCarencia, taxa2, inad2Parc, inad2SacreTr, inad2SacreBloco);
+        else                           amortRows = gerarTabelaPrice(saldoAposCarencia, taxa2, inad2Parc);
+        const carRowsTabela = rowsCar.map((r, i) => ({ parc: i + 1, pmt: 0, juros: r.juros, amort: 0, saldo: r.saldo, isCarencia: true }));
+        const amortRowsTabela = amortRows.map((r, i) => ({ ...r, parc: i + 1 + inad2CarenciaMeses }));
+        contratoOriginal.tabelaCompleta = [...carRowsTabela, ...amortRowsTabela];
+        const saldoIdx = isNaN(inad2Pagas) || inad2Pagas === 0 ? inad2Valor : (contratoOriginal.tabelaCompleta[inad2Pagas - 1]?.saldo ?? saldoAposCarencia);
+        contratoOriginal.saldoInicio = saldoIdx;
+        const fluxoRem = contratoOriginal.tabelaCompleta.slice(isNaN(inad2Pagas) ? 0 : inad2Pagas);
+        contratoOriginal.fluxoRemanescente = fluxoRem;
+        contratoOriginal.totalPmtRem   = fluxoRem.reduce((s, r) => s + r.pmt,   0);
+        contratoOriginal.totalJurosRem = fluxoRem.reduce((s, r) => s + r.juros, 0);
+        contratoOriginal.totalAmortRem = fluxoRem.reduce((s, r) => s + r.amort, 0);
+
+        // CET com carência: TIR que iguala inad2Valor ao fluxo [-pv, 0×k, pmt×n]
+        const pmtComCar = contratoOriginal.tabelaCompleta[inad2CarenciaMeses]?.pmt;
+        if (pmtComCar && pmtComCar > 0) {
+          const cetComMes = calcularTIR_comCarencia(inad2Valor, inad2Parc, pmtComCar, inad2CarenciaMeses);
+          if (cetComMes && !isNaN(cetComMes)) {
+            carenciaData.cetCom  = (Math.pow(1 + cetComMes, 12) - 1) * 100;
+            carenciaData.cetDiff = carenciaData.cetCom - carenciaData.cetSem;
+          }
+        }
+      }
+
+      // No modo simples: sobrescrever o principal com saldoAposCarencia real (BCB)
+      if (!multiMode) {
+        const principalEl2 = document.getElementById('inad-principal');
+        if (principalEl2 && principalEl2.dataset.autoFill === '1') {
+          principalEl2.value = saldoAposCarencia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+      }
+    }
 
     // ────────────────────────────────────────
     //  MODO MÚLTIPLAS PARCELAS
@@ -4534,12 +4672,12 @@ async function calcularInadimplencia() {
         },
         multiMode: true, parcIni, parcFim, linhasParcelas,
         taxaEfetivaPeriodo: null, taxaMediaBCBPeriodo: null, diferencaPeriodo: null,
-        // multaC/multaR para o quadro comparativo (total das multas)
         multaC: principal_total * (multaP / 100),
         multaR: principal_total * 0.02,
         accCorrecaoC: 0, accJurosC: 0, saldoC: totalC_all,
         accCorrecaoR: 0, accJurosR: 0, saldoR: totalR_all,
         accJurosB: 0,    saldoB: totalB_all,
+        carenciaData,
       };
 
       window._inadState = d;
@@ -4616,6 +4754,7 @@ async function calcularInadimplencia() {
         modalidadeNome: BACEN[modalidade]?.nome || modalidade,
         contratoOriginal, taxaEfetivaPeriodo, taxaMediaBCBPeriodo, diferencaPeriodo,
         multiMode: false,
+        carenciaData,
       };
 
       window._inadState = d;
@@ -4663,6 +4802,68 @@ function renderResultadosInadimplencia(d) {
     ${d.mesesSemDado > 0 ? `<div class="alert show alert-warn" style="margin-bottom:16px">
       ⚠ ${d.mesesSemDado} mês(es) sem dado disponível no BCB para o índice "${d.indiceNome}" — 0% utilizado nesses períodos.
     </div>` : ''}
+
+    ${d.carenciaData ? (() => {
+      const cd = d.carenciaData;
+      const tipoLabel = cd.tipo === 'total' ? 'carência total (sem juros)' : 'juros correndo e capitalizando';
+      return `<div class="amort-section animate-in" style="margin-bottom:20px;border-left:4px solid var(--amber);padding-left:0">
+        <div class="section-heading" style="color:var(--amber)">Período de Carência Contratual — ${cd.meses} ${cd.meses === 1 ? 'mês' : 'meses'} (${tipoLabel})</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-top:12px">
+          <div class="metric-card">
+            <div class="mc-label">Saldo original do contrato</div>
+            <div class="mc-value" style="font-size:17px">${fmtBRL(cd.saldoOriginal)}</div>
+          </div>
+          <div class="metric-card warn">
+            <div class="mc-label">Saldo após carência de ${cd.meses}m</div>
+            <div class="mc-value warn" style="font-size:17px">${fmtBRL(cd.saldoApos)}</div>
+            <div class="mc-sub">base das prestações subsequentes</div>
+          </div>
+          <div class="metric-card warn">
+            <div class="mc-label">Juros capitalizados na carência</div>
+            <div class="mc-value warn" style="font-size:17px">${fmtBRL(cd.jurosTotal)}</div>
+            <div class="mc-sub">acréscimo de ${fmtPct(cd.acrescimoPct)} sobre o principal</div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-label">Diferença gerada pela carência</div>
+            <div class="mc-value" style="font-size:17px;color:var(--amber)">${fmtBRL(cd.saldoApos - cd.saldoOriginal)}</div>
+            <div class="mc-sub">${fmtPct(cd.acrescimoPct)} do valor original</div>
+          </div>
+        </div>
+        ${cd.cetCom !== null ? `<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--amber);display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:3px">CET sem carência</div>
+            <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600">${fmtPct(cd.cetSem)} a.a.</div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:3px">CET com carência</div>
+            <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--amber)">${fmtPct(cd.cetCom)} a.a.</div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:3px">Diferença</div>
+            <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--red)">+${fmtPct(cd.cetDiff)} p.p. a.a.</div>
+          </div>
+        </div>` : ''}
+        <div style="margin-top:10px;overflow-x:auto">
+          <table style="width:100%;font-size:11px;border-collapse:collapse;font-family:'DM Mono',monospace">
+            <thead><tr style="background:var(--amber-dim,rgba(251,191,36,.12))">
+              <th style="padding:5px 8px;text-align:left;color:var(--amber)">Mês</th>
+              <th style="padding:5px 8px;text-align:right;color:var(--amber)">Taxa BCB</th>
+              <th style="padding:5px 8px;text-align:right;color:var(--amber)">Juros capitalizados</th>
+              <th style="padding:5px 8px;text-align:right;color:var(--amber)">Saldo devedor</th>
+            </tr></thead>
+            <tbody>${cd.rows.map((r, i) => `<tr style="background:${i%2?'var(--surface2)':'transparent'}">
+              <td style="padding:4px 8px;color:var(--text2)">${r.mes}</td>
+              <td style="padding:4px 8px;text-align:right">${cd.tipo==='total'?'—':fmtPct(r.taxa)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--amber)">${fmtBRL(r.juros)}</td>
+              <td style="padding:4px 8px;text-align:right;font-weight:600">${fmtBRL(r.saldo)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:10.5px;color:var(--text3);font-family:'DM Mono',monospace;font-style:italic">
+          ⓘ Fonte: BCB/SGS série ${SGS_CODIGOS[d.modalidade]||'—'} — taxas efetivas médias mensais por competência. Cada mês usa a taxa daquele período específico.
+        </div>
+      </div>`;
+    })() : ''}
 
     ${d.taxaEfetivaPeriodo !== null ? `
     <!-- Taxa efetiva no período -->
@@ -4937,6 +5138,80 @@ function gerarPDFInadimplencia() {
     y += 6;
   });
   y += 6;
+
+  // ── Seção 1-B: Carência Contratual (quando informada) ──
+  if (d.carenciaData) {
+    const cd = d.carenciaData;
+    if (y > 220) y = novaPagina();
+    doc.setFillColor(255, 248, 220);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(120, 80, 0);
+    const tipoCarPDF = cd.tipo === 'total' ? 'Carência Total' : 'Juros Correndo e Capitalizando';
+    doc.text(`1-B. PERÍODO DE CARÊNCIA — ${cd.meses} MÊS(ES) — ${tipoCarPDF.toUpperCase()}`, lm + 3, y + 5);
+    y += 12;
+
+    // Bloco resumo carência
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(80, 55, 0);
+    const resumoCar = [
+      ['Saldo original do contrato',        fmtBRL(cd.saldoOriginal)],
+      ['Saldo após carência de ' + cd.meses + ' mês(es)',   fmtBRL(cd.saldoApos)],
+      ['Juros capitalizados na carência',   fmtBRL(cd.jurosTotal)],
+      ['Acréscimo percentual',              fmtPct(cd.acrescimoPct) + ' do principal'],
+    ];
+    resumoCar.forEach(([k, v]) => {
+      doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 2, y);
+      doc.setFont('helvetica', 'normal'); doc.text(v, lm + 90, y);
+      y += 6;
+    });
+
+    // CET sem/com carência
+    if (cd.cetCom !== null) {
+      y += 2;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(80, 55, 0);
+      doc.text('Impacto no CET (Custo Efetivo Total):', lm + 2, y); y += 6;
+      const cetRows = [
+        ['CET sem carência (taxa contratada a.a.)', fmtPct(cd.cetSem)],
+        ['CET com carência (TIR efetiva a.a.)',      fmtPct(cd.cetCom)],
+        ['Diferença',                                '+' + fmtPct(cd.cetDiff) + ' p.p. a.a.'],
+      ];
+      cetRows.forEach(([k, v]) => {
+        doc.setFont('helvetica', 'bold');   doc.text(k + ':', lm + 4, y);
+        doc.setFont('helvetica', 'normal'); doc.text(v, lm + 100, y);
+        y += 5.5;
+      });
+    }
+
+    // Nota técnica automática
+    y += 2;
+    doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 70, 0);
+    const notaTecnica = doc.splitTextToSize(
+      `Nota técnica: O período de carência de ${cd.meses} mês(es) resultou em capitalização de juros sobre o saldo devedor ` +
+      `original (${tipoCarPDF.toLowerCase()}), elevando a base de cálculo das prestações subsequentes de ` +
+      `${fmtBRL(cd.saldoOriginal)} para ${fmtBRL(cd.saldoApos)}, representando acréscimo de ` +
+      `${fmtBRL(cd.jurosTotal)} (${fmtPct(cd.acrescimoPct)}). Cada mês usa a taxa BCB efetiva média do respectivo período — ` +
+      `fonte: BCB/SGS série ${SGS_CODIGOS[d.modalidade] || '—'}.`,
+      pw - 4
+    );
+    notaTecnica.forEach(linha => { if (y > 270) y = novaPagina(); doc.text(linha, lm + 2, y); y += 4.5; });
+    y += 4;
+
+    // Tabela mês a mês da carência
+    if (y > 220) y = novaPagina();
+    doc.setFillColor(255, 240, 180); doc.rect(lm, y, pw, 6, 'F');
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 55, 0);
+    const carColXs = [lm + 2, lm + 55, lm + 100, lm + 145];
+    ['Mês', 'Taxa BCB (% a.m.)', 'Juros capitalizados', 'Saldo devedor'].forEach((h, i) => doc.text(h, carColXs[i], y + 4));
+    y += 6;
+    cd.rows.forEach((r, idx) => {
+      if (y > 270) y = novaPagina();
+      if (idx % 2) { doc.setFillColor(255, 252, 240); doc.rect(lm, y, pw, 5.5, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 40, 0);
+      [r.mes, cd.tipo === 'total' ? '—' : fmtPct(r.taxa), fmtBRL(r.juros), fmtBRL(r.saldo)]
+        .forEach((v, ci) => doc.text(v, carColXs[ci], y + 4));
+      y += 5.5;
+    });
+    y += 8;
+  }
 
   // ── Seção 2: Quadro Comparativo ──
   if (y > 230) y = novaPagina();
