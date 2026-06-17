@@ -691,10 +691,16 @@
           <option value="pessoal">Crédito Pessoal</option>
           <option value="habitacional">Crédito Habitacional</option>
           <option value="capital">Capital de Giro (PJ)</option>
-          <option value="consignado">Crédito Consignado</option>
+          <option value="consignado">Crédito Consignado (privado)</option>
+          <option value="consignadoINSS">Crédito Consignado (INSS)</option>
           <option value="cheque">Cheque Especial</option>
           <option value="cartao">Cartão de Crédito Rotativo</option>
         </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data de assinatura do contrato <span class="form-hint">opcional — taxa do período</span></label>
+        <input type="date" id="data-contrato" style="width:100%" onchange="onDataContratoChange('modalidade','bacen-ref-label')" />
       </div>
 
       <div class="form-group">
@@ -741,6 +747,27 @@
           <input type="number" id="taxa-nominal" placeholder="1,80" step="0.01" min="0" />
           <span class="input-suffix">% a.m.</span>
         </div>
+      </div>
+
+      <!-- ══ CARÊNCIA ══ -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+        <div>
+          <label class="form-label">Carência <span class="form-hint">meses</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="carencia-meses" placeholder="0" min="0" max="60" value="0" oninput="onCarenciaChange()" />
+            <span class="input-suffix">meses</span>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Tipo de carência</label>
+          <select id="carencia-tipo" onchange="onCarenciaChange()">
+            <option value="juros">Juros correndo (padrão bancário)</option>
+            <option value="total">Carência total (sem juros)</option>
+          </select>
+        </div>
+      </div>
+      <div id="carencia-info" style="display:none;font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--amber)">
+        Durante a carência o saldo cresce com juros — o principal aumenta antes da amortização começar.
       </div>
 
       <!-- ══ MÉTODO HAMBURGUÊS ══ -->
@@ -946,11 +973,17 @@
           <option value="pessoal">Crédito Pessoal</option>
           <option value="habitacional">Crédito Habitacional</option>
           <option value="capital">Capital de Giro (PJ)</option>
-          <option value="consignado">Crédito Consignado</option>
+          <option value="consignado">Crédito Consignado (privado)</option>
+          <option value="consignadoINSS">Crédito Consignado (INSS)</option>
           <option value="cheque">Cheque Especial</option>
           <option value="cartao">Cartão de Crédito Rotativo</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Data de assinatura do contrato <span class="form-hint">opcional — taxa do período</span></label>
+        <input type="date" id="data-contrato-aud" style="width:100%" onchange="onDataContratoChange('modalidade-aud','bacen-ref-label-aud')" />
+      </div>
+
       <div class="form-group">
         <label class="form-label">Valor total financiado (contrato) <span class="form-hint">R$</span></label>
         <div class="input-prefix-wrap">
@@ -1092,7 +1125,8 @@
           <option value="pessoal">Crédito Pessoal</option>
           <option value="habitacional">Crédito Habitacional</option>
           <option value="capital">Capital de Giro (PJ)</option>
-          <option value="consignado">Crédito Consignado</option>
+          <option value="consignado">Crédito Consignado (privado)</option>
+          <option value="consignadoINSS">Crédito Consignado (INSS)</option>
           <option value="cheque">Cheque Especial</option>
           <option value="cartao">Cartão de Crédito Rotativo</option>
         </select>
@@ -1355,31 +1389,39 @@
 //  API BACEN — ATUALIZAÇÃO AUTOMÁTICA
 //  Fonte: dadosabertos.bcb.gov.br (SGS)
 //  Sem autenticação, sem custo, gratuita
-//  Códigos SGS:
-//    25471 = Veículos PF
-//    25464 = Crédito Pessoal
-//    25468 = Habitacional
-//    20714 = Capital de Giro PJ
-//    25469 = Consignado total
-//    25403 = Cheque Especial PF
-//    20754 = Cartão Rotativo PF
+//  Séries SGS — taxas médias de operações de crédito (% a.m. efetiva):
+//    20714 = Financiamento veículos PF
+//    20721 = Crédito pessoal não consignado PF
+//    4390  = Crédito imobiliário PF (taxa média)
+//    20723 = Capital de giro PJ
+//    20718 = Consignado privado PF
+//    20719 = Consignado INSS PF
+//    20756 = Cheque especial PF
+//    20754 = Cartão rotativo PF
 // ════════════════════════════════════════════
 
-// Fallback usado se API falhar
+// Fallback usado se API falhar (referência: competência mar/2026)
 const BACEN_FALLBACK = {
-  veiculo:      { nome: 'Financiamento de Veículos',   taxaMes: 1.65, taxaAno: 21.74, ref: 'fallback' },
-  pessoal:      { nome: 'Crédito Pessoal',             taxaMes: 3.82, taxaAno: 56.48, ref: 'fallback' },
-  habitacional: { nome: 'Crédito Habitacional',        taxaMes: 0.78, taxaAno: 9.75,  ref: 'fallback' },
-  capital:      { nome: 'Capital de Giro (PJ)',         taxaMes: 1.42, taxaAno: 18.47, ref: 'fallback' },
-  consignado:   { nome: 'Crédito Consignado',           taxaMes: 1.80, taxaAno: 23.87, ref: 'fallback' },
-  cheque:       { nome: 'Cheque Especial',              taxaMes: 7.22, taxaAno: 131.5, ref: 'fallback' },
-  cartao:       { nome: 'Cartão de Crédito Rotativo',  taxaMes: 14.3, taxaAno: 397.3, ref: 'fallback' },
+  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.89, taxaAno: 25.20, ref: 'fallback' },
+  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 6.23, taxaAno: 107.8, ref: 'fallback' },
+  habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 0.82, taxaAno: 10.30, ref: 'fallback' },
+  capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.95, taxaAno: 26.18, ref: 'fallback' },
+  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.80, taxaAno: 23.87, ref: 'fallback' },
+  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.48, taxaAno: 19.20, ref: 'fallback' },
+  cheque:         { nome: 'Cheque Especial',                  taxaMes: 6.18, taxaAno: 106.8, ref: 'fallback' },
+  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 14.3, taxaAno: 397.3, ref: 'fallback' },
 };
 
-// Códigos SGS de cada modalidade
+// Códigos SGS de cada modalidade — taxas médias de operações de crédito BCB
 const SGS_CODIGOS = {
-  veiculo: 25471, pessoal: 25464, habitacional: 25468,
-  capital: 20714, consignado: 25469, cheque: 25403, cartao: 20754,
+  veiculo:        20714,
+  pessoal:        20721,
+  habitacional:   4390,
+  capital:        20723,
+  consignado:     20718,
+  consignadoINSS: 20719,
+  cheque:         20756,
+  cartao:         20754,
 };
 
 // Códigos SGS dos índices de correção (módulo inadimplência)
@@ -1410,12 +1452,53 @@ async function buscarTaxaBacen(chave, codigo) {
   }
 }
 
+// Busca taxa BCB para um mês/ano específico (data do contrato).
+// Se não houver dado naquele mês, tenta o mês anterior automaticamente (até 3 tentativas).
+// Retorna { taxaMes, taxaAno, ref, competencia } ou null.
+async function buscarTaxaPorData(codigo, dataContrato) {
+  const ultimoDiaMes = (m, y) => new Date(y, m, 0).getDate();
+  let d = new Date(dataContrato);
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const ano = d.getFullYear();
+    const fim = ultimoDiaMes(d.getMonth() + 1, ano);
+    const ini = '01/' + mm + '/' + ano;
+    const fimStr = fim + '/' + mm + '/' + ano;
+    const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + codigo +
+      '/dados?formato=json&dataInicial=' + ini + '&dataFinal=' + fimStr;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const ultimo = data[data.length - 1];
+        const taxaMes = parseFloat(ultimo.valor);
+        if (!isNaN(taxaMes)) {
+          const taxaAno = parseFloat(((Math.pow(1 + taxaMes / 100, 12) - 1) * 100).toFixed(2));
+          const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const competencia = meses[d.getMonth()] + '/' + ano;
+          const usouAnterior = tentativa > 0;
+          return { taxaMes, taxaAno, ref: ultimo.data, competencia, usouAnterior, serie: codigo };
+        }
+      }
+    } catch (e) {
+      console.warn('[Bacen] buscarTaxaPorData tentativa ' + tentativa + ':', e.message);
+    }
+    // Recua um mês
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+  }
+  return null;
+}
+
 async function atualizarBacen() {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       BACEN = cached.data;
-      exibirStatusBacen(cached.data, 'cache');
+      // Passa o ref de qualquer modalidade que tenha dado ao vivo
+      const refCache = Object.values(cached.data).map(b => b.ref).find(r => r && r !== 'fallback') || '';
+      exibirStatusBacen(cached.data, 'cache', refCache);
       return;
     }
   } catch (_) {}
@@ -1455,13 +1538,14 @@ function exibirStatusBacen(dados, status, ref) {
     if (status === 'carregando') {
       el.textContent = 'buscando…';
       el.style.color = 'var(--amber)';
-    } else if (status === 'ok' && ref) {
+    } else if ((status === 'ok' || status === 'cache') && ref) {
       const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const p = ref.split('/');
-      el.textContent = p.length === 3 ? (meses[parseInt(p[1])-1] + '/' + p[2] + ' — Bacen ao vivo') : ref;
-      el.style.color = 'var(--green)';
+      const label = p.length === 3 ? (meses[parseInt(p[1])-1] + '/' + p[2]) : ref;
+      el.textContent = label + (status === 'ok' ? ' — Bacen ao vivo' : ' — cache');
+      el.style.color = status === 'ok' ? 'var(--green)' : 'var(--text2)';
     } else if (status === 'erro') {
-      el.textContent = 'ref. salva (offline)';
+      el.textContent = 'ref. estimada (offline)';
       el.style.color = 'var(--amber)';
     }
   }
@@ -1475,18 +1559,42 @@ function exibirStatusBacen(dados, status, ref) {
     if (painel) painel.prepend(banner);
   }
   if (status === 'carregando') {
+    banner.style.display = '';
     banner.style.background = 'var(--amber-dim)'; banner.style.color = 'var(--amber)';
     banner.innerHTML = '⟳ Buscando taxas do Banco Central…';
   } else if (status === 'ok') {
+    banner.style.display = '';
     banner.style.background = 'var(--green-dim)'; banner.style.color = 'var(--green)';
-    banner.innerHTML = '✓ Taxas Bacen atualizadas automaticamente';
-    setTimeout(function() { if (banner) banner.style.display = 'none'; }, 4000);
+    const ts = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    banner.innerHTML = '✓ Taxas BCB atualizadas — <span style="opacity:.75">' + ts + '</span>'
+      + '&nbsp;<button onclick="forcarAtualizacaoBacen()" style="margin-left:8px;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--green);background:none;color:var(--green);cursor:pointer">Atualizar</button>';
+    setTimeout(function() {
+      if (banner) {
+        banner.style.background = 'var(--surface2)'; banner.style.color = 'var(--text2)';
+        banner.style.borderLeft = '3px solid var(--green)';
+      }
+    }, 4000);
   } else if (status === 'cache') {
-    banner.style.display = 'none';
+    banner.style.display = '';
+    banner.style.background = 'var(--surface2)'; banner.style.color = 'var(--text2)';
+    try {
+      const c = JSON.parse(localStorage.getItem('mtr_bacen_cache') || 'null');
+      const ts = c ? new Date(c.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+      banner.innerHTML = 'BCB — Atualizado em ' + ts
+        + '&nbsp;<button onclick="forcarAtualizacaoBacen()" style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer">Atualizar</button>';
+    } catch (_) { banner.style.display = 'none'; }
   } else {
+    banner.style.display = '';
     banner.style.background = 'var(--amber-dim)'; banner.style.color = 'var(--amber)';
-    banner.innerHTML = '⚠ Usando taxas de referência salvas (sem conexão)';
+    banner.innerHTML = '⚠ Não foi possível conectar ao BCB. Exibindo taxa de referência estimada — não use para cálculos jurídicos.';
   }
+}
+
+async function forcarAtualizacaoBacen() {
+  try { localStorage.removeItem('mtr_bacen_cache'); } catch (_) {}
+  await atualizarBacen();
+  updateBacenRef();
+  updateBacenRefAud();
 }
 
 // Estado global
@@ -1639,15 +1747,34 @@ function calcular() {
     return;
   }
 
-  // TIR (Newton-Raphson)
-  // Usa TIR específica para SAC quando necessário (fluxo decrescente real)
-  const taxaMes = sistema === 'sac'
-    ? calcularTIR_SAC(pv, n, pmt) ?? calcularTIR(pv, n, pmt)
-    : calcularTIR(pv, n, pmt);
+  // Carência (apenas no modo simular)
+  const carenciaMeses = state.modo === 'simular'
+    ? (parseInt(document.getElementById('carencia-meses')?.value) || 0) : 0;
+  const carenciaTipo  = state.modo === 'simular'
+    ? (document.getElementById('carencia-tipo')?.value || 'juros') : 'juros';
+
+  // TIR — considera carência com juros quando aplicável
+  let taxaMes;
+  if (carenciaMeses > 0 && carenciaTipo === 'juros') {
+    taxaMes = calcularTIR_comCarencia(pv, n, pmt, carenciaMeses);
+  } else if (sistema === 'sac') {
+    taxaMes = calcularTIR_SAC(pv, n, pmt) ?? calcularTIR(pv, n, pmt);
+  } else {
+    taxaMes = calcularTIR(pv, n, pmt);
+  }
 
   if (taxaMes === null) {
     showAlert(alertEl, 'Não foi possível calcular a TIR para esses valores. Verifique se os dados refletem uma operação de crédito real.', 'alert-warn');
     return;
+  }
+
+  // Saldo após carência
+  let pvBase = pv;
+  let rowsCarencia = [];
+  if (carenciaMeses > 0) {
+    const car = gerarRowsCarencia(pv, taxaMes, carenciaMeses, carenciaTipo);
+    rowsCarencia = car.rows;
+    pvBase = car.saldoAposCarencia;
   }
 
   // CET completo (Premium) — calculado quando encargos informados
@@ -1658,18 +1785,23 @@ function calcular() {
   const cetMes = temCET ? calcularCET(pv, n, pmt, cetTarifas, cetIof, cetSeguros) : null;
 
   // Armazena estado
-  state.valorLiquido = pv;
-  state.numParcelas  = n;
-  state.valorParcela = pmt;
+  state.valorLiquido  = pv;
+  state.numParcelas   = n;
+  state.valorParcela  = pmt;
   state.taxaCalculada = taxaMes;
-  state.modalidade   = modalidade;
-  state.sistema      = sistema;
-  state.cetMes       = cetMes;
-  state.cetEncargos  = temCET ? { iof: cetIof, tarifas: cetTarifas, seguros: cetSeguros } : null;
+  state.modalidade    = modalidade;
+  state.sistema       = sistema;
+  state.cetMes        = cetMes;
+  state.cetEncargos   = temCET ? { iof: cetIof, tarifas: cetTarifas, seguros: cetSeguros } : null;
+  state.carenciaMeses = carenciaMeses;
+  state.carenciaTipo  = carenciaTipo;
+  state.saldoCarencia = pvBase;
 
-  // Gera tabelas
-  state.tabelaPrice = gerarTabelaPrice(pv, taxaMes, n);
-  state.tabelaSAC   = gerarTabelaSAC(pv, taxaMes, n);
+  // Gera tabelas — linhas de carência prefixadas às linhas de amortização
+  const amortPrice = gerarTabelaPrice(pvBase, taxaMes, n).map(r => ({ ...r, parc: r.parc + carenciaMeses }));
+  const amortSAC   = gerarTabelaSAC(pvBase, taxaMes, n).map(r => ({ ...r, parc: r.parc + carenciaMeses }));
+  state.tabelaPrice = [...rowsCarencia, ...amortPrice];
+  state.tabelaSAC   = [...rowsCarencia, ...amortSAC];
 
   renderResultados(taxaMes, pv, n, pmt, modalidade, sistema);
 }
@@ -1852,6 +1984,47 @@ function calcularCET(pv, n, pmt, tarifas, iof, seguros) {
   return calcularTIR(pvLiq, n, pmt + seguros);
 }
 
+// TIR considerando carência com juros correndo:
+// fluxo = [-pv, 0*(carencia), pmt*(n)]
+function calcularTIR_comCarencia(pv, n, pmt, carencia) {
+  const vpl = (r) => {
+    let s = -pv;
+    for (let t = carencia + 1; t <= carencia + n; t++) {
+      s += pmt / Math.pow(1 + r, t);
+    }
+    return s;
+  };
+  let lo = 1e-6, hi = 5.0;
+  if (vpl(lo) < 0 || vpl(hi) > 0) return null;
+  for (let iter = 0; iter < 300; iter++) {
+    const mid = (lo + hi) / 2;
+    if (Math.abs(hi - lo) < 1e-10) return mid;
+    vpl(mid) > 0 ? lo = mid : hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// Gera linhas do período de carência
+function gerarRowsCarencia(pv, i, carencia, tipoCarencia) {
+  const rows = [];
+  let saldo = pv;
+  for (let k = 1; k <= carencia; k++) {
+    const juros = tipoCarencia === 'total' ? 0 : saldo * i;
+    saldo += juros;
+    rows.push({ parc: k, pmt: 0, juros, amort: 0, saldo, isCarencia: true });
+  }
+  return { rows, saldoAposCarencia: saldo };
+}
+
+function onCarenciaChange() {
+  const meses = parseInt(document.getElementById('carencia-meses')?.value) || 0;
+  const tipo = document.getElementById('carencia-tipo')?.value;
+  const info = document.getElementById('carencia-info');
+  if (info) {
+    info.style.display = (meses > 0 && tipo === 'juros') ? '' : 'none';
+  }
+}
+
 // ════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════
@@ -1894,9 +2067,9 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
       <div class="mc-sub">${n}x de ${fmtBRL(pmt)}</div>
     </div>
     <div class="metric-card">
-      <div class="mc-label">Média Bacen</div>
+      <div class="mc-label">Taxa efetiva média de mercado (BCB)</div>
       <div class="mc-value" style="font-size:20px;color:var(--accent)">${fmtPct(bacen.taxaMes)} a.m.</div>
-      <div class="mc-sub">${fmtPct(bacen.taxaAno)} ao ano · ref. Mai/2026</div>
+      <div class="mc-sub">${fmtPct(bacen.taxaAno)} ao ano${bacen.ref && bacen.ref !== 'fallback' ? ' · comp. ' + (()=>{ const p=bacen.ref.split('/'); const ms=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return p.length===3?ms[parseInt(p[1])-1]+'/'+p[2]:bacen.ref; })() : ' · estimativa'}</div>
     </div>
     <div class="metric-card ${diff > 0 ? (diff > 1 ? 'danger' : 'warn') : 'good'}">
       <div class="mc-label">Diferencial</div>
@@ -1934,6 +2107,32 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
   } else {
     alertSit.className = 'alert show alert-info';
     alertSit.innerHTML = `<strong>ℹ Taxa próxima da média.</strong> A operação está dentro do intervalo esperado para o mercado.`;
+  }
+
+  // ── Resumo de carência ──
+  const carenciaBox = document.getElementById('carencia-resumo');
+  if (state.carenciaMeses > 0) {
+    const acrescimo = state.saldoCarencia - pv;
+    const cetCarencia = (Math.pow(1 + taxaMes, state.carenciaMeses + n) - 1) * 100;
+    const carenciaHtml = `
+      <div style="background:var(--amber-dim,rgba(251,191,36,.1));border:1px solid var(--amber,#f59e0b);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace">
+        <div style="font-weight:600;color:var(--amber);margin-bottom:6px">Período de carência — ${state.carenciaMeses} ${state.carenciaMeses === 1 ? 'mês' : 'meses'} (${state.carenciaTipo === 'juros' ? 'juros correndo' : 'carência total'})</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;color:var(--text2)">
+          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Saldo após carência</div><strong style="color:var(--text)">${fmtBRL(state.saldoCarencia)}</strong></div>
+          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Juros na carência</div><strong style="color:var(--amber)">${fmtBRL(acrescimo)}</strong></div>
+          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">CET c/ carência</div><strong style="color:var(--text)">${fmtPct(cetCarencia)} a.a.</strong></div>
+        </div>
+      </div>`;
+    if (carenciaBox) {
+      carenciaBox.innerHTML = carenciaHtml;
+    } else {
+      const el = document.createElement('div');
+      el.id = 'carencia-resumo';
+      el.innerHTML = carenciaHtml;
+      alertSit.insertAdjacentElement('afterend', el);
+    }
+  } else if (carenciaBox) {
+    carenciaBox.innerHTML = '';
   }
 
   // ── Comparativo Bacen ──
@@ -2003,13 +2202,23 @@ function renderTabela(tipo, btn) {
     </tr></thead><tbody>`;
 
   rows.forEach(r => {
-    html += `<tr>
-      <td>${r.parc}</td>
-      <td class="td-highlight">${fmtBRL(r.pmt)}</td>
-      <td class="td-juros">${fmtBRL(r.juros)}</td>
-      <td class="td-amort">${fmtBRL(r.amort)}</td>
-      <td class="td-saldo">${fmtBRL(r.saldo)}</td>
-    </tr>`;
+    if (r.isCarencia) {
+      html += `<tr style="background:var(--amber-dim,rgba(251,191,36,.08));color:var(--amber,#f59e0b);font-style:italic">
+        <td>${r.parc}</td>
+        <td style="font-size:10px;letter-spacing:.03em">CARÊNCIA</td>
+        <td class="td-juros">${fmtBRL(r.juros)}</td>
+        <td>—</td>
+        <td class="td-saldo">${fmtBRL(r.saldo)}</td>
+      </tr>`;
+    } else {
+      html += `<tr>
+        <td>${r.parc}</td>
+        <td class="td-highlight">${fmtBRL(r.pmt)}</td>
+        <td class="td-juros">${fmtBRL(r.juros)}</td>
+        <td class="td-amort">${fmtBRL(r.amort)}</td>
+        <td class="td-saldo">${fmtBRL(r.saldo)}</td>
+      </tr>`;
+    }
   });
 
   html += '</tbody></table>';
@@ -2818,18 +3027,69 @@ function calcularReverso() {
 // ════════════════════════════════════════════
 //  INDICADOR BACEN (atualiza label ao mudar select)
 // ════════════════════════════════════════════
+function _bacenRefHtml(chave, b) {
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  let comp = '';
+  if (b.ref && b.ref !== 'fallback') {
+    const p = b.ref.split('/');
+    comp = p.length === 3 ? ' · competência ' + meses[parseInt(p[1])-1] + '/' + p[2] : '';
+  } else {
+    comp = ' · estimativa';
+  }
+  const serie = SGS_CODIGOS[chave] || '—';
+  const tooltip = 'Taxa efetiva média das operações contratadas no período, conforme divulgado pelo Banco Central do Brasil — SGS série ' + serie + '. Inclui juros e encargos, exceto IOF e tarifas. Publicada com defasagem média de 60 a 90 dias.';
+  return `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(b.taxaMes)} a.m.</strong>${comp} ⓘ</span>`;
+}
+
 function updateBacenRef() {
   const m = document.getElementById('modalidade').value;
   const b = BACEN[m];
   const el = document.getElementById('bacen-ref-label');
-  if (el) el.textContent = `Bacen: ${fmtPct(b.taxaMes)} a.m. (${b.nome})`;
+  if (el && b) el.innerHTML = _bacenRefHtml(m, b);
 }
 
 function updateBacenRefAud() {
   const m = document.getElementById('modalidade-aud').value;
   const b = BACEN[m];
   const el = document.getElementById('bacen-ref-label-aud');
-  if (el) el.textContent = `Bacen: ${fmtPct(b.taxaMes)} a.m. (${b.nome})`;
+  if (el && b) el.innerHTML = _bacenRefHtml(m, b);
+}
+
+// Chamado quando o usuário preenche "Data de assinatura do contrato".
+// Busca a taxa BCB do mês/ano do contrato e atualiza o indicador.
+async function onDataContratoChange(selectId, labelId) {
+  const modalEl = document.getElementById(selectId);
+  const labelEl = document.getElementById(labelId);
+  const dateInputId = selectId === 'modalidade' ? 'data-contrato' : 'data-contrato-aud';
+  const dateVal = document.getElementById(dateInputId)?.value;
+  if (!modalEl || !labelEl) return;
+  const chave = modalEl.value;
+  if (!dateVal) {
+    // Sem data: volta para taxa mais recente
+    const b = BACEN[chave];
+    if (b) labelEl.innerHTML = _bacenRefHtml(chave, b);
+    return;
+  }
+  labelEl.innerHTML = '<span style="color:var(--amber)">⟳ Buscando taxa do período…</span>';
+  const codigo = SGS_CODIGOS[chave];
+  if (!codigo) { labelEl.innerHTML = _bacenRefHtml(chave, BACEN[chave]); return; }
+  const resultado = await buscarTaxaPorData(codigo, new Date(dateVal + 'T12:00:00'));
+  if (resultado) {
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const p = resultado.ref.split('/');
+    const comp = p.length === 3 ? meses[parseInt(p[1])-1] + '/' + p[2] : resultado.competencia;
+    const aviso = resultado.usouAnterior
+      ? `<span style="color:var(--amber)"> ⚠ dado BCB indisponível para o mês solicitado — usando competência ${comp}</span>` : '';
+    const serie = SGS_CODIGOS[chave] || '—';
+    const tooltip = 'Taxa efetiva média BCB — SGS série ' + serie + ' — competência ' + comp + '. Publicada com defasagem média de 60 a 90 dias.';
+    labelEl.innerHTML = `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(resultado.taxaMes)} a.m.</strong> · competência ${comp} ⓘ</span>${aviso}`;
+    // Atualiza BACEN local para que o comparativo use o dado do período
+    if (BACEN[chave]) { BACEN[chave].taxaMes = resultado.taxaMes; BACEN[chave].taxaAno = resultado.taxaAno; BACEN[chave].ref = resultado.ref; }
+  } else {
+    const b = BACEN[chave];
+    labelEl.innerHTML = _bacenRefHtml(chave, b)
+      + '<span style="color:var(--amber)"> ⚠ Dado BCB indisponível para o período. Usando referência estimada.</span>';
+  }
 }
 
 // ════════════════════════════════════════════
