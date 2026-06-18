@@ -1195,7 +1195,7 @@
 
       <div class="form-group">
         <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
-        <select id="inad-modalidade">
+        <select id="inad-modalidade" onchange="updateBacenRefInad()">
           <option value="veiculo">Financiamento de Veículos</option>
           <option value="pessoal">Crédito Pessoal</option>
           <option value="habitacional">Crédito Habitacional</option>
@@ -1205,6 +1205,13 @@
           <option value="cheque">Cheque Especial</option>
           <option value="cartao">Cartão de Crédito Rotativo</option>
         </select>
+        <div id="bacen-ref-label-inad" style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;margin-top:5px;letter-spacing:.02em"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data de assinatura do contrato <span class="form-hint">opcional — taxa do período</span></label>
+        <input type="date" id="data-contrato-inad" style="width:100%" onchange="onDataContratoChange('inad-modalidade','bacen-ref-label-inad')" />
+        <div id="alerta-bcb-inad" style="display:none"></div>
       </div>
 
       <!-- Modo simples: saldo único + data de vencimento -->
@@ -3247,6 +3254,13 @@ function updateBacenRefAud() {
   if (el && b) el.innerHTML = _bacenRefHtml(m, b);
 }
 
+function updateBacenRefInad() {
+  const m = document.getElementById('inad-modalidade')?.value;
+  const b = BACEN[m];
+  const el = document.getElementById('bacen-ref-label-inad');
+  if (el && b) el.innerHTML = _bacenRefHtml(m, b);
+}
+
 // Exibe alerta de defasagem BCB abaixo do campo de taxa (Níveis 1, 2, 3)
 function exibirAlertaBCB(alertElId, nivel, dados) {
   const el = document.getElementById(alertElId);
@@ -3286,8 +3300,12 @@ A taxa exibida é estimativa baseada nos dados mais recentes disponíveis.<br>
 async function onDataContratoChange(selectId, labelId) {
   const modalEl = document.getElementById(selectId);
   const labelEl = document.getElementById(labelId);
-  const dateInputId = selectId === 'modalidade' ? 'data-contrato' : 'data-contrato-aud';
-  const alertElId   = selectId === 'modalidade' ? 'alerta-bcb-sim' : 'alerta-bcb-aud';
+  const dateInputId = selectId === 'modalidade' ? 'data-contrato'
+                   : selectId === 'inad-modalidade' ? 'data-contrato-inad'
+                   : 'data-contrato-aud';
+  const alertElId   = selectId === 'modalidade' ? 'alerta-bcb-sim'
+                   : selectId === 'inad-modalidade' ? 'alerta-bcb-inad'
+                   : 'alerta-bcb-aud';
   const dateVal = document.getElementById(dateInputId)?.value;
   if (!modalEl || !labelEl) return;
   const chave = modalEl.value;
@@ -3551,6 +3569,7 @@ function calcularLive() {
       selModAud.insertAdjacentElement('afterend', badge2);
       updateBacenRefAud();
     }
+    updateBacenRefInad();
 
     // Escuta inputs para live feedback
     ['valor-liquido','num-parcelas','valor-parcela'].forEach(id => {
