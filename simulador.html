@@ -603,39 +603,75 @@
 
   function getToken() { return localStorage.getItem('mtr_token'); }
 
+  function aplicarDadosUsuario(me) {
+    if (!me) return;
+    localStorage.setItem('mtr_user', JSON.stringify(me));
+    window.userTier    = me.tier || 'standard';
+    window.userPremium = (window.userTier === 'premium');
+    const sisAtual = document.getElementById('sistema-amort')?.value;
+    const showCETInit = sisAtual && !['hamburguês','sacre','ipca_plus'].includes(sisAtual);
+    if (showCETInit) {
+      document.getElementById('section-cet').style.display  = '';
+      document.getElementById('upsell-cet').style.display   = 'none';
+    }
+    initCarenciaGate();
+    const nameEl = document.getElementById('user-header-name');
+    if (nameEl) nameEl.textContent = me.name || '';
+    const planEl = document.getElementById('user-header-plan');
+    if (planEl) planEl.textContent = window.userPremium ? 'premium' : (me.plan === 'subscription' ? 'assinante' : 'ativo');
+  }
+
+  async function verificarTokenBackground(token) {
+    try {
+      const res = await fetch(API_URL + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
+      });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('mtr_token');
+        localStorage.removeItem('mtr_user');
+        window.location.href = 'auth.html';
+        return;
+      }
+      if (res.ok) {
+        const me = await res.json();
+        if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+        if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
+          window.location.href = 'auth.html?reason=expired'; return;
+        }
+        aplicarDadosUsuario(me);
+      }
+    } catch (_) {
+      // Erro de rede / servidor em cold start — mantém o usuário na página
+    }
+  }
+
   async function verificarAcesso() {
     const token = getToken();
     if (!token) { window.location.href = 'auth.html'; return; }
+
+    // ── CAMINHO RÁPIDO: cache disponível ─────────────────────────────
+    // Aplica dados locais imediatamente — página fica interativa sem esperar o servidor
+    const cached = (() => { try { return JSON.parse(localStorage.getItem('mtr_user') || 'null'); } catch(_) { return null; } })();
+    if (cached && cached.activationPaid) {
+      aplicarDadosUsuario(cached);
+      // Verifica JWT em background; só redireciona se for 401/403
+      verificarTokenBackground(token);
+      return;
+    }
+
+    // ── CAMINHO LENTO: sem cache (primeiro acesso) ────────────────────
     try {
       const res = await fetch(API_URL + '/api/auth/me', {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if (!res.ok) throw new Error('unauthorized');
       const me = await res.json();
-      // Atualiza dados locais
-      localStorage.setItem('mtr_user', JSON.stringify(me));
-      // Verifica plano ativo
       if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
       if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
         window.location.href = 'auth.html?reason=expired'; return;
       }
-      // Tier e status premium disponíveis globalmente
-      window.userTier    = me.tier || 'standard';
-      window.userPremium = (window.userTier === 'premium');
-      // Inicializa visibilidade de features premium no sistema atual
-      const sisAtual = document.getElementById('sistema-amort')?.value;
-      const showCETInit = sisAtual && !['hamburguês','sacre','ipca_plus'].includes(sisAtual);
-      if (showCETInit) {
-        document.getElementById('section-cet').style.display  = '';
-        document.getElementById('upsell-cet').style.display   = 'none';
-      }
-      // Inicializa gate de carência (Premium)
-      initCarenciaGate();
-      // Injeta nome do usuário no header se existir
-      const nameEl = document.getElementById('user-header-name');
-      if (nameEl) nameEl.textContent = me.name;
-      const planEl = document.getElementById('user-header-plan');
-      if (planEl) planEl.textContent = window.userPremium ? 'premium' : (me.plan === 'subscription' ? 'assinante' : 'ativo');
+      aplicarDadosUsuario(me);
     } catch (e) {
       localStorage.removeItem('mtr_token');
       localStorage.removeItem('mtr_user');
@@ -643,7 +679,6 @@
     }
   }
 
-  // Verifica assim que o DOM carrega
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', verificarAcesso);
   } else {

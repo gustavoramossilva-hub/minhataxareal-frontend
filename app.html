@@ -160,20 +160,67 @@ async function confirmCancel() {
   } catch(e) { document.getElementById('malert').textContent='Erro de conexão.'; document.getElementById('malert').style.display='block'; btn.disabled=false; btn.textContent='Confirmar cancelamento'; btn.style.opacity='1'; }
 }
 
+function setMsg(t) { document.getElementById('ov-msg').textContent = t; }
+
+function mostrarPainel(d) {
+  document.getElementById('ov').classList.add('gone');
+  document.getElementById('hname').textContent = d.name || d.email || '';
+  document.getElementById('hplan').textContent = d.plan || 'ativo';
+  document.getElementById('gname').textContent = ((d.name || d.email || 'usuário').split(' ')[0]);
+  if (d.activatedAt && Date.now() - d.activatedAt < 7*24*60*60*1000) {
+    document.getElementById('btn-cancel').style.display = 'inline-block';
+  }
+  localStorage.setItem('mtr_user', JSON.stringify(d));
+}
+
+// Verifica o token no servidor em background (sem bloquear a UI)
+async function verificarTokenBackground(token) {
+  try {
+    const r = await fetch(API + '/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token },
+      // Timeout de 10s para não ficar pendurado indefinidamente
+      signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
+    });
+    if (r.status === 401 || r.status === 403) {
+      // Token genuinamente inválido — redireciona
+      localStorage.removeItem('mtr_token');
+      localStorage.removeItem('mtr_user');
+      goLogin();
+      return;
+    }
+    if (r.ok) {
+      const d = await r.json();
+      // Atualiza cache e UI silenciosamente
+      mostrarPainel(d);
+    }
+    // Erro de servidor (5xx) — mantém o que está na tela, não redireciona
+  } catch (_) {
+    // Erro de rede / timeout — servidor em cold start, mantém conteúdo visível
+  }
+}
+
 let attempts = 0;
 
 async function checkAccess() {
   const token = localStorage.getItem('mtr_token');
-  console.log('[checkAccess] token:', token ? 'presente' : 'ausente');
   if (!token) { goLogin(); return; }
 
-  setMsg('conectando ao servidor...');
+  // ── CAMINHO RÁPIDO: cache do usuário disponível ──────────────────
+  // Mostra o painel imediatamente sem esperar o servidor
+  const cached = (() => { try { return JSON.parse(localStorage.getItem('mtr_user') || 'null'); } catch(_) { return null; } })();
+  if (cached && cached.activationPaid) {
+    mostrarPainel(cached);
+    // Verifica token em background — redireciona apenas se for 401/403
+    verificarTokenBackground(token);
+    return;
+  }
 
+  // ── CAMINHO LENTO: sem cache (primeiro acesso ou cache limpo) ─────
+  setMsg('conectando ao servidor...');
   try {
     const r = await fetch(API + '/api/auth/me', { headers: {'Authorization':'Bearer '+token} });
     const d = await r.json();
 
-    // Só vai para login se o token for genuinamente inválido (não erro de rede)
     if (r.status === 401 || r.status === 403) {
       localStorage.removeItem('mtr_token');
       localStorage.removeItem('mtr_user');
@@ -182,25 +229,15 @@ async function checkAccess() {
       document.getElementById('ov-btn').style.display = 'none';
       return;
     }
-
     if (!r.ok) throw new Error('server_error');
-
-    // Acesso OK — esconde overlay e mostra conteúdo
-    document.getElementById('ov').classList.add('gone');
-    document.getElementById('hname').textContent = d.name || d.email;
-    document.getElementById('hplan').textContent = d.plan || 'ativo';
-    document.getElementById('gname').textContent = (d.name || d.email).split(' ')[0];
-
-    if (d.activatedAt && Date.now() - d.activatedAt < 7*24*60*60*1000) {
-      document.getElementById('btn-cancel').style.display = 'inline-block';
-    }
+    mostrarPainel(d);
 
   } catch(e) {
-    // Erro de rede — NÃO limpa o token, NÃO redireciona
+    // Erro de rede — servidor em cold start, tenta novamente
     attempts++;
     if (attempts < 4) {
       setMsg('servidor iniciando, aguardando... (' + attempts + '/3)');
-      setTimeout(checkAccess, 6000);
+      setTimeout(checkAccess, 3000); // reduzido de 6s para 3s
     } else {
       setMsg('servidor demorou para responder');
       document.getElementById('ov-btn').style.display = 'inline-block';
@@ -215,8 +252,6 @@ function retry() {
   document.getElementById('ov-login').style.display = 'none';
   checkAccess();
 }
-
-function setMsg(t) { document.getElementById('ov-msg').textContent = t; }
 
 checkAccess();
 </script>
