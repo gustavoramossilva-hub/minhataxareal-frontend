@@ -291,6 +291,15 @@
     display: flex; align-items: center; gap: 6px;
   }
   .pdf-btn:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+  .excel-btn { background: var(--surface2); border: 1px solid #22c55e44; color: #22c55e; font-family: 'DM Mono', monospace; font-size: 11px; padding: 9px 16px; border-radius: var(--radius-sm); cursor: pointer; letter-spacing: .04em; transition: background .15s, border-color .15s; display: flex; align-items: center; gap: 6px; }
+  .excel-btn:hover { background: var(--surface); border-color: #22c55e; }
+  .laudo-panel { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  .laudo-panel-header { padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-family: 'Syne', sans-serif; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); user-select: none; }
+  .laudo-panel-header:hover { color: var(--text2); }
+  .laudo-panel-body { padding: 12px 14px 14px; border-top: 1px solid var(--border2); }
+  .laudo-field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); display: block; margin-bottom: 4px; }
+  .laudo-input { width: 100%; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-size: 12px; font-family: inherit; box-sizing: border-box; }
+  .laudo-input:focus { outline: none; border-color: var(--accent); }
 
   /* ── CARDS DE MÉTRICAS ── */
   .metrics-grid {
@@ -615,6 +624,7 @@
       document.getElementById('upsell-cet').style.display   = 'none';
     }
     initCarenciaGate();
+    initLaudoConfig();
     const nameEl = document.getElementById('user-header-name');
     if (nameEl) nameEl.textContent = me.name || '';
     const planEl = document.getElementById('user-header-plan');
@@ -1320,6 +1330,34 @@
   <!-- ══ PAINEL DIREITO (resultados) ══ -->
   <div class="right-panel" id="right-panel">
 
+    <!-- Personalização de laudo — apenas Premium -->
+    <div id="laudo-config-panel" class="laudo-panel" style="display:none">
+      <div class="laudo-panel-header" onclick="toggleLaudoConfig()">
+        <span>⚙ Personalizar cabeçalho do laudo / PDF</span>
+        <span id="laudo-toggle-icon">▸</span>
+      </div>
+      <div id="laudo-config-body" style="display:none" class="laudo-panel-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label class="laudo-field-label">Nome do perito / responsável</label>
+            <input id="laudo-perito" type="text" placeholder="Dr. João Silva" class="laudo-input" />
+          </div>
+          <div>
+            <label class="laudo-field-label">Nº do processo / expediente</label>
+            <input id="laudo-processo" type="text" placeholder="0001234-56.2026.8.26.0100" class="laudo-input" style="font-family:'DM Mono',monospace" />
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <label class="laudo-field-label">Vara / Juízo</label>
+          <input id="laudo-vara" type="text" placeholder="3ª Vara Cível de São Paulo" class="laudo-input" />
+        </div>
+        <div>
+          <label class="laudo-field-label">Observações técnicas</label>
+          <textarea id="laudo-obs" rows="3" placeholder="Observações adicionais para o laudo pericial…" class="laudo-input" style="resize:vertical"></textarea>
+        </div>
+      </div>
+    </div>
+
     <!-- Estado vazio -->
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🧮</div>
@@ -1337,10 +1375,16 @@
           <div class="results-title" id="res-titulo">Análise da Operação</div>
           <div class="results-subtitle" id="res-subtitulo"></div>
         </div>
-        <button class="pdf-btn" onclick="gerarPDF()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Exportar PDF
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="pdf-btn" onclick="gerarPDF()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            PDF
+          </button>
+          <button class="excel-btn" onclick="gerarExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Excel
+          </button>
+        </div>
       </div>
 
       <!-- Métricas principais -->
@@ -2620,6 +2664,242 @@ function calcularAntecipacao() {
 // ════════════════════════════════════════════
 //  EXPORT PDF
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  LAUDO — PERSONALIZAÇÃO DO CABEÇALHO
+// ════════════════════════════════════════════
+function getLaudoFields() {
+  return {
+    perito:   (document.getElementById('laudo-perito')?.value   || '').trim(),
+    processo: (document.getElementById('laudo-processo')?.value || '').trim(),
+    vara:     (document.getElementById('laudo-vara')?.value     || '').trim(),
+    obs:      (document.getElementById('laudo-obs')?.value      || '').trim(),
+  };
+}
+
+function toggleLaudoConfig() {
+  const body = document.getElementById('laudo-config-body');
+  const icon = document.getElementById('laudo-toggle-icon');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  if (icon) icon.textContent = open ? '▸' : '▾';
+}
+
+function initLaudoConfig() {
+  const panel = document.getElementById('laudo-config-panel');
+  if (panel) panel.style.display = window.userPremium === true ? '' : 'none';
+}
+
+// ════════════════════════════════════════════
+//  EXCEL — EXPORTAÇÃO VIA SHEETJS (Premium)
+// ════════════════════════════════════════════
+function _carregarSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload  = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('SheetJS não carregou'));
+    document.head.appendChild(s);
+  });
+}
+
+function _xlsxNum(v) { return typeof v === 'number' ? v : 0; }
+
+async function gerarExcel() {
+  if (window.userPremium !== true) {
+    showAlert(document.getElementById('alert-input'), 'Exportação Excel disponível apenas para planos Premium.', 'alert-warn');
+    return;
+  }
+  if (!state.taxaCalculada) {
+    showAlert(document.getElementById('alert-input'), 'Execute o cálculo antes de exportar.', 'alert-warn');
+    return;
+  }
+  let XLSX;
+  try { XLSX = await _carregarSheetJS(); }
+  catch(e) {
+    showAlert(document.getElementById('alert-input'), 'Não foi possível carregar a biblioteca Excel. Verifique sua conexão.', 'alert-warn');
+    return;
+  }
+
+  const { perito, processo, vara, obs } = getLaudoFields();
+  const bacen   = BACEN[state.modalidade];
+  const taxa    = state.taxaCalculada;
+  const taxaAno = (Math.pow(1 + taxa, 12) - 1) * 100;
+  const total   = state.numParcelas * state.valorParcela;
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Resumo ──
+  const resumo = [
+    ['MinhaTaxaReal — Relatório de Análise de Crédito'],
+    ['Gerado em', new Date().toLocaleDateString('pt-BR')],
+    [],
+    ...(perito   ? [['Perito / Responsável', perito]]   : []),
+    ...(processo ? [['Nº do Processo',       processo]] : []),
+    ...(vara     ? [['Vara / Juízo',         vara]]     : []),
+    ...(obs      ? [['Observações',          obs]]      : []),
+    [],
+    ['DADOS DA OPERAÇÃO'],
+    ['Modalidade',               bacen.nome],
+    ['Sistema de amortização',   state.sistema.toUpperCase()],
+    ['Valor líquido (R$)',       _xlsxNum(state.valorLiquido)],
+    ['Nº de parcelas',           _xlsxNum(state.numParcelas)],
+    ['Valor da parcela (R$)',    _xlsxNum(state.valorParcela)],
+    ['Total pago (R$)',          _xlsxNum(total)],
+    ['Total de juros (R$)',      _xlsxNum(total - state.valorLiquido)],
+    [],
+    ['TAXAS APURADAS'],
+    ['Taxa efetiva (TIR) a.m. (%)',  _xlsxNum(taxa * 100)],
+    ['Taxa efetiva (TIR) a.a. (%)',  _xlsxNum(taxaAno)],
+    ['Taxa média BCB a.m. (%)',      _xlsxNum(bacen.taxaMes)],
+    ['Diferença (p.p.)',             _xlsxNum(taxa * 100 - bacen.taxaMes)],
+    ...(state.cetMes ? [
+      ['CET a.m. (%)',  _xlsxNum(state.cetMes * 100)],
+      ['CET a.a. (%)',  _xlsxNum((Math.pow(1 + state.cetMes, 12) - 1) * 100)],
+    ] : []),
+    ...(state.carenciaDias > 0 ? [
+      [],
+      ['CARÊNCIA'],
+      ['Dias de carência',          _xlsxNum(state.carenciaDias)],
+      ['Taxa diária equiv. (%)',    _xlsxNum(state.taxaDiariaCarencia * 100)],
+      ['Juros capitalizados (R$)',  _xlsxNum(state.jurosCarencia)],
+      ['Saldo após carência (R$)',  _xlsxNum(state.saldoCarencia)],
+    ] : []),
+  ];
+  const wsR = XLSX.utils.aoa_to_sheet(resumo);
+  wsR['!cols'] = [{wch: 36}, {wch: 22}];
+  XLSX.utils.book_append_sheet(wb, wsR, 'Resumo');
+
+  // ── Sheet 2: Amortização ──
+  const tabela = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
+  const amort = [
+    ['Parcela', 'Tipo', 'PMT (R$)', 'Juros (R$)', 'Amortização (R$)', 'Saldo Devedor (R$)'],
+    ...tabela.map(r => r.isCarencia
+      ? ['Carência', r.tipoCarencia === 'total' ? 'Total (sem juros)' : 'Juros capitalizando', 0, _xlsxNum(r.juros), 0, _xlsxNum(r.saldo)]
+      : [_xlsxNum(r.parc), 'Amortização', _xlsxNum(r.pmt), _xlsxNum(r.juros), _xlsxNum(r.amort), _xlsxNum(r.saldo)]
+    ),
+  ];
+  const wsA = XLSX.utils.aoa_to_sheet(amort);
+  wsA['!cols'] = [{wch:10},{wch:22},{wch:14},{wch:14},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, wsA, 'Amortização');
+
+  XLSX.writeFile(wb, 'minhataxareal_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+async function gerarExcelInadimplencia() {
+  if (window.userPremium !== true) {
+    showAlert(document.getElementById('alert-input'), 'Exportação Excel disponível apenas para planos Premium.', 'alert-warn');
+    return;
+  }
+  const d = window._inadState;
+  if (!d) {
+    showAlert(document.getElementById('alert-input'), 'Execute a apuração antes de exportar.', 'alert-warn');
+    return;
+  }
+  let XLSX;
+  try { XLSX = await _carregarSheetJS(); }
+  catch(e) {
+    showAlert(document.getElementById('alert-input'), 'Não foi possível carregar a biblioteca Excel. Verifique sua conexão.', 'alert-warn');
+    return;
+  }
+
+  const { perito, processo, vara, obs } = getLaudoFields();
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Resumo ──
+  const resumo = [
+    ['MinhaTaxaReal — Apuração de Inadimplência'],
+    ['Gerado em', new Date().toLocaleDateString('pt-BR')],
+    [],
+    ...(perito   ? [['Perito / Responsável', perito]]   : []),
+    ...(processo ? [['Nº do Processo',       processo]] : []),
+    ...(vara     ? [['Vara / Juízo',         vara]]     : []),
+    ...(obs      ? [['Observações',          obs]]      : []),
+    [],
+    ['DADOS DA OPERAÇÃO'],
+    ['Modalidade',            d.modalidadeNome],
+    ['Data de apuração',      d.apuracao.split('-').reverse().join('/')],
+    ['Multa aplicada (%)',    _xlsxNum(d.multaP)],
+    ['Juros de mora (%/mês)', _xlsxNum(d.jurosMoraP)],
+    ['Índice de correção',    d.indiceNome],
+    [],
+    ['QUADRO COMPARATIVO'],
+    ['',                        'Credor (R$)',       'Referência (R$)',    'Média BCB (R$)'],
+    ['Principal',               _xlsxNum(d.principal), _xlsxNum(d.principal), _xlsxNum(d.principal)],
+    ['Multa',                   _xlsxNum(d.multaC),    _xlsxNum(d.multaR),    _xlsxNum(d.multaR)],
+    ['Correção monetária',      _xlsxNum(d.accCorrecaoC), _xlsxNum(d.accCorrecaoR), 0],
+    ['Juros de mora',           _xlsxNum(d.accJurosC), _xlsxNum(d.accJurosR), _xlsxNum(d.accJurosB)],
+    ...(d.outros > 0 ? [['Outros encargos', _xlsxNum(d.outros), 0, 0]] : []),
+    ['TOTAL',                   _xlsxNum(d.totalC),    _xlsxNum(d.totalR),    _xlsxNum(d.totalB)],
+  ];
+  const wsR = XLSX.utils.aoa_to_sheet(resumo);
+  wsR['!cols'] = [{wch:30},{wch:16},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, wsR, 'Resumo');
+
+  // ── Sheet 2: Evolução mês a mês (modo simples) ou parcelas (modo multi) ──
+  if (d.multiMode && d.linhasParcelas?.length) {
+    const rows = [
+      ['Parcela', 'Vencimento', 'Meses em atraso', 'Valor original (R$)', 'Total Credor (R$)', 'Total Ref. (R$)', 'Total BCB (R$)'],
+      ...d.linhasParcelas.map(l => [
+        l.parc,
+        l.dueYM.split('-').reverse().join('/'),
+        _xlsxNum(l.meses),
+        _xlsxNum(l.pmt),
+        _xlsxNum(l.totalC),
+        _xlsxNum(l.totalR),
+        _xlsxNum(l.totalB),
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:10},{wch:14},{wch:16},{wch:20},{wch:18},{wch:16},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Parcelas em Atraso');
+  } else if (d.linhasMes?.length) {
+    const rows = [
+      ['Mês', '% Corr. Credor', 'Encargos Credor (R$)', 'Saldo Credor (R$)', '% IPCA', 'Encargos Ref. (R$)', 'Saldo Ref. (R$)', 'Saldo BCB (R$)'],
+      ...d.linhasMes.map(l => [
+        l.label,
+        _xlsxNum(l.taxaIndC),
+        _xlsxNum(l.corrC + l.jurosC),
+        _xlsxNum(l.saldoC),
+        _xlsxNum(l.taxaIPCA),
+        _xlsxNum(l.corrR + l.jurosR),
+        _xlsxNum(l.saldoR),
+        _xlsxNum(l.saldoB),
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:10},{wch:14},{wch:20},{wch:18},{wch:10},{wch:20},{wch:18},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Evolução Mensal');
+  }
+
+  // ── Sheet 3: Carência (quando presente) ──
+  if (d.carenciaData?.rows?.length) {
+    const cd = d.carenciaData;
+    const rows = [
+      ['Período de Carência — ' + cd.dias + ' dias'],
+      ['Saldo original (R$)', _xlsxNum(cd.saldoOriginal)],
+      ['Saldo após carência (R$)', _xlsxNum(cd.saldoApos)],
+      ['Juros capitalizados (R$)', _xlsxNum(cd.jurosTotal)],
+      ['Taxa diária média (%)', _xlsxNum(cd.taxaDiaMedia)],
+      [],
+      ['Mês / Período', 'Dias', 'Taxa BCB a.m. (%)', 'Taxa diária equiv. (%)', 'Juros capitalizados (R$)', 'Saldo devedor (R$)'],
+      ...cd.rows.map(r => [
+        r.mes,
+        _xlsxNum(r.dias),
+        _xlsxNum(r.taxa),
+        _xlsxNum(r.taxaDia),
+        _xlsxNum(r.juros),
+        _xlsxNum(r.saldo),
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:22},{wch:24},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Carência');
+  }
+
+  XLSX.writeFile(wb, 'minhataxareal_inadimplencia_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
 function gerarPDF() {
   let jsPDF;
   try {
@@ -2644,8 +2924,15 @@ function gerarPDF() {
   const pw = 170;
 
   // Cabeçalho
+  const _lf = getLaudoFields();
+  const _laudoLines = [
+    _lf.perito   ? 'Perito / Responsável: ' + _lf.perito     : null,
+    _lf.processo ? 'Nº do Processo: '       + _lf.processo   : null,
+    _lf.vara     ? 'Vara / Juízo: '         + _lf.vara       : null,
+  ].filter(Boolean);
+  const _hdrH = 40 + (_laudoLines.length > 0 ? _laudoLines.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, _hdrH, 'F');
   doc.setTextColor(212, 240, 60);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -2654,11 +2941,13 @@ function gerarPDF() {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text('Relatório de Análise de Crédito', lm, 23);
-  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + ' — Taxa Bacen ref.: Mai/2026', lm, 29);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR'), lm, 29);
+  let _ly = 35;
+  _laudoLines.forEach(line => { _ly += 6; doc.text(line, lm, _ly); });
   doc.setFillColor(212, 240, 60);
-  doc.rect(lm, 34, pw, 1, 'F');
+  doc.rect(lm, _hdrH - 6, pw, 1, 'F');
 
-  y = 50;
+  y = _hdrH + 10;
   doc.setTextColor(30, 30, 30);
 
   // Seção 1
@@ -2933,6 +3222,20 @@ function gerarPDF() {
   doc.setFont('helvetica', 'italic');
   const disclaimer = 'AVISO: Este relatório tem fins exclusivamente educativos e informativos. Os cálculos são baseados nos dados fornecidos pelo usuário e nas taxas médias oficiais do Banco Central do Brasil. Não constitui consultoria jurídica, financeira ou assessoria de investimentos.';
   doc.text(doc.splitTextToSize(disclaimer, pw - 4), lm + 2, y + 5);
+  y += 22;
+
+  // Observações do laudo (se preenchidas)
+  if (_lf.obs) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    y += 4;
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(50, 50, 50);
+    doc.text('OBSERVAÇÕES TÉCNICAS', lm + 3, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
+    doc.splitTextToSize(_lf.obs, pw - 4).forEach(l => { if (y > 270) { doc.addPage(); y = 20; } doc.text(l, lm + 2, y); y += 5; });
+  }
 
   doc.save('MinhaTaxaReal-Simulacao-' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
@@ -5011,10 +5314,16 @@ function renderResultadosInadimplencia(d) {
         <div class="results-title">Apuração de Inadimplência</div>
         <div class="results-subtitle">${subtitulo}</div>
       </div>
-      <button class="pdf-btn" onclick="gerarPDFInadimplencia()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Exportar PDF
-      </button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="pdf-btn" onclick="gerarPDFInadimplencia()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          PDF
+        </button>
+        <button class="excel-btn" onclick="gerarExcelInadimplencia()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Excel
+        </button>
+      </div>
     </div>
 
     ${d.mesesSemDado > 0 ? `<div class="alert show alert-warn" style="margin-bottom:16px">
@@ -5318,8 +5627,15 @@ function gerarPDFInadimplencia() {
   }
 
   // ── Cabeçalho página 1 ──
+  const _lfi = getLaudoFields();
+  const _llinesI = [
+    _lfi.perito   ? 'Perito / Responsável: ' + _lfi.perito   : null,
+    _lfi.processo ? 'Nº do Processo: '       + _lfi.processo : null,
+    _lfi.vara     ? 'Vara / Juízo: '         + _lfi.vara     : null,
+  ].filter(Boolean);
+  const _hdrHI = 40 + (_llinesI.length > 0 ? _llinesI.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, _hdrHI, 'F');
   doc.setTextColor(212, 240, 60);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -5329,9 +5645,11 @@ function gerarPDFInadimplencia() {
   doc.setFont('helvetica', 'normal');
   doc.text('Apuração de Inadimplência — Memória de Cálculo', lm, 23);
   doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: Banco Central do Brasil — SGS', lm, 29);
+  let _lyI = 35;
+  _llinesI.forEach(line => { _lyI += 6; doc.text(line, lm, _lyI); });
   doc.setFillColor(212, 240, 60);
-  doc.rect(lm, 34, pw, 1, 'F');
-  y = 50;
+  doc.rect(lm, _hdrHI - 6, pw, 1, 'F');
+  y = _hdrHI + 10;
 
   // ── Seção 1: Dados da Operação ──
   doc.setFillColor(240, 240, 240);
@@ -5729,8 +6047,21 @@ function gerarPDFInadimplencia() {
     }
   }
 
+  // Observações do laudo (se preenchidas)
+  if (_lfi.obs) {
+    if (y > 250) y = novaPagina();
+    y += 4;
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(50, 50, 50);
+    doc.text('OBSERVAÇÕES TÉCNICAS', lm + 3, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
+    doc.splitTextToSize(_lfi.obs, pw - 4).forEach(l => { if (y > 270) y = novaPagina(); doc.text(l, lm + 2, y); y += 5; });
+  }
+
   rodape();
-  doc.save('inadimplencia-' + d.vencimento + '.pdf');
+  doc.save('inadimplencia-' + (d.vencimento || new Date().toISOString().slice(0,10)) + '.pdf');
 }
 
 // ════════════════════════════════════════════
