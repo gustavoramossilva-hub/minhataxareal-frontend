@@ -2773,15 +2773,15 @@ async function gerarExcel() {
   // ── Sheet 2: Amortização ──
   const tabela = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
   const amort = [
-    ['Parcela', 'Tipo', 'PMT (R$)', 'Juros (R$)', 'Amortização (R$)', 'Saldo Devedor (R$)'],
+    ['Parcela', 'Tipo', 'PMT (R$)', 'Juros (R$)', 'Amortizacao (R$)', 'Saldo Devedor (R$)'],
     ...tabela.map(r => r.isCarencia
-      ? ['Carência', r.tipoCarencia === 'total' ? 'Total (sem juros)' : 'Juros capitalizando', 0, _xlsxNum(r.juros), 0, _xlsxNum(r.saldo)]
-      : [_xlsxNum(r.parc), 'Amortização', _xlsxNum(r.pmt), _xlsxNum(r.juros), _xlsxNum(r.amort), _xlsxNum(r.saldo)]
+      ? ['Carencia', r.tipoCarencia === 'total' ? 'Total (sem juros)' : 'Juros capitalizando', 0, _xlsxNum(r.juros), 0, _xlsxNum(r.saldo)]
+      : [_xlsxNum(r.parc), 'Amortizacao', _xlsxNum(r.pmt), _xlsxNum(r.juros), _xlsxNum(r.amort), _xlsxNum(r.saldo)]
     ),
   ];
   const wsA = XLSX.utils.aoa_to_sheet(amort);
   wsA['!cols'] = [{wch:10},{wch:22},{wch:14},{wch:14},{wch:18},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, wsA, 'Amortização');
+  XLSX.utils.book_append_sheet(wb, wsA, 'Amortizacao');
 
   XLSX.writeFile(wb, 'minhataxareal_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
@@ -2872,7 +2872,31 @@ async function gerarExcelInadimplencia() {
     XLSX.utils.book_append_sheet(wb, ws, 'Evolução Mensal');
   }
 
-  // ── Sheet 3: Carência (quando presente) ──
+  // ── Sheet 3: Fluxo de amortização do contrato original (quando presente) ──
+  if (d.contratoOriginal?.tabelaCompleta?.length) {
+    const co = d.contratoOriginal;
+    const rowsAmort = [
+      ['Parcela', 'PMT (R$)', 'Juros (R$)', 'Amortizacao (R$)', 'Saldo Devedor (R$)', 'Situacao'],
+      ...co.tabelaCompleta.map((r, i) => {
+        const pago    = i < co.pagas;
+        const carenc  = !!r.isCarencia;
+        const situacao = carenc ? 'Carencia' : pago ? 'Pago' : 'Em aberto';
+        return [
+          carenc ? 'Carencia' : _xlsxNum(r.parc),
+          _xlsxNum(r.pmt),
+          _xlsxNum(r.juros),
+          _xlsxNum(r.amort),
+          _xlsxNum(r.saldo),
+          situacao,
+        ];
+      }),
+    ];
+    const wsAmort = XLSX.utils.aoa_to_sheet(rowsAmort);
+    wsAmort['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:18},{wch:20},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsAmort, 'Fluxo Amortizacao');
+  }
+
+  // ── Sheet 4: Carência (quando presente) ──
   if (d.carenciaData?.rows?.length) {
     const cd = d.carenciaData;
     const rows = [
