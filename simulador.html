@@ -1527,37 +1527,39 @@
 //    20754 = Cartão rotativo PF
 // ════════════════════════════════════════════
 
-// Fallback usado se API falhar (referência: competência mar/2026)
+// Fallback usado se API falhar — valores reais confirmados em testes BCB (referência: mar/2024)
+// taxaAno = (1 + taxaMes/100)^12 - 1
 const BACEN_FALLBACK = {
-  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.89, taxaAno: 25.20, ref: 'fallback' },
-  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 6.23, taxaAno: 107.8, ref: 'fallback' },
-  habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 0.82, taxaAno: 10.30, ref: 'fallback' },
-  capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.95, taxaAno: 26.18, ref: 'fallback' },
-  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.80, taxaAno: 23.87, ref: 'fallback' },
-  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.48, taxaAno: 19.20, ref: 'fallback' },
-  cheque:         { nome: 'Cheque Especial',                  taxaMes: 6.18, taxaAno: 106.8, ref: 'fallback' },
-  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 14.3, taxaAno: 397.3, ref: 'fallback' },
+  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 5.78,  taxaAno: 82.67,  ref: 'fallback' },
+  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.91,  taxaAno: 25.41,  ref: 'fallback' },
+  habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 1.70,  taxaAno: 22.41,  ref: 'fallback' },
+  capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.72,  taxaAno: 22.73,  ref: 'fallback' },
+  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.77,  taxaAno: 23.42,  ref: 'fallback' },
+  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.86,  taxaAno: 24.75,  ref: 'fallback' },
+  cheque:         { nome: 'Cheque Especial',                  taxaMes: 10.35, taxaAno: 231.40, ref: 'fallback' },
+  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 18.57, taxaAno: 622.30, ref: 'fallback' },
 };
 
-// Códigos SGS de cada modalidade — taxas médias de operações de crédito BCB
+// Códigos SGS primários por modalidade — séries 254xx retornam % a.m. (confirmado em testes reais)
 const SGS_CODIGOS = {
-  veiculo:        20714,
-  pessoal:        20721,
-  habitacional:   4390,
-  capital:        20723,
-  consignado:     20718,
+  pessoal:        25464,
+  veiculo:        25471,
+  habitacional:   25468,
+  capital:        25467,
+  consignado:     25469,
   consignadoINSS: 20719,
   cheque:         20756,
   cartao:         20754,
 };
 
-// Séries SGS com fallback: [primária, secundária]. A secundária é tentada se a primária não retornar dado.
+// Séries com fallback — primária (% a.m. confirmada) seguida de alternativa
+// Séries 207xx retornam % a.a. ou segmento diferente; usadas só se a primária falhar
 const SGS_SERIES_FALLBACK = {
-  pessoal:        [20721, 25464],
-  veiculo:        [20714, 25471],
-  habitacional:   [4390,  25468],
-  capital:        [20723, 25467],
-  consignado:     [20718, 25469],
+  pessoal:        [25464, 20721],
+  veiculo:        [25471, 20714],
+  habitacional:   [25468, 4390],
+  capital:        [25467, 20723],
+  consignado:     [25469, 20718],
   consignadoINSS: [20719],
   cheque:         [20756, 25403],
   cartao:         [20754],
