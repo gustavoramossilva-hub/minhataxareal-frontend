@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico BCB — MinhaTaxaReal</title>
+<style>
+:root { --bg:#111; --surface:#1a1a1a; --border:#2a2a2a; --text:#e5e5e5; --text2:#aaa; --ok:#A3E635; --err:#ff4444; --warn:#f59e0b; --blue:#3730A3; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Mono', 'Fira Code', monospace; background: var(--bg); color: var(--text); padding: 2rem; min-height: 100vh; }
+h1 { font-size: 20px; margin-bottom: 6px; }
+.sub { color: var(--text2); font-size: 12px; margin-bottom: 20px; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+button { background: var(--blue); color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-size: 13px; border-radius: 6px; font-family: inherit; transition: opacity .15s; }
+button:hover { opacity: .85; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+.btn-copy { background: #27272a; font-size: 12px; padding: 8px 14px; }
+.progress { font-size: 12px; color: var(--warn); }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+thead th { background: var(--blue); color: #fff; padding: 10px 12px; text-align: left; white-space: nowrap; }
+tbody tr:nth-child(even) { background: var(--surface); }
+td { border: 1px solid var(--border); padding: 8px 12px; vertical-align: middle; white-space: nowrap; }
+.ok  { color: var(--ok); }
+.err { color: var(--err); }
+.warn { color: var(--warn); }
+.mod-col { color: var(--text2); font-size: 11px; max-width: 200px; white-space: normal; }
+.serie-col { color: #60a5fa; }
+.summary { margin-top: 20px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; line-height: 1.8; }
+.summary .ok { font-weight: bold; }
+.summary .err { font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>⚙ Diagnóstico Séries SGS — BCB</h1>
+<p class="sub">Testa todas as séries SGS implementadas no MinhaTaxaReal contra a API pública do Banco Central.</p>
+
+<div class="controls">
+  <button id="btn-rodar" onclick="rodarTestes()">▶ Rodar Testes Agora</button>
+  <button class="btn-copy" id="btn-copy" onclick="copiarResultado()" style="display:none">📋 Copiar Resultado</button>
+  <span class="progress" id="progress"></span>
+</div>
+
+<div id="resultado"></div>
+
+<script>
+const MODALIDADES = {
+  pessoal:        'Crédito Pessoal (PF)',
+  veiculo:        'Financiamento de Veículos (PF)',
+  habitacional:   'Crédito Habitacional (PF)',
+  capital:        'Capital de Giro (PJ)',
+  consignado:     'Consignado Privado (PF)',
+  consignadoINSS: 'Consignado INSS (PF)',
+  cheque:         'Cheque Especial (PF)',
+  cartao:         'Cartão Rotativo (PF)',
+};
+
+const SERIES = [
+  { chave: 'pessoal',        serie: 20721, nome: 'Pessoal não consig. — redesenho (novo)' },
+  { chave: 'pessoal',        serie: 25464, nome: 'Pessoal não consig. — série original' },
+  { chave: 'veiculo',        serie: 20714, nome: 'Veículo PF — redesenho (novo)' },
+  { chave: 'veiculo',        serie: 25471, nome: 'Veículo PF — série original' },
+  { chave: 'habitacional',   serie: 4390,  nome: 'Habitacional / SELIC' },
+  { chave: 'habitacional',   serie: 25468, nome: 'Habitacional — série original' },
+  { chave: 'capital',        serie: 20723, nome: 'Capital de Giro PJ — redesenho' },
+  { chave: 'capital',        serie: 25467, nome: 'Capital de Giro PJ — original' },
+  { chave: 'consignado',     serie: 20718, nome: 'Consignado privado — redesenho' },
+  { chave: 'consignado',     serie: 25469, nome: 'Consignado privado — original' },
+  { chave: 'consignadoINSS', serie: 20719, nome: 'Consignado INSS' },
+  { chave: 'cheque',         serie: 20756, nome: 'Cheque especial — redesenho' },
+  { chave: 'cheque',         serie: 25403, nome: 'Cheque especial — original' },
+  { chave: 'cartao',         serie: 20754, nome: 'Cartão rotativo PF' },
+];
+
+const DATAS = [
+  { ini: '01/03/2024', fim: '31/03/2024', label: 'mar/2024' },
+  { ini: '01/06/2023', fim: '30/06/2023', label: 'jun/2023' },
+  { ini: '01/01/2022', fim: '31/01/2022', label: 'jan/2022' },
+  { ini: '01/01/2015', fim: '31/01/2015', label: 'jan/2015' },
+];
+
+async function testarSerie(serie, dataIni, dataFim) {
+  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados?formato=json&dataInicial=${dataIni}&dataFinal=${dataFim}`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return { ok: false, msg: 'HTTP ' + r.status };
+    const d = await r.json();
+    if (d && d.length > 0) {
+      const val = parseFloat(d[d.length - 1].valor);
+      if (!isNaN(val)) return { ok: true, valor: val };
+    }
+    return { ok: false, msg: 'sem dado' };
+  } catch (e) {
+    return { ok: false, msg: e.name === 'TimeoutError' ? 'timeout' : 'erro rede' };
+  }
+}
+
+async function rodarTestes() {
+  const btn = document.getElementById('btn-rodar');
+  const prog = document.getElementById('progress');
+  const div = document.getElementById('resultado');
+  btn.disabled = true;
+  document.getElementById('btn-copy').style.display = 'none';
+  div.innerHTML = '';
+
+  const total = SERIES.length * DATAS.length;
+  let feito = 0;
+
+  // Matriz de resultados: results[i][j] = { ok, valor, msg }
+  const results = Array.from({ length: SERIES.length }, () => Array(DATAS.length).fill(null));
+
+  // Rodar em paralelo por série, sequencial por data (para não sobrecarregar a API)
+  for (let j = 0; j < DATAS.length; j++) {
+    prog.textContent = `Testando ${DATAS[j].label}… (${feito}/${total})`;
+    const promises = SERIES.map((s, i) =>
+      testarSerie(s.serie, DATAS[j].ini, DATAS[j].fim).then(r => { results[i][j] = r; feito++; })
+    );
+    await Promise.all(promises);
+    prog.textContent = `${DATAS[j].label} concluído (${feito}/${total})`;
+  }
+
+  prog.textContent = 'Concluído!';
+
+  // Montar tabela
+  let ok = 0, err = 0;
+  let html = `<table><thead><tr>
+    <th>Série</th><th>Nome / Modalidade</th>
+    ${DATAS.map(d => `<th>${d.label}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  for (let i = 0; i < SERIES.length; i++) {
+    const s = SERIES[i];
+    html += `<tr>
+      <td class="serie-col">${s.serie}</td>
+      <td class="mod-col">${s.nome}<br><span style="color:#555">${MODALIDADES[s.chave]}</span></td>`;
+    for (let j = 0; j < DATAS.length; j++) {
+      const r = results[i][j];
+      if (r && r.ok) {
+        ok++;
+        html += `<td class="ok">✅ ${r.valor.toFixed(2)}%</td>`;
+      } else {
+        err++;
+        html += `<td class="err">❌ ${r ? r.msg : '—'}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  // Resumo por modalidade (fallback coverage)
+  html += `<div class="summary">
+    <strong>Resumo:</strong> ${ok} retornos válidos · ${err} sem dado<br>`;
+
+  const chaves = [...new Set(SERIES.map(s => s.chave))];
+  for (const chave of chaves) {
+    const idxs = SERIES.map((s, i) => s.chave === chave ? i : -1).filter(i => i >= 0);
+    const cobertos = DATAS.map((_, j) => idxs.some(i => results[i] && results[i][j] && results[i][j].ok));
+    const totalDatas = cobertos.filter(Boolean).length;
+    const cls = totalDatas === DATAS.length ? 'ok' : totalDatas > 0 ? 'warn' : 'err';
+    html += `<span class="${cls}">${MODALIDADES[chave]}: ${totalDatas}/${DATAS.length} datas cobertas</span><br>`;
+  }
+  html += '</div>';
+
+  div.innerHTML = html;
+  btn.disabled = false;
+  document.getElementById('btn-copy').style.display = '';
+}
+
+function copiarResultado() {
+  const el = document.getElementById('resultado');
+  const texto = el.innerText;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.textContent = '📋 Copiar Resultado', 2000);
+  });
+}
+</script>
+</body>
+</html>

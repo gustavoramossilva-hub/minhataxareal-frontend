@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Termos de Uso e Privacidade — MinhaTaxaReal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0b0d;
+  --bg2:      #0e0f11;
+  --surface:  #13151a;
+  --surface2: #1a1d24;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.12);
+  --text:     #ede9e3;
+  --text2:    #9a9894;
+  --text3:    #767370;
+  --accent:   #d4f03c;
+  --accent2:  #b8d430;
+  --adim:     rgba(212,240,60,0.08);
+  --radius:   10px;
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.65; }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 48px; display: flex; align-items: center; justify-content: space-between; background: rgba(10,11,13,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: -.03em; display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+.logo-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex-shrink: 0; box-shadow: 0 0 12px var(--accent); }
+.nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-links a { font-size: 13px; color: var(--text2); text-decoration: none; transition: color .15s; }
+.nav-links a:hover { color: var(--text); }
+
+main { max-width: 800px; margin: 0 auto; padding: 120px 48px 80px; }
+
+.page-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.page-eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--accent); }
+.page-title { font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 44px); font-weight: 800; line-height: 1.1; letter-spacing: -.03em; margin-bottom: 10px; }
+.page-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); margin-bottom: 48px; }
+
+.clause { margin-bottom: 36px; }
+.clause h2 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--accent); margin-bottom: 12px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+.clause h2 span { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400; color: var(--text3); }
+.clause p { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 10px; }
+.clause p:last-child { margin-bottom: 0; }
+.clause ul { list-style: none; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.clause ul li { font-size: 14px; color: var(--text2); line-height: 1.7; display: flex; gap: 10px; }
+.clause ul li::before { content: '→'; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 12px; flex-shrink: 0; margin-top: 2px; }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+.contact-box { background: var(--surface); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 20px 24px; margin-top: 48px; }
+.contact-box p { font-size: 13px; color: var(--text2); line-height: 1.7; }
+.contact-box a { color: var(--accent); text-decoration: none; }
+
+footer { border-top: 1px solid var(--border); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; max-width: 100%; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a { font-size: 12px; color: var(--text3); text-decoration: none; transition: color .15s; }
+.footer-links a:hover { color: var(--text2); }
+.footer-copy { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); letter-spacing: .04em; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo"><span class="logo-mark"></span>MinhaTaxaReal</a>
+  <div class="nav-links">
+    <a href="index.html">Início</a>
+    <a href="auth.html">Entrar</a>
+    <a href="simulador.html">Simulador</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-eyebrow">Legal</div>
+  <h1 class="page-title">Termos de Uso e<br>Política de Privacidade</h1>
+  <p class="page-meta">Última atualização: junho de 2026</p>
+
+  <div class="clause">
+    <h2>1. Natureza do Serviço <span>Art. 1º</span></h2>
+    <p>O <strong style="color:var(--text)">MinhaTaxaReal</strong> é uma ferramenta educacional de simulação e cálculo financeiro. Não é uma instituição financeira, correspondente bancário, assessoria financeira ou jurídica, e não oferece produtos ou serviços de crédito de qualquer espécie.</p>
+    <p>O serviço destina-se exclusivamente a auxiliar o usuário a compreender matematicamente operações de crédito, com base nos dados por ele próprio fornecidos.</p>
+  </div>
+
+  <div class="clause">
+    <h2>2. Finalidade e Limitações <span>Art. 2º</span></h2>
+    <p>Os cálculos, simulações e comparativos têm caráter exclusivamente educacional e informativo. Os resultados:</p>
+    <ul>
+      <li>Não constituem laudo técnico, parecer jurídico ou recomendação financeira</li>
+      <li>Não substituem a análise de um profissional habilitado (advogado, contador, consultor financeiro)</li>
+      <li>São baseados nos dados informados pelo próprio usuário e nas taxas médias divulgadas pelo Banco Central do Brasil</li>
+      <li>Podem divergir dos valores contratuais reais em razão de encargos, tarifas ou condições específicas não informadas</li>
+    </ul>
+  </div>
+
+  <div class="clause">
+    <h2>3. Limitação de Responsabilidade <span>Art. 3º</span></h2>
+    <p>O MinhaTaxaReal não se responsabiliza por decisões financeiras, jurídicas ou contratuais tomadas com base nas simulações realizadas. Para decisões de qualquer natureza relacionadas a contratos de crédito, o usuário deve consultar uma instituição financeira regulada ou profissional habilitado.</p>
+  </div>
+
+  <div class="clause">
+    <h2>4. Fontes de Dados <span>Art. 4º</span></h2>
+    <p>As taxas de referência exibidas são obtidas da API pública do Banco Central do Brasil — Sistema Gerenciador de Séries Temporais (SGS/BCB), disponível em <strong style="color:var(--text)">dadosabertos.bcb.gov.br</strong>.</p>
+    <p>O MinhaTaxaReal não garante a atualização em tempo real dos dados, que são publicados pelo BCB com defasagem média de 60 a 90 dias. O usuário reconhece que as taxas exibidas são médias de mercado e podem não refletir as condições específicas do seu contrato.</p>
+  </div>
+
+  <div class="clause">
+    <h2>5. Privacidade e LGPD <span>Art. 5º</span></h2>
+    <p>Os dados inseridos nas simulações são processados localmente no browser do usuário e não são armazenados em servidores nem compartilhados com terceiros para fins comerciais.</p>
+    <p>O cadastro de usuários (nome e e-mail) é necessário para acesso ao serviço e segue as diretrizes da <strong style="color:var(--text)">Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018)</strong>. O usuário pode solicitar a exclusão dos seus dados a qualquer momento através do e-mail abaixo.</p>
+    <p>Para exercer seus direitos como titular de dados (acesso, retificação, exclusão, portabilidade), entre em contato: <strong style="color:var(--text)">contato@minhataxareal.com.br</strong></p>
+  </div>
+
+  <div class="clause">
+    <h2>6. Propriedade Intelectual <span>Art. 6º</span></h2>
+    <p>Todo o conteúdo, código, marca e identidade visual do MinhaTaxaReal são de propriedade exclusiva do titular e protegidos pela Lei 9.609/98 (Lei do Software) e Lei 9.610/98 (Direitos Autorais). É vedada a reprodução, cópia ou uso comercial sem autorização expressa.</p>
+  </div>
+
+  <div class="clause">
+    <h2>7. Alterações nos Termos <span>Art. 7º</span></h2>
+    <p>Estes termos podem ser atualizados periodicamente. A data de última atualização é sempre indicada no topo desta página. O uso continuado do serviço após alterações implica aceitação dos novos termos.</p>
+  </div>
+
+  <div class="clause">
+    <h2>8. Foro <span>Art. 8º</span></h2>
+    <p>Fica eleito o foro da Comarca de Belo Horizonte/MG para dirimir quaisquer controvérsias decorrentes destes termos, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
+  </div>
+
+  <hr class="divider">
+
+  <div class="contact-box">
+    <p>Dúvidas sobre estes termos ou sobre seus dados? Entre em contato: <a href="mailto:contato@minhataxareal.com.br">contato@minhataxareal.com.br</a></p>
+  </div>
+</main>
+
+<footer>
+  <a href="index.html" class="logo" style="font-size:15px"><span class="logo-mark" style="width:7px;height:7px"></span>MinhaTaxaReal</a>
+  <div class="footer-links">
+    <a href="index.html">Início</a>
+    <a href="simulador.html">Simulador</a>
+    <a href="auth.html">Entrar</a>
+    <a href="termos.html">Termos de Uso</a>
+  </div>
+  <div class="footer-copy">© 2026 MinhaTaxaReal · Ferramenta educacional</div>
+</footer>
+
+</body>
+</html>
