@@ -1550,6 +1550,18 @@ const SGS_CODIGOS = {
   cartao:         20754,
 };
 
+// Séries SGS com fallback: [primária, secundária]. A secundária é tentada se a primária não retornar dado.
+const SGS_SERIES_FALLBACK = {
+  pessoal:        [20721, 25464],
+  veiculo:        [20714, 25471],
+  habitacional:   [4390,  25468],
+  capital:        [20723, 25467],
+  consignado:     [20718, 25469],
+  consignadoINSS: [20719],
+  cheque:         [20756, 25403],
+  cartao:         [20754],
+};
+
 // Códigos SGS dos índices de correção (módulo inadimplência)
 const SGS_INDICES = { ipca: 433, inpc: 188, selic: 4390, tr: 226 };
 
@@ -1579,36 +1591,39 @@ async function buscarTaxaBacen(chave, codigo) {
 }
 
 // Busca taxa BCB para um mês/ano específico (data do contrato).
-// Se não houver dado naquele mês, tenta o mês anterior automaticamente (até 3 tentativas).
-// Retorna { taxaMes, taxaAno, ref, competencia } ou null.
-async function buscarTaxaPorData(codigo, dataContrato) {
+// Tenta até 4 meses para trás e, em cada mês, testa todas as séries com fallback da modalidade.
+// Retorna { taxaMes, taxaAno, ref, competencia, usouAnterior, defasagem, serie } ou null.
+async function buscarTaxaPorData(codigo, dataContrato, series) {
   const ultimoDiaMes = (m, y) => new Date(y, m, 0).getDate();
+  // series pode ser um array (fallback) ou código único (legado)
+  const seriesList = Array.isArray(series) ? series : (series ? [series] : [codigo]);
+  const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   let d = new Date(dataContrato);
-  for (let tentativa = 0; tentativa < 3; tentativa++) {
+  for (let defasagem = 0; defasagem < 5; defasagem++) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const ano = d.getFullYear();
     const fim = ultimoDiaMes(d.getMonth() + 1, ano);
     const ini = '01/' + mm + '/' + ano;
     const fimStr = fim + '/' + mm + '/' + ano;
-    const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + codigo +
-      '/dados?formato=json&dataInicial=' + ini + '&dataFinal=' + fimStr;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const ultimo = data[data.length - 1];
-        const taxaMes = parseFloat(ultimo.valor);
-        if (!isNaN(taxaMes)) {
-          const taxaAno = parseFloat(((Math.pow(1 + taxaMes / 100, 12) - 1) * 100).toFixed(2));
-          const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-          const competencia = meses[d.getMonth()] + '/' + ano;
-          const usouAnterior = tentativa > 0;
-          return { taxaMes, taxaAno, ref: ultimo.data, competencia, usouAnterior, serie: codigo };
+    for (const serie of seriesList) {
+      const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + serie +
+        '/dados?formato=json&dataInicial=' + ini + '&dataFinal=' + fimStr;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const ultimo = data[data.length - 1];
+          const taxaMes = parseFloat(ultimo.valor);
+          if (!isNaN(taxaMes)) {
+            const taxaAno = parseFloat(((Math.pow(1 + taxaMes / 100, 12) - 1) * 100).toFixed(2));
+            const competencia = mesesNomes[d.getMonth()] + '/' + ano;
+            return { taxaMes, taxaAno, ref: ultimo.data, competencia, usouAnterior: defasagem > 0, defasagem, serie };
+          }
         }
+      } catch (e) {
+        console.warn('[Bacen] buscarTaxaPorData serie=' + serie + ' defasagem=' + defasagem + ':', e.message);
       }
-    } catch (e) {
-      console.warn('[Bacen] buscarTaxaPorData tentativa ' + tentativa + ':', e.message);
     }
     // Recua um mês
     d.setDate(1);
@@ -3597,24 +3612,24 @@ function exibirAlertaBCB(alertElId, nivel, dados) {
   const styles = {
     1: 'background:rgba(251,191,36,.12);border:1px solid var(--amber,#f59e0b);color:var(--amber,#b45309)',
     2: 'background:rgba(59,130,246,.1);border:1px solid #3b82f6;color:#1d4ed8',
-    3: 'background:rgba(239,68,68,.1);border:1px solid var(--red,#ef4444);color:var(--red,#b91c1c)',
+    3: 'background:rgba(251,191,36,.12);border:1px solid var(--amber,#f59e0b);color:var(--amber,#b45309)',
   };
-  const icons = { 1: '⚠️', 2: 'ℹ️', 3: '❌' };
+  const icons = { 1: '⚠️', 2: 'ℹ️', 3: '⚠️' };
+  const { defasagem } = dados;
   let msg = '';
   if (nivel === 1) {
     msg = `<strong>Contrato recente detectado</strong><br>
-As taxas médias do BCB possuem defasagem de aproximadamente 60 a 90 dias. Para contratos dos últimos 3 meses pode não haver taxa disponível para o período exato.<br>
-Competência mais recente disponível: <strong>${competencia || '—'}</strong>.<br>
-<em>Recomendação: use a taxa contratual do banco como base de cálculo e a taxa BCB apenas como parâmetro de comparação.</em>`;
+As taxas médias do BCB são publicadas com defasagem de 60 a 90 dias. O cálculo foi realizado com a referência mais recente disponível: competência <strong>${competencia || '—'}</strong>${defasagem > 0 ? ' (defasagem de ' + defasagem + ' ' + (defasagem === 1 ? 'mês' : 'meses') + ')' : ''}.<br>
+Série BCB/SGS: <strong>${serie || '—'}</strong>.`;
   } else if (nivel === 2) {
-    msg = `<strong>Taxa de referência com defasagem</strong><br>
+    msg = `<strong>Dado BCB com defasagem de ${defasagem || '?'} ${(defasagem === 1 ? 'mês' : 'meses')}</strong><br>
 O BCB divulga as taxas médias com defasagem média de 60 a 90 dias. A taxa exibida refere-se à competência <strong>${competencia || '—'}</strong>, a mais recente disponível.<br>
 Fonte: BCB/SGS série <strong>${serie || '—'}</strong>.`;
   } else {
-    msg = `<strong>Taxa BCB não disponível para este período</strong><br>
-Não há dados na série BCB/SGS ${serie||'—'} para a competência solicitada (${competencia||'—'}).<br>
+    msg = `<strong>Não foi possível obter a taxa BCB.</strong><br>
+Não há dados nas séries BCB/SGS ${serie||'—'} para a competência solicitada (${competencia||'—'}).<br>
 Possíveis motivos: período muito recente (dado não publicado) ou anterior ao início da série.<br>
-A taxa exibida é estimativa baseada nos dados mais recentes disponíveis.<br>
+Usando estimativa de referência. O cálculo foi realizado normalmente.<br>
 <em>Para cálculos periciais, informe manualmente a taxa contratual.</em>`;
   }
   el.style.display = '';
@@ -3650,34 +3665,34 @@ async function onDataContratoChange(selectId, labelId) {
 
   labelEl.innerHTML = '<span style="color:var(--amber)">⟳ Buscando taxa do período…</span>';
   const codigo = SGS_CODIGOS[chave];
-  if (!codigo) { labelEl.innerHTML = _bacenRefHtml(chave, BACEN[chave]); return; }
-  const resultado = await buscarTaxaPorData(codigo, dtContrato);
+  const seriesFallback = SGS_SERIES_FALLBACK[chave] || (codigo ? [codigo] : []);
+  if (!seriesFallback.length) { labelEl.innerHTML = _bacenRefHtml(chave, BACEN[chave]); return; }
+  const resultado = await buscarTaxaPorData(codigo, dtContrato, seriesFallback);
 
   if (resultado) {
     const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const p    = resultado.ref.split('/');
     const comp = p.length === 3 ? mesesNomes[parseInt(p[1])-1] + '/' + p[2] : resultado.competencia;
-    const serie = SGS_CODIGOS[chave] || '—';
+    const serie = resultado.serie || codigo || '—';
     const tooltip = 'Taxa efetiva média BCB — SGS série ' + serie + ' — competência ' + comp + '. Publicada com defasagem média de 60 a 90 dias.';
-    labelEl.innerHTML = `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(resultado.taxaMes)} a.m.</strong> · competência ${comp} ⓘ</span>`;
+    labelEl.innerHTML = `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(resultado.taxaMes)} a.m.</strong> · competência ${comp} · série ${serie} ⓘ</span>`;
     if (BACEN[chave]) { BACEN[chave].taxaMes = resultado.taxaMes; BACEN[chave].taxaAno = resultado.taxaAno; BACEN[chave].ref = resultado.ref; }
 
-    // Determina nível do alerta
+    // Determina nível do alerta — informativo apenas, nunca bloqueia
     if (diasDesdeContrato < 90) {
-      exibirAlertaBCB(alertElId, 1, { competencia: comp, serie });
+      exibirAlertaBCB(alertElId, 1, { competencia: comp, serie, defasagem: resultado.defasagem });
     } else if (resultado.usouAnterior) {
-      exibirAlertaBCB(alertElId, 2, { competencia: comp, serie });
+      exibirAlertaBCB(alertElId, 2, { competencia: comp, serie, defasagem: resultado.defasagem });
     } else {
       exibirAlertaBCB(alertElId, 0, {});
     }
   } else {
-    // Nível 3: sem dado algum
+    // Nível 3: sem dado algum — usa fallback hardcoded, cálculo continua normalmente
     const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const comp = mesesNomes[dtContrato.getMonth()] + '/' + dtContrato.getFullYear();
     const b = BACEN[chave];
-    labelEl.innerHTML = _bacenRefHtml(chave, b)
-      + '<span style="color:var(--amber)"> ⚠ Dado BCB indisponível para o período. Usando referência estimada.</span>';
-    exibirAlertaBCB(alertElId, 3, { competencia: comp, serie: SGS_CODIGOS[chave] || '—' });
+    labelEl.innerHTML = `<span>Taxa de referência estimada: <strong>${fmtPct(b?.taxaMes || 0)} a.m.</strong> · estimativa</span>`;
+    exibirAlertaBCB(alertElId, 3, { competencia: comp, serie: seriesFallback.join(', ') || '—' });
   }
 }
 
