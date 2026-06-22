@@ -1161,7 +1161,24 @@ async function verificarSessao() {
 //  TERMOS DE USO (modal simples)
 // ═══════════════════════════════════════════════
 function showTermos() {
-  alert('Termos de Uso\n\nO MinhaTaxaReal é uma ferramenta de matemática financeira com fins exclusivamente educativos e informativos.\n\nNão constitui consultoria jurídica, financeira ou de investimentos.\n\nAo usar o app, você concorda que os resultados são simulações matemáticas baseadas nos dados inseridos e nas médias oficiais do Banco Central do Brasil.');
+  alert(
+    'TERMOS DE USO — MinhaTaxaReal\n\n' +
+    '1. NATUREZA DO SERVIÇO\n' +
+    'O MinhaTaxaReal é uma ferramenta educacional de matemática financeira. ' +
+    'Não é uma instituição financeira, não é correspondente bancário e não oferece produtos ou serviços de crédito.\n\n' +
+    '2. LIMITAÇÃO DE RESPONSABILIDADE\n' +
+    'Os resultados têm caráter exclusivamente informativo e educacional. ' +
+    'Os cálculos são baseados nos dados inseridos pelo usuário e nas taxas médias divulgadas pelo Banco Central do Brasil (SGS/BCB). ' +
+    'O MinhaTaxaReal não se responsabiliza por decisões tomadas com base nos resultados.\n\n' +
+    '3. NÃO CONSTITUI ASSESSORIA\n' +
+    'Nenhum resultado, comparativo ou relatório gerado constitui assessoria jurídica, financeira, contábil ou de investimentos. ' +
+    'Para decisões contratuais ou financeiras, consulte um profissional habilitado.\n\n' +
+    '4. PRIVACIDADE (LGPD)\n' +
+    'Os dados inseridos são processados localmente ou armazenados de forma segura exclusivamente para funcionamento do serviço. ' +
+    'Não são compartilhados com terceiros sem consentimento.\n\n' +
+    '5. CONTATO\n' +
+    'Dúvidas: contato@minhataxareal.com.br'
+  );
 }
 
 // ═══════════════════════════════════════════════
@@ -1170,6 +1187,7 @@ function showTermos() {
 window.addEventListener('DOMContentLoaded', async () => {
   const retorno = await verificarRetornoPagamento();
   if (!retorno) showPage('page-login');
+  if (location.hash === '#termos') showTermos();
 });
 </script>
 </body>

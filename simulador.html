@@ -2287,7 +2287,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
   const alertSit = document.getElementById('alert-situacao');
   if (diff > 2) {
     alertSit.className = 'alert show alert-danger';
-    alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> Sua operação está ${fmtPct(diff)} a.m. acima da média Bacen para ${bacen.nome}. Para referência: a média Bacen para esta modalidade é de . Consulte um profissional para análise contratual.`;
+    alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> Sua operação está ${fmtPct(diff)} a.m. acima da média Bacen para ${bacen.nome}. Para referência: a média Bacen para esta modalidade é de ${fmtPct(bacen.taxaMes)} a.m. Consulte um profissional para análise contratual.`;
   } else if (diff > 0.5) {
     alertSit.className = 'alert show alert-warn';
     alertSit.innerHTML = `<strong>ℹ Comparativo informativo.</strong> A taxa calculada está acima da média Bacen para esta modalidade. Esta informação tem caráter exclusivamente educativo.`;
@@ -3248,8 +3248,8 @@ function gerarPDF() {
   for (let p = 1; p <= totalPagesMain; p++) {
     doc.setPage(p);
     doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(160, 160, 160);
-    doc.text('MinhaTaxaReal · Cálculo matemático para fins técnicos · Fonte: Banco Central do Brasil (dadosabertos.bcb.gov.br)', lm, 291);
-    doc.text('Plano: ' + (window.userPremium ? 'Premium' : 'Standard') + '  ·  Página ' + p + ' de ' + totalPagesMain, 190, 291, { align: 'right' });
+    doc.text('Documento gerado pela ferramenta educacional MinhaTaxaReal (minhataxareal.com.br). Não constitui laudo técnico oficial, assessoria financeira ou jurídica.', lm, 289);
+    doc.text('Fonte BCB: dadosabertos.bcb.gov.br  ·  Plano: ' + (window.userPremium ? 'Premium' : 'Standard') + '  ·  Página ' + p + ' de ' + totalPagesMain, 190, 292.5, { align: 'right' });
   }
   doc.setPage(totalPagesMain);
 
