@@ -571,6 +571,9 @@
   .btn-remove-evento:hover { color: var(--red); }
   .stj-badge { background: var(--blue-dim); border: 1px solid rgba(96,165,250,.25); color: var(--blue); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11px; line-height: 1.6; margin-top: 10px; }
   .stj-badge-warn { background: var(--amber-dim); border: 1px solid rgba(245,166,35,.25); color: var(--amber); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11px; line-height: 1.6; margin-top: 10px; }
+  .toggle-bcb-container { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 20px; }
+  .toggle-bcb-container .toggle-label { font-size: 12px; color: var(--text2); font-weight: 500; flex: 1; }
+  .toggle-status { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em; color: var(--accent); min-width: 28px; }
   .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
   .toggle-label { font-size: 12px; color: var(--text2); font-weight: 500; }
   .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
@@ -722,11 +725,22 @@
   <div class="left-panel">
     <p class="panel-title">Dados da Operação</p>
 
-    <!-- tabs: simular / auditar -->
-    <div class="tabs">
+    <!-- tabs -->
+    <div class="tabs" style="grid-template-columns:1fr 1fr 1fr 1fr">
       <button class="tab-btn active" id="tab-simular" onclick="switchTab('simular')">Simular</button>
-      <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Auditar</button>
-      <button class="tab-btn" id="tab-inadimplencia" onclick="switchTab('inadimplencia')">Inadimplência</button>
+      <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Extrato</button>
+      <button class="tab-btn" id="tab-inadimplencia" onclick="switchTab('inadimplencia')">Inadimpl.</button>
+      <button class="tab-btn" id="tab-atualizacao" onclick="switchTab('atualizacao')">Atualização</button>
+    </div>
+
+    <!-- toggle comparação BCB -->
+    <div class="toggle-bcb-container">
+      <span class="toggle-label">Comparação com BCB</span>
+      <label class="toggle-switch" style="width:48px;height:24px">
+        <input type="checkbox" id="toggle-bcb" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span id="toggle-bcb-label" class="toggle-status">ON</span>
     </div>
 
     <!-- MODO SIMULAR -->
@@ -1026,62 +1040,99 @@
       </div>
     </div>
 
-    <!-- MODO AUDITAR (campos adicionais) -->
+    <!-- MODO EXTRATO (apuração de extrato bancário) -->
     <div id="mode-auditar" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
-        <select id="modalidade-aud" onchange="updateBacenRefAud()">
-          <option value="veiculo">Financiamento de Veículos</option>
-          <option value="pessoal">Crédito Pessoal</option>
-          <option value="habitacional">Crédito Habitacional</option>
-          <option value="capital">Capital de Giro (PJ)</option>
-          <option value="consignado">Crédito Consignado (privado)</option>
-          <option value="consignadoINSS">Crédito Consignado (INSS)</option>
-          <option value="cheque">Cheque Especial</option>
-          <option value="cartao">Cartão de Crédito Rotativo</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Data de assinatura do contrato <span class="form-hint">opcional — taxa do período</span></label>
-        <input type="date" id="data-contrato-aud" style="width:100%" onchange="onDataContratoChange('modalidade-aud','bacen-ref-label-aud')" />
-        <div id="alerta-bcb-aud" style="display:none"></div>
+      <p class="panel-title" style="margin-bottom:4px">Apuração de Extrato Bancário</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Lance os pagamentos mês a mês e apure a taxa efetiva real aplicada em cada período.</p>
+
+      <div class="premium-gate-extrato" id="extrato-premium-gate" style="display:none">
+        <div class="stj-badge-warn">🔒 Funcionalidade exclusiva do plano Premium.</div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Valor total financiado (contrato) <span class="form-hint">R$</span></label>
-        <div class="input-prefix-wrap">
-          <span class="input-prefix">R$</span>
-          <input type="text" id="aud-valor" placeholder="25.000,00" oninput="maskCurrency(this)" />
+      <div id="extrato-form">
+        <p class="panel-title" style="font-size:11px;margin-bottom:10px">Dados do Contrato</p>
+
+        <div class="form-group">
+          <label class="form-label">Modalidade <span class="form-hint">Bacen</span></label>
+          <select id="ext-modalidade" onchange="updateBacenRefAud()">
+            <option value="veiculo">Financiamento de Veículos</option>
+            <option value="pessoal">Crédito Pessoal</option>
+            <option value="habitacional">Crédito Habitacional</option>
+            <option value="capital">Capital de Giro (PJ)</option>
+            <option value="consignado">Crédito Consignado (privado)</option>
+            <option value="consignadoINSS">Crédito Consignado (INSS)</option>
+            <option value="cheque">Cheque Especial</option>
+            <option value="cartao">Cartão de Crédito Rotativo</option>
+          </select>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Número total de parcelas <span class="form-hint">meses</span></label>
-        <div class="input-suffix-wrap">
-          <input type="number" id="aud-parcelas" placeholder="48" min="1" max="480" />
-          <span class="input-suffix">x</span>
+
+        <div class="form-group">
+          <label class="form-label">Valor original do contrato <span class="form-hint">R$</span></label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">R$</span>
+            <input type="text" id="ext-valor" placeholder="0,00" oninput="maskCurrency(this)" />
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Valor de cada parcela <span class="form-hint">R$</span></label>
-        <div class="input-prefix-wrap">
-          <span class="input-prefix">R$</span>
-          <input type="text" id="aud-parcela-val" placeholder="750,00" oninput="maskCurrency(this)" />
+
+        <div class="form-group">
+          <label class="form-label">Data de início do contrato</label>
+          <input type="date" id="ext-data-inicio" style="width:100%" />
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Parcelas já pagas <span class="form-hint">quitadas</span></label>
-        <div class="input-suffix-wrap">
-          <input type="number" id="aud-pagas" placeholder="12" min="0" />
-          <span class="input-suffix">x</span>
+
+        <div class="form-group">
+          <label class="form-label">Taxa nominal contratada <span class="form-hint">% a.m.</span></label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="ext-taxa-nominal" placeholder="0,00" step="0.01" min="0" />
+            <span class="input-suffix">% a.m.</span>
+          </div>
         </div>
-      </div>
-      <hr class="form-divider">
-      <div class="form-group">
-        <label class="form-label">Sistema de amortização <span class="form-hint">tabela</span></label>
-        <select id="aud-sistema">
-          <option value="price">Tabela Price</option>
-          <option value="sac">SAC</option>
-        </select>
+
+        <div class="form-group">
+          <label class="form-label">Número de parcelas</label>
+          <div class="input-suffix-wrap">
+            <input type="number" id="ext-parcelas" placeholder="0" min="1" max="480" />
+            <span class="input-suffix">x</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sistema de amortização</label>
+          <select id="ext-sistema">
+            <option value="price">Tabela Price</option>
+            <option value="sac">SAC</option>
+            <option value="sacre">SACRE</option>
+          </select>
+        </div>
+
+        <hr class="form-divider">
+        <p class="panel-title" style="font-size:11px;margin-bottom:10px">Lançamento do Extrato</p>
+
+        <div style="overflow-x:auto;margin-bottom:10px">
+          <table id="ext-tabela" style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="background:var(--surface2)">
+                <th style="padding:6px 8px;text-align:left;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)">Mês/Ano</th>
+                <th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)">Valor Pago (R$)</th>
+                <th style="padding:6px 8px;text-align:center;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)">Situação</th>
+                <th style="padding:6px 4px;border-bottom:1px solid var(--border)"></th>
+              </tr>
+            </thead>
+            <tbody id="ext-tabela-body"></tbody>
+          </table>
+        </div>
+
+        <button onclick="extAddRow()" style="width:100%;padding:8px;background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--radius-sm);color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:14px">+ Adicionar período</button>
+
+        <button onclick="calcularExtrato()" class="calc-btn">⚡ Calcular Apuração</button>
+
+        <hr class="form-divider" style="margin-top:16px">
+        <!-- Placeholder IA -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center;opacity:.7">
+          <div style="font-size:18px;margin-bottom:6px">📎</div>
+          <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:4px">Em breve: preenchimento automático via IA</div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px">Faça upload do contrato ou extrato em PDF e a IA preencherá os campos automaticamente.</div>
+          <button disabled style="padding:6px 16px;background:var(--surface);border:1px solid var(--border);border-radius:99px;color:var(--text3);font-size:11px;cursor:not-allowed">Em breve</button>
+        </div>
       </div>
     </div>
 
@@ -1263,7 +1314,7 @@
       <div class="form-group">
         <label class="form-label">Multa aplicada <span class="form-hint">% sobre o saldo</span></label>
         <div class="input-suffix-wrap">
-          <input type="number" id="inad-multa" value="2" step="0.01" min="0" max="100" />
+          <input type="number" id="inad-multa" placeholder="2" step="0.01" min="0" max="100" />
           <span class="input-suffix">%</span>
         </div>
       </div>
@@ -1271,7 +1322,7 @@
       <div class="form-group">
         <label class="form-label">Juros de mora <span class="form-hint">% a.m.</span></label>
         <div class="input-suffix-wrap">
-          <input type="number" id="inad-juros-mora" value="1" step="0.01" min="0" />
+          <input type="number" id="inad-juros-mora" placeholder="1" step="0.01" min="0" />
           <span class="input-suffix">% a.m.</span>
         </div>
       </div>
@@ -1317,6 +1368,71 @@
 
       <button class="calc-btn" onclick="calcularInadimplencia()">▶ Apurar Inadimplência</button>
       <button class="clear-btn" onclick="limparInadimplencia()">↺ Limpar campos</button>
+    </div>
+
+    <!-- ══ MODO ATUALIZAÇÃO MONETÁRIA ══ -->
+    <div id="mode-atualizacao" style="display:none">
+      <p class="panel-title" style="margin-bottom:4px">Atualização Monetária</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Cálculo para cumprimento de sentença conforme EC 113/2021.</p>
+
+      <div class="form-group">
+        <label class="form-label">Valor da condenação <span class="form-hint">R$</span></label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">R$</span>
+          <input type="text" id="atl-valor" placeholder="0,00" oninput="maskCurrency(this)" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data base <span class="form-hint">sentença ou evento</span></label>
+        <input type="date" id="atl-data-base" style="width:100%" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data de apuração</label>
+        <input type="date" id="atl-data-apuracao" style="width:100%" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tribunal</label>
+        <select id="atl-tribunal">
+          <option value="tjmg">TJMG</option>
+          <option value="tjsp">TJSP</option>
+          <option value="tjrs">TJRS</option>
+          <option value="tjpr">TJPR</option>
+          <option value="trf1">TRF1</option>
+          <option value="trf3">TRF3</option>
+          <option value="stj">STJ</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Natureza da dívida</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="radio" name="atl-natureza" value="civel" checked style="accent-color:var(--accent)"> Cível geral
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="radio" name="atl-natureza" value="fazenda" style="accent-color:var(--accent)"> Fazenda Pública
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="radio" name="atl-natureza" value="bancaria" style="accent-color:var(--accent)"> Bancária
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="radio" name="atl-natureza" value="trabalhista" style="accent-color:var(--accent)"> Trabalhista
+          </label>
+        </div>
+      </div>
+
+      <div id="atl-loading" style="display:none;font-size:12px;color:var(--amber);font-family:'DM Mono',monospace;padding:10px 0;text-align:center">
+        ⟳ Buscando índices no Banco Central…
+      </div>
+
+      <button class="calc-btn" onclick="calcularAtualizacao()">▶ Calcular Atualização</button>
+      <button class="clear-btn" onclick="limparAtualizacao()">↺ Limpar campos</button>
+
+      <div id="atl-resultado" style="display:none;margin-top:20px"></div>
     </div>
 
     <div id="alert-input" class="alert alert-danger"></div>
@@ -1782,8 +1898,13 @@ function switchTab(tab) {
   document.getElementById('tab-simular').classList.toggle('active', tab === 'simular');
   document.getElementById('tab-auditar').classList.toggle('active', tab === 'auditar');
   document.getElementById('tab-inadimplencia').classList.toggle('active', tab === 'inadimplencia');
+  document.getElementById('tab-atualizacao').classList.toggle('active', tab === 'atualizacao');
   document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
   document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
+  document.getElementById('mode-atualizacao').style.display = tab === 'atualizacao' ? '' : 'none';
+  // Botões principais só aparecem no modo simular
+  const mainBtns = document.getElementById('main-calc-buttons');
+  if (mainBtns) mainBtns.style.display = tab === 'simular' ? '' : 'none';
   // mode-inadimplencia é controlado individualmente abaixo (depende do gate premium)
   if (tab !== 'inadimplencia') {
     document.getElementById('mode-inadimplencia').style.display = 'none';
@@ -3614,10 +3735,10 @@ function exibirAlertaBCB(alertElId, nivel, dados) {
   if (nivel === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
   const styles = {
     1: 'background:rgba(251,191,36,.12);border:1px solid var(--amber,#f59e0b);color:var(--amber,#b45309)',
-    2: 'background:rgba(59,130,246,.1);border:1px solid #3b82f6;color:#1d4ed8',
-    3: 'background:rgba(251,191,36,.12);border:1px solid var(--amber,#f59e0b);color:var(--amber,#b45309)',
+    2: 'background:rgba(55,48,163,.15);border:1px solid #3730A3;color:#ffffff',
+    3: 'background:rgba(55,48,163,.15);border:1px solid #3730A3;color:#ffffff',
   };
-  const icons = { 1: '⚠️', 2: 'ℹ️', 3: '⚠️' };
+  const icons = { 1: '⚠️', 2: 'ℹ️', 3: 'ℹ️' };
   const { defasagem } = dados;
   let msg = '';
   if (nivel === 1) {
@@ -3625,15 +3746,15 @@ function exibirAlertaBCB(alertElId, nivel, dados) {
 As taxas médias do BCB são publicadas com defasagem de 60 a 90 dias. O cálculo foi realizado com a referência mais recente disponível: competência <strong>${competencia || '—'}</strong>${defasagem > 0 ? ' (defasagem de ' + defasagem + ' ' + (defasagem === 1 ? 'mês' : 'meses') + ')' : ''}.<br>
 Série BCB/SGS: <strong>${serie || '—'}</strong>.`;
   } else if (nivel === 2) {
-    msg = `<strong>Dado BCB com defasagem de ${defasagem || '?'} ${(defasagem === 1 ? 'mês' : 'meses')}</strong><br>
-O BCB divulga as taxas médias com defasagem média de 60 a 90 dias. A taxa exibida refere-se à competência <strong>${competencia || '—'}</strong>, a mais recente disponível.<br>
+    msg = `<strong>Informação sobre a taxa de referência</strong><br>
+O Banco Central publica as taxas médias com defasagem de 60 a 90 dias. Dado exibido refere-se à competência <strong>${competencia || '—'}</strong> (defasagem de ${defasagem || '?'} ${defasagem === 1 ? 'mês' : 'meses'}).<br>
+<span style="color:#A3E635;font-weight:bold">✅ O cálculo foi realizado normalmente com a referência disponível.</span><br>
 Fonte: BCB/SGS série <strong>${serie || '—'}</strong>.`;
   } else {
-    msg = `<strong>Não foi possível obter a taxa BCB.</strong><br>
-Não há dados nas séries BCB/SGS ${serie||'—'} para a competência solicitada (${competencia||'—'}).<br>
-Possíveis motivos: período muito recente (dado não publicado) ou anterior ao início da série.<br>
-Usando estimativa de referência. O cálculo foi realizado normalmente.<br>
-<em>Para cálculos periciais, informe manualmente a taxa contratual.</em>`;
+    msg = `<strong>ℹ️ Informação sobre a taxa de referência</strong><br><br>
+O Banco Central publica as taxas médias com defasagem de 60 a 90 dias. Para a competência solicitada (${competencia||'—'}), o dado oficial ainda não está disponível.<br><br>
+<span style="color:#A3E635;font-weight:bold">✅ O cálculo foi realizado normalmente com a estimativa de referência disponível.</span><br><br>
+Para maior precisão, informe a taxa do contrato no campo <em>"Taxa nominal informada"</em>.`;
   }
   el.style.display = '';
   el.style.cssText = `display:block;margin-top:6px;padding:8px 12px;border-radius:6px;font-size:11px;line-height:1.6;${styles[nivel]}`;
@@ -3774,7 +3895,7 @@ window.renderResultados = function(taxaMes, pv, n, pmt, modalidade, sistema) {
         <div class="form-group" style="margin:0">
           <label class="form-label">% máx. comprometimento</label>
           <div class="input-suffix-wrap">
-            <input type="number" id="rev-comprometimento" value="30" min="1" max="100" />
+            <input type="number" id="rev-comprometimento" placeholder="30" min="1" max="100" />
             <span class="input-suffix">%</span>
           </div>
         </div>
@@ -6117,7 +6238,319 @@ window.addEventListener('DOMContentLoaded', () => {
   // Data de apuração padrão = hoje
   const inadApur = document.getElementById('inad-apuracao');
   if (inadApur) inadApur.value = new Date().toISOString().slice(0, 10);
+
+  // Data de apuração ATUALIZAÇÃO = hoje
+  const atlApur = document.getElementById('atl-data-apuracao');
+  if (atlApur) atlApur.value = new Date().toISOString().slice(0, 10);
+
+  // Toggle BCB — restaurar preferência e vincular handler
+  (function initToggleBCB() {
+    const tog = document.getElementById('toggle-bcb');
+    if (!tog) return;
+    const pref = localStorage.getItem('mtr_bcb_toggle');
+    if (pref === '0') { tog.checked = false; aplicarToggleBCB(false); }
+    tog.addEventListener('change', e => {
+      aplicarToggleBCB(e.target.checked);
+      localStorage.setItem('mtr_bcb_toggle', e.target.checked ? '1' : '0');
+    });
+  })();
+
+  // Adicionar primeira linha na tabela extrato
+  extAddRow();
 });
+
+// ════════════════════════════════════════════
+//  TOGGLE BCB
+// ════════════════════════════════════════════
+function aplicarToggleBCB(ativo) {
+  document.getElementById('toggle-bcb-label').textContent = ativo ? 'ON' : 'OFF';
+  const seletores = [
+    '#compare-section', '#differential-box', '.taxa-bcb-row',
+    '#bacen-ref-label', '#bacen-ref-label-aud', '#bacen-ref-label-inad',
+    '#alerta-bcb-sim', '#alerta-bcb-aud', '#alerta-bcb-inad',
+    '#alert-situacao'
+  ];
+  seletores.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.display = ativo ? '' : 'none';
+    });
+  });
+  const labelModo = document.getElementById('label-modo-calculo');
+  if (labelModo) labelModo.textContent = ativo ? 'Modo: Simulação com referência BCB' : 'Modo: Análise do contrato';
+}
+
+// ════════════════════════════════════════════
+//  EXTRATO — tabela editável + cálculo
+// ════════════════════════════════════════════
+let _extRowId = 0;
+function extAddRow() {
+  const tbody = document.getElementById('ext-tabela-body');
+  if (!tbody) return;
+  const id = ++_extRowId;
+  const hoje = new Date();
+  const mesAno = (hoje.getMonth() + 1).toString().padStart(2, '0') + '/' + hoje.getFullYear();
+  const tr = document.createElement('tr');
+  tr.id = 'ext-row-' + id;
+  tr.innerHTML = `
+    <td style="padding:4px"><input type="text" placeholder="mm/aaaa" value="${mesAno}" id="ext-mesano-${id}" style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:11px" /></td>
+    <td style="padding:4px"><input type="text" placeholder="0,00" id="ext-pago-${id}" oninput="maskCurrency(this)" style="width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:11px" /></td>
+    <td style="padding:4px">
+      <select id="ext-sit-${id}" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:11px;width:100%">
+        <option value="pago">Pago</option>
+        <option value="atraso">Em atraso</option>
+        <option value="nao_pago">Não pago</option>
+        <option value="carencia">Carência</option>
+      </select>
+    </td>
+    <td style="padding:4px;text-align:center"><button onclick="extRemRow(${id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px" title="Remover">🗑️</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function extRemRow(id) {
+  const tr = document.getElementById('ext-row-' + id);
+  if (tr) tr.remove();
+}
+
+function calcularExtrato() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  const valor = parseBRL(document.getElementById('ext-valor')?.value || '');
+  const taxaNom = parseFloat(document.getElementById('ext-taxa-nominal')?.value) || 0;
+  const nParcelas = parseInt(document.getElementById('ext-parcelas')?.value) || 0;
+  const sistema = document.getElementById('ext-sistema')?.value || 'price';
+  const modalidade = document.getElementById('ext-modalidade')?.value || 'pessoal';
+
+  if (!valor || valor <= 0) { showAlert(alertEl, 'Informe o valor original do contrato.'); return; }
+  if (!nParcelas || nParcelas <= 0) { showAlert(alertEl, 'Informe o número de parcelas.'); return; }
+
+  // Coletar linhas da tabela
+  const rows = [];
+  document.querySelectorAll('#ext-tabela-body tr').forEach(tr => {
+    const rid = tr.id.replace('ext-row-', '');
+    const mesano = document.getElementById('ext-mesano-' + rid)?.value || '';
+    const pago = parseBRL(document.getElementById('ext-pago-' + rid)?.value || '');
+    const sit = document.getElementById('ext-sit-' + rid)?.value || 'pago';
+    rows.push({ mesano, pago, sit });
+  });
+
+  if (!rows.length) { showAlert(alertEl, 'Adicione ao menos um período no extrato.'); return; }
+
+  // Gerar tabela teórica (Price ou SAC)
+  const iTaxaNom = taxaNom / 100;
+  let tabTeorica = [];
+  if (sistema === 'sac') {
+    tabTeorica = gerarTabelaSAC(valor, iTaxaNom, nParcelas);
+  } else {
+    tabTeorica = gerarTabelaPrice(valor, iTaxaNom, nParcelas);
+  }
+
+  // Apuração período a período
+  const bcenRef = BACEN[modalidade] || BACEN.pessoal;
+  let totalPago = 0, totalTeorico = 0, totalBCB = 0;
+  let detalhes = [];
+
+  rows.forEach((r, i) => {
+    const teorico = tabTeorica[i] || {};
+    const pmtTeorico = teorico.pmt || 0;
+    const jurosTeorico = teorico.juros || 0;
+    const saldo = teorico.saldo || 0;
+    const taxaEfetiva = saldo > 0 ? (r.pago - (teorico.amort || 0)) / saldo * 100 : taxaNom;
+    const taxaBCB = bcenRef.taxaMes;
+    const difTaxas = taxaEfetiva - taxaBCB;
+
+    totalPago += r.pago || 0;
+    totalTeorico += pmtTeorico;
+    totalBCB += saldo > 0 ? (saldo * taxaBCB / 100) + (teorico.amort || 0) : pmtTeorico;
+
+    detalhes.push({ mesano: r.mes || r.mesano, sit: r.sit, pago: r.pago, pmtTeorico, saldo, taxaEfetiva: isNaN(taxaEfetiva) ? taxaNom : taxaEfetiva, taxaBCB, difTaxas });
+  });
+
+  // Taxa média efetiva (TIR aproximada via média ponderada)
+  const taxaMediaEfetiva = detalhes.length ? detalhes.reduce((s, d) => s + d.taxaEfetiva, 0) / detalhes.length : taxaNom;
+  const taxaAnoEfetiva = (Math.pow(1 + taxaMediaEfetiva / 100, 12) - 1) * 100;
+  const taxaAnoNom = (Math.pow(1 + iTaxaNom, 12) - 1) * 100;
+  const taxaBCBano = (Math.pow(1 + bcenRef.taxaMes / 100, 12) - 1) * 100;
+  const difTotal = totalPago - totalBCB;
+
+  // Renderizar resultado na right-panel
+  const resArea = document.getElementById('results-area');
+  if (resArea) {
+    resArea.style.display = '';
+    resArea.innerHTML = `
+      <div class="section-heading">Resultado da Apuração de Extrato</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div class="metric-card"><div class="mc-lbl">Taxa média efetiva apurada</div><div class="mc-value accent">${fmtPct(taxaMediaEfetiva)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoEfetiva)} a.a.</div></div>
+        <div class="metric-card"><div class="mc-lbl">Taxa nominal contratada</div><div class="mc-value">${fmtPct(taxaNom)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoNom)} a.a.</div></div>
+        <div class="metric-card"><div class="mc-lbl">Taxa média BCB (${bcenRef.nome})</div><div class="mc-value">${fmtPct(bcenRef.taxaMes)} a.m.</div><div class="mc-sub">${fmtPct(taxaBCBano)} a.a.</div></div>
+        <div class="metric-card"><div class="mc-lbl">Total pago vs. referência BCB</div><div class="mc-value ${difTotal > 0 ? 'danger' : 'ok'}">${difTotal >= 0 ? '+' : ''}${fmtBRL(difTotal)}</div><div class="mc-sub">total pago: ${fmtBRL(totalPago)}</div></div>
+      </div>
+      <div class="section-heading" style="margin-top:20px">Detalhamento por Período</div>
+      <div style="overflow-x:auto">
+        <table class="amort-table" style="width:100%;font-size:11px">
+          <thead><tr>
+            <th>Mês</th><th>Situação</th><th>Valor Pago</th><th>Parcela Teórica</th>
+            <th>Saldo Devedor</th><th>Taxa Efetiva</th><th>Taxa BCB</th><th>Diferença</th>
+          </tr></thead>
+          <tbody>${detalhes.map(d => `<tr>
+            <td>${d.mesano}</td>
+            <td>${{ pago: '✅ Pago', atraso: '⚠️ Atraso', nao_pago: '❌ Não pago', carencia: '⏸ Carência' }[d.sit] || d.sit}</td>
+            <td style="text-align:right">${fmtBRL(d.pago)}</td>
+            <td style="text-align:right">${fmtBRL(d.pmtTeorico)}</td>
+            <td style="text-align:right">${fmtBRL(d.saldo)}</td>
+            <td style="text-align:right;color:var(--accent)">${fmtPct(d.taxaEfetiva)}</td>
+            <td style="text-align:right">${fmtPct(d.taxaBCB)}</td>
+            <td style="text-align:right;color:${d.difTaxas > 0.5 ? 'var(--red)' : 'var(--text2)'}">${d.difTaxas >= 0 ? '+' : ''}${fmtPct(d.difTaxas)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="disclaimer" style="margin-top:16px">
+        A apuração mês a mês da taxa efetiva permite identificar divergências entre a taxa contratada e a efetivamente cobrada em cada período. · <a href="termos.html" style="color:inherit;text-decoration:underline">Termos de Uso</a>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+//  ATUALIZAÇÃO MONETÁRIA — EC 113/2021
+// ════════════════════════════════════════════
+const EC113_DATA  = new Date('2021-12-08');
+const FAZENDA_EC  = new Date('2021-05-05');
+const SGS_IPCA_E  = 13522; // IPCA-E acumulado mensal
+const SGS_SELIC_M = 4390;  // SELIC acumulada mensal
+const SGS_INPC_M  = 188;   // INPC mensal
+
+async function calcularAtualizacao() {
+  const alertEl = document.getElementById('alert-input');
+  alertEl.classList.remove('show');
+
+  const valor = parseBRL(document.getElementById('atl-valor')?.value || '');
+  const dataBase = document.getElementById('atl-data-base')?.value;
+  const dataApuracao = document.getElementById('atl-data-apuracao')?.value;
+  const natureza = document.querySelector('input[name="atl-natureza"]:checked')?.value || 'civel';
+
+  if (!valor || valor <= 0) { showAlert(alertEl, 'Informe o valor da condenação.'); return; }
+  if (!dataBase) { showAlert(alertEl, 'Informe a data base.'); return; }
+  if (!dataApuracao) { showAlert(alertEl, 'Informe a data de apuração.'); return; }
+  if (dataApuracao <= dataBase) { showAlert(alertEl, 'A data de apuração deve ser posterior à data base.'); return; }
+
+  const dtBase = new Date(dataBase + 'T12:00:00');
+  const dtApuracao = new Date(dataApuracao + 'T12:00:00');
+  const isFazenda = natureza === 'fazenda';
+
+  // Determinar índices conforme EC 113/2021
+  let indiceCorr, indiceJuros, baseJuros;
+  if (dtBase >= EC113_DATA || !isFazenda) {
+    // Cível/bancária/trabalhista após EC113: IPCA-E + SELIC
+    indiceCorr  = { nome: 'IPCA-E', serie: SGS_IPCA_E };
+    indiceJuros = { nome: 'SELIC', serie: SGS_SELIC_M };
+  } else {
+    // Antes de EC113: INPC + 1% a.m.
+    indiceCorr  = { nome: 'INPC', serie: SGS_INPC_M };
+    indiceJuros = { nome: '1% a.m. (art. 406 CC)', serie: null, fixo: 1.0 };
+  }
+
+  const loadEl = document.getElementById('atl-loading');
+  if (loadEl) loadEl.style.display = '';
+
+  try {
+    // Montar range de meses
+    const meses = getMeses(dataBase.slice(0, 7), dataApuracao.slice(0, 7));
+    if (!meses.length) { showAlert(alertEl, 'Período inválido.'); return; }
+
+    const dataIniBCB = meses[0].dataIniBCB;
+    const dataFimBCB = meses[meses.length - 1].dataFimBCB;
+
+    // Buscar séries
+    const [serieCorr, serieJur] = await Promise.all([
+      buscarSerieHistorica(indiceCorr.serie, dataIniBCB, dataFimBCB),
+      indiceJuros.serie ? buscarSerieHistorica(indiceJuros.serie, dataIniBCB, dataFimBCB) : Promise.resolve([]),
+    ]);
+
+    const mapCorr = serieParaMap(serieCorr);
+    const mapJur  = indiceJuros.serie ? serieParaMap(serieJur) : {};
+
+    let saldoCorr = valor;
+    let totalCorrecao = 0, totalJuros = 0;
+    let detalhesMeses = [];
+
+    meses.forEach(m => {
+      const fCorr = indiceCorr.serie
+        ? (parseFloat(mapCorr[m.key] ?? 0) / 100)
+        : 0;
+      const fJur = indiceJuros.fixo
+        ? (indiceJuros.fixo / 100)
+        : (parseFloat(mapJur[m.key] ?? 0) / 100);
+
+      const corrMes = saldoCorr * fCorr;
+      const jurMes  = saldoCorr * fJur;
+      saldoCorr += corrMes;
+      totalCorrecao += corrMes;
+      totalJuros    += jurMes;
+
+      detalhesMeses.push({
+        mesAno: m.key,
+        fatorCorr: (fCorr * 100).toFixed(4),
+        fatorJur:  (fJur * 100).toFixed(4),
+        valorAtual: saldoCorr,
+      });
+    });
+
+    const totalAtualizado = valor + totalCorrecao + totalJuros;
+    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const fmtMesAno = k => { const p = k.split('-'); return mesesNomes[parseInt(p[1]) - 1] + '/' + p[0]; };
+
+    const resDiv = document.getElementById('atl-resultado');
+    if (resDiv) {
+      resDiv.style.display = '';
+      resDiv.innerHTML = `
+        <div class="section-heading">Resultado da Atualização</div>
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span style="color:var(--text2)">Valor original</span><span>${fmtBRL(valor)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span style="color:var(--text2)">Correção monetária (${indiceCorr.nome})</span><span>${fmtBRL(totalCorrecao)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
+            <span style="color:var(--text2)">Juros de mora (${indiceJuros.nome})</span><span>${fmtBRL(totalJuros)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:16px;font-weight:700">
+            <span style="color:var(--accent)">TOTAL ATUALIZADO</span><span style="color:var(--accent)">${fmtBRL(totalAtualizado)}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+            Período: ${fmtMesAno(meses[0].key)} a ${fmtMesAno(meses[meses.length-1].key)} · Base legal: EC 113/2021 / art. 406 CC
+          </div>
+        </div>
+        <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px">
+          Atualização calculada conforme Emenda Constitucional 113/2021, que unificou os índices de correção monetária e juros de mora para condenações judiciais em IPCA-E + SELIC.
+        </div>
+        <div style="overflow-x:auto">
+          <table class="amort-table" style="width:100%;font-size:11px">
+            <thead><tr>
+              <th>Mês/Ano</th><th>${indiceCorr.nome} (%)</th><th>${indiceJuros.nome} (%)</th><th>Valor Atualizado</th>
+            </tr></thead>
+            <tbody>${detalhesMeses.map(d => `<tr>
+              <td>${fmtMesAno(d.mesAno)}</td>
+              <td style="text-align:right">${d.fatorCorr}</td>
+              <td style="text-align:right">${d.fatorJur}</td>
+              <td style="text-align:right;color:var(--accent)">${fmtBRL(d.valorAtual)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+    }
+  } catch (e) {
+    showAlert(alertEl, 'Erro ao buscar índices BCB: ' + e.message, 'alert-warn');
+  } finally {
+    if (loadEl) loadEl.style.display = 'none';
+  }
+}
+
+function limparAtualizacao() {
+  ['atl-valor','atl-data-base'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('atl-data-apuracao').value = new Date().toISOString().slice(0, 10);
+  const res = document.getElementById('atl-resultado');
+  if (res) { res.style.display = 'none'; res.innerHTML = ''; }
+}
 </script>
 </body>
 </html>
