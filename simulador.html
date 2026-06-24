@@ -1428,70 +1428,178 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- ══ MODO ATUALIZAÇÃO MONETÁRIA ══ -->
     <div id="mode-atualizacao" style="display:none">
-      <p class="panel-title" style="margin-bottom:4px">Atualização Monetária</p>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Lance os valores a serem atualizados e apure o total corrigido até a data de apuração.</p>
 
-      <div class="form-group">
-        <label class="form-label">Valor base <span class="form-hint">R$</span></label>
-        <div class="input-prefix-wrap">
-          <span class="input-prefix">R$</span>
-          <input type="text" id="atl-valor" placeholder="0,00" oninput="maskCurrency(this)" />
+      <!-- Premium gate -->
+      <div id="atl-premium-gate" style="display:none;text-align:center;padding:32px 12px">
+        <div style="font-size:30px;margin-bottom:10px">🔒</div>
+        <p style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:8px;color:var(--text)">Plano Premium</p>
+        <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px">A aba <strong style="color:var(--text)">Atualização Monetária</strong> é exclusiva do plano Premium.<br>Calcule múltiplos lançamentos, honorários, multas e exporte PDF/Excel.</p>
+        <button class="calc-btn" style="max-width:240px;width:100%;justify-content:center" onclick="window.open('https://pay.kiwify.com.br/1xAQ6ev','_blank')">Fazer upgrade &#8594; Premium</button>
+      </div>
+
+      <!-- Conteúdo (somente premium) -->
+      <div id="atl-content">
+        <p class="panel-title" style="margin-bottom:4px">Atualização Monetária</p>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Lance os valores a serem atualizados e apure o total corrigido até a data de apuração.</p>
+
+        <!-- Bloco 1 — Configurações gerais -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Data de apuração</label>
+            <input type="date" id="atl-data-apuracao" style="width:100%" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tribunal</label>
+            <select id="atl-tribunal" style="width:100%">
+              <option value="tjmg">TJMG</option>
+              <option value="tjsp">TJSP</option>
+              <option value="tjrs">TJRS</option>
+              <option value="tjpr">TJPR</option>
+              <option value="trf1">TRF1</option>
+              <option value="trf3">TRF3</option>
+              <option value="stj">STJ</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label">Data base <span class="form-hint">sentença ou evento</span></label>
-        <input type="date" id="atl-data-base" style="width:100%" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Data de apuração</label>
-        <input type="date" id="atl-data-apuracao" style="width:100%" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Tribunal</label>
-        <select id="atl-tribunal">
-          <option value="tjmg">TJMG</option>
-          <option value="tjsp">TJSP</option>
-          <option value="tjrs">TJRS</option>
-          <option value="tjpr">TJPR</option>
-          <option value="trf1">TRF1</option>
-          <option value="trf3">TRF3</option>
-          <option value="stj">STJ</option>
-          <option value="outro">Outro</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Finalidade</label>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="civel" checked style="accent-color:var(--accent)"> Contrato / Execução extrajudicial
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="judicial" style="accent-color:var(--accent)"> Processo judicial cível
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="fazenda" style="accent-color:var(--accent)"> Fazenda Pública
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="trabalhista" style="accent-color:var(--accent)"> Trabalhista
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="outro" style="accent-color:var(--accent)"> Outro
-          </label>
+        <div class="form-group">
+          <label class="form-label">Índice de correção</label>
+          <select id="atl-indice" style="width:100%">
+            <option value="auto">Automático (conforme finalidade e data)</option>
+            <option value="ipca_selic">IPCA-E + SELIC (EC 113/2021)</option>
+            <option value="inpc_1pct">INPC + 1% a.m. (art. 406 CC)</option>
+            <option value="ipca_6aa">IPCA-E + 6% a.a.</option>
+          </select>
         </div>
+
+        <div class="form-group">
+          <label class="form-label">Finalidade</label>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+              <input type="radio" name="atl-natureza" value="civel" checked style="accent-color:var(--accent)"> Contrato / Execução extrajudicial
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+              <input type="radio" name="atl-natureza" value="judicial" style="accent-color:var(--accent)"> Processo judicial cível
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+              <input type="radio" name="atl-natureza" value="fazenda" style="accent-color:var(--accent)"> Fazenda Pública
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+              <input type="radio" name="atl-natureza" value="trabalhista" style="accent-color:var(--accent)"> Trabalhista
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+              <input type="radio" name="atl-natureza" value="outro" style="accent-color:var(--accent)"> Outro
+            </label>
+          </div>
+        </div>
+
+        <!-- Bloco 2 — Tabela de lançamentos -->
+        <div class="section-heading" style="margin-top:2px;margin-bottom:10px">Lançamentos</div>
+        <div style="overflow-x:auto;margin-bottom:8px">
+          <table class="amort-table" id="atl-tabela" style="width:100%;font-size:11px">
+            <thead><tr>
+              <th style="width:24px">#</th>
+              <th>Descrição</th>
+              <th style="width:82px">Valor (R$)</th>
+              <th style="width:90px">Data Base</th>
+              <th style="width:70px">Tipo</th>
+              <th style="width:20px"></th>
+            </tr></thead>
+            <tbody id="atl-tabela-body"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+          <button class="clear-btn" style="flex:1;min-width:120px;font-size:11px" onclick="atlAddLancamento()">+ Lançamento</button>
+          <button class="clear-btn" style="flex:1;min-width:140px;font-size:11px" onclick="atlAbrirModalSerie()">+ Série de parcelas</button>
+        </div>
+
+        <!-- Bloco 3 — Encargos adicionais -->
+        <details style="margin-bottom:18px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+          <summary style="font-size:11px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);cursor:pointer;list-style:none">Encargos adicionais &#9658;</summary>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:14px">
+
+            <div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;margin-bottom:6px">
+                <input type="checkbox" id="atl-multa-check" onchange="atlToggleEncargo('multa')" style="accent-color:var(--accent)"> Multa
+              </label>
+              <div id="atl-multa-fields" style="display:none;padding-left:18px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div><label class="form-label">Percentual (%)</label>
+                    <div class="input-suffix-wrap"><input type="number" id="atl-multa-pct" placeholder="ex: 10" min="0" max="100" step="0.1"/><span class="input-suffix">%</span></div>
+                  </div>
+                  <div><label class="form-label">Incide sobre</label>
+                    <select id="atl-multa-base"><option value="principal">Valor original</option><option value="total">Total atualizado</option></select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;margin-bottom:6px">
+                <input type="checkbox" id="atl-hon-check" onchange="atlToggleEncargo('hon')" style="accent-color:var(--accent)"> Honorários advocatícios
+              </label>
+              <div id="atl-hon-fields" style="display:none;padding-left:18px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                  <div><label class="form-label">Tipo</label>
+                    <select id="atl-hon-tipo" onchange="atlToggleHonTipo()"><option value="pct">Percentual</option><option value="fixo">Valor fixo</option></select>
+                  </div>
+                  <div id="atl-hon-pct-wrap"><label class="form-label">Percentual (%)</label>
+                    <div class="input-suffix-wrap"><input type="number" id="atl-hon-pct" placeholder="ex: 20" min="0" max="100" step="0.1"/><span class="input-suffix">%</span></div>
+                  </div>
+                  <div id="atl-hon-fixo-wrap" style="display:none"><label class="form-label">Valor fixo (R$)</label>
+                    <div class="input-prefix-wrap"><span class="input-prefix">R$</span><input type="text" id="atl-hon-fixo" placeholder="0,00" oninput="maskCurrency(this)"/></div>
+                  </div>
+                </div>
+                <div><label class="form-label">Fase</label>
+                  <select id="atl-hon-fase">
+                    <option value="sucumbencia">Sucumbência</option>
+                    <option value="cumprimento">Cumprimento (art. 523 CPC)</option>
+                    <option value="contratual">Honorários contratuais</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;margin-bottom:6px">
+                <input type="checkbox" id="atl-juros-check" onchange="atlToggleEncargo('juros')" style="accent-color:var(--accent)"> Juros de mora adicionais
+              </label>
+              <div id="atl-juros-fields" style="display:none;padding-left:18px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div><label class="form-label">Taxa (% a.m.)</label>
+                    <div class="input-suffix-wrap"><input type="number" id="atl-juros-taxa" placeholder="0,00" min="0" step="0.01"/><span class="input-suffix">%</span></div>
+                  </div>
+                  <div><label class="form-label">Incide sobre</label>
+                    <select id="atl-juros-base"><option value="principal">Valor original</option><option value="total">Total atualizado</option></select>
+                  </div>
+                  <div><label class="form-label">De</label><input type="date" id="atl-juros-de" style="width:100%"/></div>
+                  <div><label class="form-label">Até</label><input type="date" id="atl-juros-ate" style="width:100%"/></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;margin-bottom:6px">
+                <input type="checkbox" id="atl-custas-check" onchange="atlToggleEncargo('custas')" style="accent-color:var(--accent)"> Custas processuais
+              </label>
+              <div id="atl-custas-fields" style="display:none;padding-left:18px">
+                <div class="input-prefix-wrap"><span class="input-prefix">R$</span><input type="text" id="atl-custas-valor" placeholder="0,00" oninput="maskCurrency(this)"/></div>
+              </div>
+            </div>
+
+          </div>
+        </details>
+
+        <div id="atl-loading" style="display:none;font-size:12px;color:var(--amber);font-family:'DM Mono',monospace;padding:10px 0;text-align:center">
+          &#x27F3; Buscando índices no Banco Central&#8230;
+        </div>
+
+        <button class="calc-btn" onclick="calcularAtualizacao()">&#9889; Calcular Atualização</button>
+        <button class="clear-btn" onclick="limparAtualizacao()" style="margin-top:8px">&#8635; Limpar</button>
+
+        <div id="atl-resultado" style="display:none;margin-top:20px"></div>
       </div>
-
-      <div id="atl-loading" style="display:none;font-size:12px;color:var(--amber);font-family:'DM Mono',monospace;padding:10px 0;text-align:center">
-        ⟳ Buscando índices no Banco Central…
-      </div>
-
-      <button class="calc-btn" onclick="calcularAtualizacao()">▶ Calcular Atualização</button>
-      <button class="clear-btn" onclick="limparAtualizacao()">↺ Limpar campos</button>
-
-      <div id="atl-resultado" style="display:none;margin-top:20px"></div>
     </div>
 
     <div id="alert-input" class="alert alert-danger"></div>
@@ -1960,7 +2068,20 @@ function switchTab(tab) {
   document.getElementById('tab-atualizacao').classList.toggle('active', tab === 'atualizacao');
   document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
   document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
-  document.getElementById('mode-atualizacao').style.display = tab === 'atualizacao' ? '' : 'none';
+  if (tab === 'atualizacao') {
+    document.getElementById('mode-atualizacao').style.display = '';
+    const gate = document.getElementById('atl-premium-gate');
+    const content = document.getElementById('atl-content');
+    if (window.userPremium === false) {
+      if (gate) gate.style.display = '';
+      if (content) content.style.display = 'none';
+    } else {
+      if (gate) gate.style.display = 'none';
+      if (content) content.style.display = '';
+    }
+  } else {
+    document.getElementById('mode-atualizacao').style.display = 'none';
+  }
   // Botões principais só aparecem no modo simular
   const mainBtns = document.getElementById('main-calc-buttons');
   if (mainBtns) mainBtns.style.display = tab === 'simular' ? '' : 'none';
@@ -6313,9 +6434,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const inadApur = document.getElementById('inad-apuracao');
   if (inadApur) inadApur.value = new Date().toISOString().slice(0, 10);
 
-  // Data de apuração ATUALIZAÇÃO = hoje
+  // Data de apuração ATUALIZAÇÃO = hoje + primeira linha na tabela
   const atlApur = document.getElementById('atl-data-apuracao');
   if (atlApur) atlApur.value = new Date().toISOString().slice(0, 10);
+  if (document.getElementById('atl-tabela-body')) atlAddLancamento();
 
   // Toggle BCB — restaurar preferência e vincular handler
   (function initToggleBCB() {
@@ -6489,136 +6611,281 @@ function calcularExtrato() {
 }
 
 // ════════════════════════════════════════════
-//  ATUALIZAÇÃO MONETÁRIA — EC 113/2021
+//  ATUALIZAÇÃO MONETÁRIA — multi-lançamentos
 // ════════════════════════════════════════════
 const EC113_DATA  = new Date('2021-12-08');
 const FAZENDA_EC  = new Date('2021-05-05');
-const SGS_IPCA_E  = 13522; // IPCA-E acumulado mensal
-const SGS_SELIC_M = 4390;  // SELIC acumulada mensal
-const SGS_INPC_M  = 188;   // INPC mensal
+const SGS_IPCA_E  = 13522;
+const SGS_SELIC_M = 4390;
+const SGS_INPC_M  = 188;
+
+let _atlRowId = 0;
+
+function atlAddLancamento(data = {}) {
+  const id = ++_atlRowId;
+  const tbody = document.getElementById('atl-tabela-body');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.id = 'atl-row-' + id;
+  const tipoOpts = ['principal','honorarios','multa','juros','outros'];
+  const tipoNm   = ['Principal','Honorários','Multa','Juros','Outros'];
+  tr.innerHTML = `
+    <td style="text-align:center;color:var(--text3);font-size:10px"></td>
+    <td><input type="text" placeholder="Descrição" value="${data.desc||''}" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:11px;padding:2px 0;outline:none"/></td>
+    <td><div class="input-prefix-wrap" style="min-width:0"><input type="text" placeholder="0,00" value="${data.valor||''}" oninput="maskCurrency(this)" style="font-size:11px"/></div></td>
+    <td><input type="date" value="${data.data||''}" style="width:100%;font-size:11px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 4px"/></td>
+    <td><select style="width:100%;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px">
+      ${tipoOpts.map((v,i)=>`<option value="${v}"${(data.tipo||'principal')===v?' selected':''}>${tipoNm[i]}</option>`).join('')}
+    </select></td>
+    <td><button onclick="atlRemLancamento('atl-row-${id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px" title="Remover">&times;</button></td>`;
+  tbody.appendChild(tr);
+  atlRenumerar();
+}
+
+function atlRenumerar() {
+  document.querySelectorAll('#atl-tabela-body tr').forEach((tr, i) => {
+    tr.querySelector('td:first-child').textContent = i + 1;
+  });
+}
+
+function atlRemLancamento(id) {
+  const tr = document.getElementById(id);
+  if (tr) tr.remove();
+  atlRenumerar();
+}
+
+function atlToggleEncargo(type) {
+  const check  = document.getElementById('atl-' + type + '-check');
+  const fields = document.getElementById('atl-' + type + '-fields');
+  if (fields) fields.style.display = check && check.checked ? '' : 'none';
+}
+
+function atlToggleHonTipo() {
+  const tipo = document.getElementById('atl-hon-tipo')?.value;
+  const pw = document.getElementById('atl-hon-pct-wrap');
+  const fw = document.getElementById('atl-hon-fixo-wrap');
+  if (pw) pw.style.display = tipo === 'pct'  ? '' : 'none';
+  if (fw) fw.style.display = tipo === 'fixo' ? '' : 'none';
+}
+
+function atlAbrirModalSerie() {
+  const m = document.getElementById('atl-modal-serie');
+  if (m) m.style.display = 'flex';
+}
+
+function atlFecharModalSerie() {
+  const m = document.getElementById('atl-modal-serie');
+  if (m) m.style.display = 'none';
+}
+
+function atlGerarSerie() {
+  const desc      = document.getElementById('atl-serie-desc')?.value || 'Parcela';
+  const valorStr  = document.getElementById('atl-serie-valor')?.value || '';
+  const qtd       = parseInt(document.getElementById('atl-serie-qtd')?.value) || 0;
+  const data1     = document.getElementById('atl-serie-data1')?.value;
+  const intervalo = document.getElementById('atl-serie-intervalo')?.value || 'mensal';
+  const tipo      = document.getElementById('atl-serie-tipo')?.value || 'principal';
+  if (!valorStr || qtd <= 0 || !data1) { alert('Preencha valor, quantidade e data da 1ª parcela.'); return; }
+  let dt = new Date(data1 + 'T12:00:00');
+  for (let i = 0; i < qtd; i++) {
+    atlAddLancamento({ desc: desc + ' ' + (i+1) + '/' + qtd, valor: valorStr, data: dt.toISOString().slice(0,10), tipo });
+    if (intervalo === 'mensal')      dt.setMonth(dt.getMonth() + 1);
+    else if (intervalo === 'quinzenal') dt.setDate(dt.getDate() + 15);
+    else                             dt.setDate(dt.getDate() + 7);
+  }
+  atlFecharModalSerie();
+  // Limpar modal
+  ['atl-serie-desc','atl-serie-valor','atl-serie-qtd','atl-serie-data1'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+
+function _atlResolverIndice(dtBase, indiceSelect) {
+  if (indiceSelect === 'ipca_selic') return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'SELIC', serie:SGS_SELIC_M }];
+  if (indiceSelect === 'inpc_1pct') return [{ nome:'INPC', serie:SGS_INPC_M }, { nome:'1% a.m.', serie:null, fixo:1.0 }];
+  if (indiceSelect === 'ipca_6aa')  return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'6% a.a.', serie:null, fixo:(Math.pow(1.06,1/12)-1)*100 }];
+  // auto
+  if (dtBase >= EC113_DATA) return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'SELIC', serie:SGS_SELIC_M }];
+  return [{ nome:'INPC', serie:SGS_INPC_M }, { nome:'1% a.m.', serie:null, fixo:1.0 }];
+}
 
 async function calcularAtualizacao() {
   const alertEl = document.getElementById('alert-input');
   alertEl.classList.remove('show');
 
-  const valor = parseBRL(document.getElementById('atl-valor')?.value || '');
-  const dataBase = document.getElementById('atl-data-base')?.value;
   const dataApuracao = document.getElementById('atl-data-apuracao')?.value;
-  const natureza = document.querySelector('input[name="atl-natureza"]:checked')?.value || 'civel';
+  const indiceSelect = document.getElementById('atl-indice')?.value || 'auto';
 
-  if (!valor || valor <= 0) { showAlert(alertEl, 'Informe o valor base.'); return; }
-  if (!dataBase) { showAlert(alertEl, 'Informe a data base.'); return; }
   if (!dataApuracao) { showAlert(alertEl, 'Informe a data de apuração.'); return; }
-  if (dataApuracao <= dataBase) { showAlert(alertEl, 'A data de apuração deve ser posterior à data base.'); return; }
 
-  const dtBase = new Date(dataBase + 'T12:00:00');
-  const dtApuracao = new Date(dataApuracao + 'T12:00:00');
-  const isFazenda = natureza === 'fazenda';
+  const rows = document.querySelectorAll('#atl-tabela-body tr');
+  if (!rows.length) { showAlert(alertEl, 'Adicione ao menos um lançamento.'); return; }
 
-  // Determinar índices conforme EC 113/2021
-  // Pós-EC113 (≥ 08/12/2021): IPCA-E + SELIC para todos
-  // Pré-EC113: INPC + 1% a.m. (art. 406 CC)
-  let indiceCorr, indiceJuros, baseJuros;
-  if (dtBase >= EC113_DATA) {
-    indiceCorr  = { nome: 'IPCA-E', serie: SGS_IPCA_E };
-    indiceJuros = { nome: 'SELIC', serie: SGS_SELIC_M };
-  } else {
-    indiceCorr  = { nome: 'INPC', serie: SGS_INPC_M };
-    indiceJuros = { nome: '1% a.m. (art. 406 CC)', serie: null, fixo: 1.0 };
-  }
+  const lancamentos = [];
+  let erroLanc = false;
+  rows.forEach((tr, i) => {
+    const inputs = tr.querySelectorAll('input');
+    const sel    = tr.querySelector('select');
+    const desc   = inputs[0]?.value || ('Lançamento ' + (i+1));
+    const valor  = parseBRL(inputs[1]?.value || '');
+    const data   = inputs[2]?.value;
+    const tipo   = sel?.value || 'principal';
+    if (!valor || valor <= 0 || !data || data >= dataApuracao) erroLanc = true;
+    lancamentos.push({ desc, valor, data, tipo });
+  });
+  if (erroLanc) { showAlert(alertEl, 'Verifique os lançamentos: todos devem ter valor > 0, data base preenchida e anterior à data de apuração.'); return; }
+
+  const mesMax   = dataApuracao.slice(0, 7);
+  const dataMin  = lancamentos.reduce((m, l) => l.data < m ? l.data : m, lancamentos[0].data);
+  const mesMin   = dataMin.slice(0, 7);
 
   const loadEl = document.getElementById('atl-loading');
   if (loadEl) loadEl.style.display = '';
 
   try {
-    // Montar range de meses
-    const meses = getMeses(dataBase.slice(0, 7), dataApuracao.slice(0, 7));
-    if (!meses.length) { showAlert(alertEl, 'Período inválido.'); return; }
+    const mesesFull = getMeses(mesMin, mesMax);
+    if (!mesesFull.length) { showAlert(alertEl, 'Período inválido.'); return; }
+    const dataIniBCB = mesesFull[0].dataIniBCB;
+    const dataFimBCB = mesesFull[mesesFull.length-1].dataFimBCB;
 
-    const dataIniBCB = meses[0].dataIniBCB;
-    const dataFimBCB = meses[meses.length - 1].dataFimBCB;
+    // Descobrir quais séries precisam ser buscadas
+    const seriesNeeded = new Set();
+    lancamentos.forEach(l => {
+      const [ic, ij] = _atlResolverIndice(new Date(l.data + 'T12:00:00'), indiceSelect);
+      if (ic.serie) seriesNeeded.add(ic.serie);
+      if (ij.serie) seriesNeeded.add(ij.serie);
+    });
+    const seriesData = {};
+    await Promise.all([...seriesNeeded].map(async s => {
+      seriesData[s] = serieParaMap(await buscarSerieHistorica(s, dataIniBCB, dataFimBCB));
+    }));
 
-    // Buscar séries
-    const [serieCorr, serieJur] = await Promise.all([
-      buscarSerieHistorica(indiceCorr.serie, dataIniBCB, dataFimBCB),
-      indiceJuros.serie ? buscarSerieHistorica(indiceJuros.serie, dataIniBCB, dataFimBCB) : Promise.resolve([]),
-    ]);
+    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const fmtMA = k => { const p = k.split('-'); return mesesNomes[parseInt(p[1])-1]+'/'+p[0]; };
 
-    const mapCorr = serieParaMap(serieCorr);
-    const mapJur  = indiceJuros.serie ? serieParaMap(serieJur) : {};
-
-    let saldoCorr = valor;
-    let totalCorrecao = 0, totalJuros = 0;
-    let detalhesMeses = [];
-
-    meses.forEach(m => {
-      const fCorr = indiceCorr.serie
-        ? (parseFloat(mapCorr[m.key] ?? 0) / 100)
-        : 0;
-      const fJur = indiceJuros.fixo
-        ? (indiceJuros.fixo / 100)
-        : (parseFloat(mapJur[m.key] ?? 0) / 100);
-
-      const corrMes = saldoCorr * fCorr;
-      saldoCorr += corrMes;
-      const jurMes  = saldoCorr * fJur;
-      saldoCorr += jurMes;
-      totalCorrecao += corrMes;
-      totalJuros    += jurMes;
-
-      detalhesMeses.push({
-        mesAno: m.key,
-        fatorCorr: (fCorr * 100).toFixed(4),
-        fatorJur:  (fJur * 100).toFixed(4),
-        valorAtual: saldoCorr,
+    const resultados = lancamentos.map((l, idx) => {
+      const dtBase = new Date(l.data + 'T12:00:00');
+      const [ic, ij] = _atlResolverIndice(dtBase, indiceSelect);
+      const meses = getMeses(l.data.slice(0,7), mesMax);
+      let saldo = l.valor, totalCorr = 0, totalJur = 0;
+      const detalhes = [];
+      meses.forEach(m => {
+        const fCorr = ic.serie ? (parseFloat(seriesData[ic.serie]?.[m.key] ?? 0) / 100) : 0;
+        const fJur  = ij.fixo != null ? (ij.fixo / 100) : (ij.serie ? (parseFloat(seriesData[ij.serie]?.[m.key] ?? 0) / 100) : 0);
+        const corrMes = saldo * fCorr; saldo += corrMes;
+        const jurMes  = saldo * fJur;  saldo += jurMes;
+        totalCorr += corrMes; totalJur += jurMes;
+        detalhes.push({ mes: fmtMA(m.key), fCorr: (fCorr*100).toFixed(4), fJur: (fJur*100).toFixed(4), saldo });
       });
+      return { num: idx+1, desc: l.desc, valor: l.valor, data: l.data, tipo: l.tipo,
+               totalCorr, totalJur, total: l.valor + totalCorr + totalJur,
+               indiceCorr: ic.nome, indiceJuros: ij.nome, detalhes };
     });
 
-    const totalAtualizado = valor + totalCorrecao + totalJuros;
-    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const fmtMesAno = k => { const p = k.split('-'); return mesesNomes[parseInt(p[1]) - 1] + '/' + p[0]; };
+    // Encargos adicionais
+    const totalBase = resultados.reduce((s, r) => s + r.total, 0);
+    const somaOrig  = lancamentos.reduce((s, l) => s + l.valor, 0);
+    let multaVal = 0, honorariosVal = 0, jurosAdVal = 0, custasVal = 0;
+
+    if (document.getElementById('atl-multa-check')?.checked) {
+      const pct  = parseFloat(document.getElementById('atl-multa-pct')?.value) || 0;
+      const base = document.getElementById('atl-multa-base')?.value === 'total' ? totalBase : somaOrig;
+      multaVal = base * (pct / 100);
+    }
+    if (document.getElementById('atl-hon-check')?.checked) {
+      if (document.getElementById('atl-hon-tipo')?.value === 'fixo') {
+        honorariosVal = parseBRL(document.getElementById('atl-hon-fixo')?.value || '');
+      } else {
+        const pct = parseFloat(document.getElementById('atl-hon-pct')?.value) || 0;
+        honorariosVal = totalBase * (pct / 100);
+      }
+    }
+    if (document.getElementById('atl-juros-check')?.checked) {
+      const taxa  = parseFloat(document.getElementById('atl-juros-taxa')?.value) || 0;
+      const deS   = document.getElementById('atl-juros-de')?.value;
+      const ateS  = document.getElementById('atl-juros-ate')?.value;
+      const jBase = document.getElementById('atl-juros-base')?.value === 'total' ? totalBase : somaOrig;
+      if (deS && ateS && taxa > 0) {
+        jurosAdVal = jBase * (taxa / 100) * getMeses(deS.slice(0,7), ateS.slice(0,7)).length;
+      }
+    }
+    if (document.getElementById('atl-custas-check')?.checked) {
+      custasVal = parseBRL(document.getElementById('atl-custas-valor')?.value || '');
+    }
+
+    const totalGeral = totalBase + multaVal + honorariosVal + jurosAdVal + custasVal;
+
+    // Agregar por tipo
+    const porTipo = {};
+    resultados.forEach(r => { porTipo[r.tipo] = (porTipo[r.tipo] || 0) + r.total; });
+    const tipoLabel = { principal:'Principal', honorarios:'Honorários', multa:'Multa', juros:'Juros', outros:'Outros' };
+
+    const tribunal = (document.getElementById('atl-tribunal')?.value || '').toUpperCase();
+    const dataFmt  = new Date(dataApuracao + 'T12:00:00').toLocaleDateString('pt-BR');
 
     const resDiv = document.getElementById('atl-resultado');
-    if (resDiv) {
-      resDiv.style.display = '';
-      resDiv.innerHTML = `
-        <div class="section-heading">Resultado da Atualização</div>
-        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
-            <span style="color:var(--text2)">Valor original</span><span>${fmtBRL(valor)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
-            <span style="color:var(--text2)">Correção monetária (${indiceCorr.nome})</span><span>${fmtBRL(totalCorrecao)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
-            <span style="color:var(--text2)">Juros de mora (${indiceJuros.nome})</span><span>${fmtBRL(totalJuros)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:16px;font-weight:700">
-            <span style="color:var(--accent)">TOTAL ATUALIZADO</span><span style="color:var(--accent)">${fmtBRL(totalAtualizado)}</span>
-          </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
-            Período: ${fmtMesAno(meses[0].key)} a ${fmtMesAno(meses[meses.length-1].key)} · Base legal: EC 113/2021 / art. 406 CC
-          </div>
+    if (!resDiv) return;
+    resDiv.style.display = '';
+
+    const encargosHTML = [
+      multaVal      > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">Multa</span><span>${fmtBRL(multaVal)}</span></div>` : '',
+      honorariosVal > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">Honorários</span><span>${fmtBRL(honorariosVal)}</span></div>` : '',
+      jurosAdVal    > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">Juros adicionais</span><span>${fmtBRL(jurosAdVal)}</span></div>` : '',
+      custasVal     > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">Custas</span><span>${fmtBRL(custasVal)}</span></div>` : '',
+    ].join('');
+
+    const idxMesHTML = resultados.length === 1 ? `
+      <div class="section-heading" style="margin-top:16px;font-size:10px;margin-bottom:8px">Índices Mês a Mês</div>
+      <div style="overflow-x:auto">
+        <table class="amort-table" style="width:100%;font-size:10px">
+          <thead><tr><th>Mês/Ano</th><th>${resultados[0].indiceCorr} (%)</th><th>${resultados[0].indiceJuros} (%)</th><th>Saldo</th></tr></thead>
+          <tbody>${resultados[0].detalhes.map(d=>`<tr>
+            <td>${d.mes}</td><td style="text-align:right">${d.fCorr}</td><td style="text-align:right">${d.fJur}</td>
+            <td style="text-align:right;color:var(--accent)">${fmtBRL(d.saldo)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>` : '';
+
+    resDiv.innerHTML = `
+      <div class="section-heading">Resultado — Apuração até ${dataFmt}</div>
+      <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:16px;margin-bottom:14px">
+        ${Object.entries(porTipo).map(([t,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--text2)">${tipoLabel[t]||t} (atualizado)</span><span>${fmtBRL(v)}</span>
+        </div>`).join('')}
+        ${encargosHTML}
+        <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:16px;font-weight:700">
+          <span style="color:var(--accent)">TOTAL GERAL</span><span style="color:var(--accent)">${fmtBRL(totalGeral)}</span>
         </div>
-        <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px">
-          Atualização calculada com base nos índices oficiais divulgados pelo Banco Central do Brasil:<br>
-          · IPCA-E: BCB/SGS série 13522 &nbsp;· SELIC: BCB/SGS série 4390 &nbsp;· INPC: BCB/SGS série 188<br><br>
-          Os valores apresentados têm caráter informativo e educacional. Recomenda-se a revisão por profissional habilitado.
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">
+          Tribunal: ${tribunal} &nbsp;·&nbsp; Apuração: ${dataFmt}
         </div>
-        <div style="overflow-x:auto">
-          <table class="amort-table" style="width:100%;font-size:11px">
-            <thead><tr>
-              <th>Mês/Ano</th><th>${indiceCorr.nome} (%)</th><th>${indiceJuros.nome} (%)</th><th>Valor Atualizado</th>
-            </tr></thead>
-            <tbody>${detalhesMeses.map(d => `<tr>
-              <td>${fmtMesAno(d.mesAno)}</td>
-              <td style="text-align:right">${d.fatorCorr}</td>
-              <td style="text-align:right">${d.fatorJur}</td>
-              <td style="text-align:right;color:var(--accent)">${fmtBRL(d.valorAtual)}</td>
-            </tr>`).join('')}</tbody>
-          </table>
-        </div>`;
-    }
+      </div>
+      <div class="section-heading" style="font-size:10px;margin-bottom:8px">Detalhamento por Lançamento</div>
+      <div style="overflow-x:auto;margin-bottom:14px">
+        <table class="amort-table" style="width:100%;font-size:10px">
+          <thead><tr><th>#</th><th>Descrição</th><th>Valor Orig.</th><th>Correção</th><th>Juros</th><th>Total</th></tr></thead>
+          <tbody>${resultados.map(r=>`<tr>
+            <td>${r.num}</td><td>${r.desc}</td>
+            <td style="text-align:right">${fmtBRL(r.valor)}</td>
+            <td style="text-align:right">${fmtBRL(r.totalCorr)}</td>
+            <td style="text-align:right">${fmtBRL(r.totalJur)}</td>
+            <td style="text-align:right;color:var(--accent);font-weight:600">${fmtBRL(r.total)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px;line-height:1.6">
+        Atualização calculada com base nos índices oficiais divulgados pelo Banco Central do Brasil:<br>
+        &nbsp;· IPCA-E: BCB/SGS série 13522 &nbsp;· SELIC: BCB/SGS série 4390 &nbsp;· INPC: BCB/SGS série 188<br><br>
+        Os valores têm caráter informativo e educacional. Recomenda-se revisão por profissional habilitado.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="clear-btn" style="flex:1;min-width:120px;font-size:11px" onclick="atlExportarPDF(window._atlResultados)">&#8595; Exportar PDF</button>
+        <button class="clear-btn" style="flex:1;min-width:120px;font-size:11px" onclick="atlExportarExcel(window._atlResultados)">&#8595; Exportar Excel</button>
+      </div>
+      ${idxMesHTML}`;
+
+    window._atlResultados = { resultados, multaVal, honorariosVal, jurosAdVal, custasVal, totalGeral, tribunal, dataFmt };
+
   } catch (e) {
     showAlert(alertEl, 'Erro ao buscar índices BCB: ' + e.message, 'alert-warn');
   } finally {
@@ -6627,11 +6894,155 @@ async function calcularAtualizacao() {
 }
 
 function limparAtualizacao() {
-  ['atl-valor','atl-data-base'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('atl-data-apuracao').value = new Date().toISOString().slice(0, 10);
+  const tbody = document.getElementById('atl-tabela-body');
+  if (tbody) tbody.innerHTML = '';
+  _atlRowId = 0;
+  atlAddLancamento();
+  const apurEl = document.getElementById('atl-data-apuracao');
+  if (apurEl) apurEl.value = new Date().toISOString().slice(0, 10);
   const res = document.getElementById('atl-resultado');
   if (res) { res.style.display = 'none'; res.innerHTML = ''; }
+  ['multa','hon','juros','custas'].forEach(t => {
+    const c = document.getElementById('atl-' + t + '-check');
+    const f = document.getElementById('atl-' + t + '-fields');
+    if (c) c.checked = false;
+    if (f) f.style.display = 'none';
+  });
+  window._atlResultados = null;
+}
+
+async function atlExportarPDF(dados) {
+  if (!window.userPremium) { showAlert(document.getElementById('alert-input'), 'Export PDF disponível apenas no plano Premium.', 'alert-warn'); return; }
+  if (!dados) { showAlert(document.getElementById('alert-input'), 'Execute o cálculo antes de exportar.', 'alert-warn'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const lm = 14, pw = 182;
+  // Header logo
+  doc.setFillColor(55,48,163); doc.roundedRect(lm,5,10,10,2,2,'F');
+  doc.setDrawColor(163,230,53); doc.setLineWidth(0.6);
+  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm+1.2, 13.5);
+  doc.setTextColor(163,230,53); doc.setFontSize(6); doc.setFont('helvetica','bold');
+  doc.text('MINHA', lm+12, 9, { charSpace:0.8 });
+  doc.setTextColor(255,255,255); doc.setFontSize(13);
+  doc.text('TaxaReal', lm+11.5, 15.5);
+  doc.setTextColor(180,180,180); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Relatório de Atualização Monetária', lm+26, 10);
+  doc.setFontSize(7);
+  doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR') + '  ·  Tribunal: ' + (dados.tribunal||'—') + '  ·  Apuração: ' + dados.dataFmt, lm+26, 15);
+  doc.setDrawColor(55,48,163); doc.setLineWidth(0.4); doc.line(lm,19,lm+pw,19);
+  let y = 26;
+  doc.setTextColor(163,230,53); doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text('Total Geral: ' + fmtBRL(dados.totalGeral), lm, y); y += 10;
+  // Cabeçalho tabela
+  const cols = [8,62,26,26,26,28];
+  const hdrs = ['#','Descrição','Valor Orig.','Correção','Juros','Total'];
+  doc.setFillColor(55,48,163); doc.rect(lm, y-4, pw, 6, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  let x = lm;
+  hdrs.forEach((h,i) => { doc.text(h, x+1, y); x += cols[i]; });
+  y += 4;
+  dados.resultados.forEach((r, i) => {
+    doc.setFillColor(i%2===0 ? 22:26, i%2===0 ? 24:27, i%2===0 ? 30:35);
+    doc.rect(lm, y-3.5, pw, 5.5, 'F');
+    doc.setTextColor(200,200,200); doc.setFont('helvetica','normal');
+    x = lm;
+    [String(r.num), r.desc.substring(0,30), fmtBRL(r.valor), fmtBRL(r.totalCorr), fmtBRL(r.totalJur), fmtBRL(r.total)].forEach((c,ci) => { doc.text(c, x+1, y); x += cols[ci]; });
+    y += 5.5;
+  });
+  y += 6;
+  doc.setFontSize(7); doc.setTextColor(110,110,110);
+  doc.text('Fontes BCB/SGS: 13522 (IPCA-E) · 4390 (SELIC) · 188 (INPC) · Carater informativo e educacional.', lm, y);
+  doc.save('atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+async function atlExportarExcel(dados) {
+  if (!window.userPremium) { showAlert(document.getElementById('alert-input'), 'Export Excel disponível apenas no plano Premium.', 'alert-warn'); return; }
+  if (!dados) { showAlert(document.getElementById('alert-input'), 'Execute o cálculo antes de exportar.', 'alert-warn'); return; }
+  let XLSX;
+  try { XLSX = await _carregarSheetJS(); }
+  catch(e) { showAlert(document.getElementById('alert-input'), 'Não foi possível carregar a biblioteca Excel.', 'alert-warn'); return; }
+  const wb = XLSX.utils.book_new();
+  // Aba Resumo
+  const porTipo = {};
+  dados.resultados.forEach(r => { porTipo[r.tipo] = (porTipo[r.tipo]||0) + r.total; });
+  const resumo = [
+    ['MinhaTaxaReal — Atualização Monetária'],
+    ['Gerado em', new Date().toLocaleDateString('pt-BR')],
+    ['Tribunal', dados.tribunal], ['Data de Apuração', dados.dataFmt], [],
+    ['Discriminação','Total (R$)'],
+    ...Object.entries(porTipo).map(([t,v]) => [t,v]),
+    ...(dados.multaVal>0      ? [['Multa', dados.multaVal]] : []),
+    ...(dados.honorariosVal>0 ? [['Honorários', dados.honorariosVal]] : []),
+    ...(dados.jurosAdVal>0    ? [['Juros adicionais', dados.jurosAdVal]] : []),
+    ...(dados.custasVal>0     ? [['Custas', dados.custasVal]] : []),
+    [], ['TOTAL GERAL', dados.totalGeral],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumo), 'Resumo');
+  // Aba Lançamentos
+  const lancRows = [
+    ['#','Descrição','Valor Original (R$)','Data Base','Tipo','Correção (R$)','Juros (R$)','Total (R$)'],
+    ...dados.resultados.map(r => [r.num, r.desc, r.valor, r.data, r.tipo, r.totalCorr, r.totalJur, r.total]),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(lancRows), 'Lancamentos');
+  // Aba Índices (primeiro lançamento)
+  if (dados.resultados.length > 0) {
+    const r0 = dados.resultados[0];
+    const idxRows = [
+      ['Mes/Ano', r0.indiceCorr + ' (%)', r0.indiceJuros + ' (%)', 'Saldo (R$)'],
+      ...r0.detalhes.map(d => [d.mes, parseFloat(d.fCorr), parseFloat(d.fJur), d.saldo]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(idxRows), 'Indices');
+  }
+  XLSX.writeFile(wb, 'atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 </script>
+
+<!-- Modal — Série de Parcelas (fora do left-panel para position:fixed funcionar) -->
+<div id="atl-modal-serie" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:24px 22px;max-width:380px;width:92%;max-height:92vh;overflow-y:auto">
+    <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:16px">Série de Parcelas</p>
+    <div class="form-group">
+      <label class="form-label">Descrição</label>
+      <input type="text" id="atl-serie-desc" placeholder="ex: Parcelas do contrato" style="width:100%"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Valor por parcela (R$)</label>
+        <div class="input-prefix-wrap"><span class="input-prefix">R$</span><input type="text" id="atl-serie-valor" placeholder="0,00" oninput="maskCurrency(this)"/></div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Qtd. parcelas</label>
+        <input type="number" id="atl-serie-qtd" placeholder="ex: 12" min="1" max="360" step="1" style="width:100%"/>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Data da 1ª parcela</label>
+        <input type="date" id="atl-serie-data1" style="width:100%"/>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Intervalo</label>
+        <select id="atl-serie-intervalo" style="width:100%">
+          <option value="mensal">Mensal</option>
+          <option value="quinzenal">Quinzenal</option>
+          <option value="semanal">Semanal</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:10px">
+      <label class="form-label">Tipo</label>
+      <select id="atl-serie-tipo" style="width:100%">
+        <option value="principal">Principal</option>
+        <option value="honorarios">Honorários</option>
+        <option value="multa">Multa</option>
+        <option value="juros">Juros</option>
+        <option value="outros">Outros</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="calc-btn" style="flex:1" onclick="atlGerarSerie()">Adicionar série</button>
+      <button class="clear-btn" style="flex:1" onclick="atlFecharModalSerie()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
