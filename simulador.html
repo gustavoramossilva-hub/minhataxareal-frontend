@@ -135,8 +135,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
   /* ── TABS ── */
   .tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     background: var(--surface2);
     border-radius: var(--radius-sm);
     padding: 4px;
@@ -144,11 +144,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     margin-bottom: 28px;
   }
   .tab-btn {
+    flex: 1 1 auto;
+    min-width: 72px;
     font-family: 'Syne', sans-serif;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: .04em;
-    padding: 8px;
+    padding: 8px 10px;
     border-radius: 6px;
     border: none;
     background: transparent;
@@ -156,10 +158,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     cursor: pointer;
     transition: all .2s;
     text-transform: uppercase;
+    white-space: nowrap;
+    text-align: center;
   }
   .tab-btn.active {
     background: var(--accent);
     color: #0e0f11;
+  }
+  .aba-texto-curto { display: none; }
+  @media (max-width: 400px) {
+    .tab-btn { flex: 1 1 45%; font-size: 11px; padding: 7px 6px; }
+  }
+  @media (max-width: 340px) {
+    .aba-texto-completo { display: none; }
+    .aba-texto-curto { display: inline; }
   }
 
   /* ── FORM GROUPS ── */
@@ -623,6 +635,27 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     header { padding: 16px 20px; }
     .left-panel, .right-panel { padding: 24px 20px; }
   }
+  @media (max-width: 640px) {
+    .left-panel, .right-panel { padding: 20px 16px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-card { padding: 12px; }
+    .amort-table { font-size: 10px; }
+    .amort-table th, .amort-table td { padding: 5px 6px; }
+    header svg { width: 140px; height: 28px; }
+  }
+  @media (max-width: 390px) {
+    .left-panel, .right-panel { padding: 16px 12px; }
+    .tabs { gap: 3px; padding: 3px; }
+    .form-grid-2 { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+    header { padding: 12px 16px; }
+    header svg { width: 120px; height: 24px; }
+    .toggle-bcb-container { flex-wrap: wrap; gap: 6px; }
+  }
+  @media (max-width: 340px) {
+    .left-panel, .right-panel { padding: 12px 10px; }
+    .badge-header { display: none; }
+  }
 </style>
 
 <script>
@@ -749,11 +782,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p class="panel-title">Dados da Operação</p>
 
     <!-- tabs -->
-    <div class="tabs" style="grid-template-columns:1fr 1fr 1fr 1fr">
+    <div class="tabs">
       <button class="tab-btn active" id="tab-simular" onclick="switchTab('simular')">Simular</button>
       <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Extrato</button>
       <button class="tab-btn" id="tab-inadimplencia" onclick="switchTab('inadimplencia')">Inadimpl.</button>
-      <button class="tab-btn" id="tab-atualizacao" onclick="switchTab('atualizacao')">Atualização</button>
+      <button class="tab-btn" id="tab-atualizacao" onclick="switchTab('atualizacao')"><span class="aba-texto-completo">Atualização</span><span class="aba-texto-curto">Atual.</span></button>
     </div>
 
     <!-- toggle comparação BCB -->
@@ -845,7 +878,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div>
               <label class="form-label">Período de carência <span class="form-hint">dias</span></label>
               <div class="input-suffix-wrap">
-                <input type="number" id="carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" value="0" oninput="onCarenciaChange()" />
+                <input type="number" id="carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" oninput="onCarenciaChange()" />
                 <span class="input-suffix">dias</span>
               </div>
             </div>
@@ -944,7 +977,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="form-group">
           <label class="form-label">TR mensal <span class="form-hint">% a.m.</span></label>
           <div class="input-suffix-wrap">
-            <input type="number" id="sacre-tr" placeholder="0,00" step="0.01" min="0" value="0" />
+            <input type="number" id="sacre-tr" placeholder="0,00" step="0.01" min="0" />
             <span class="input-suffix">% a.m.</span>
           </div>
         </div>
@@ -952,7 +985,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="form-group">
           <label class="form-label">Meses por bloco <span class="form-hint">recálculo</span></label>
           <div class="input-suffix-wrap">
-            <input type="number" id="sacre-bloco" value="12" min="1" max="60" />
+            <input type="number" id="sacre-bloco" placeholder="12" min="1" max="60" />
             <span class="input-suffix">meses</span>
           </div>
         </div>
@@ -1209,11 +1242,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div>
             <label class="form-label">TR mensal <span class="form-hint">%</span></label>
-            <input type="number" id="inad2-sacre-tr" placeholder="0,00" step="0.01" min="0" value="0" oninput="atualizarIndicadorContrato()" />
+            <input type="number" id="inad2-sacre-tr" placeholder="0,00" step="0.01" min="0" oninput="atualizarIndicadorContrato()" />
           </div>
           <div>
             <label class="form-label">Tamanho do bloco <span class="form-hint">meses</span></label>
-            <input type="number" id="inad2-sacre-bloco" value="12" min="1" max="60" oninput="atualizarIndicadorContrato()" />
+            <input type="number" id="inad2-sacre-bloco" placeholder="12" min="1" max="60" oninput="atualizarIndicadorContrato()" />
           </div>
         </div>
       </div>
@@ -1251,7 +1284,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div>
             <label class="form-label">Carência contratual <span class="form-hint">dias</span></label>
             <div class="input-suffix-wrap">
-              <input type="number" id="inad2-carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" value="0" oninput="atualizarIndicadorContrato()" />
+              <input type="number" id="inad2-carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" oninput="atualizarIndicadorContrato()" />
               <span class="input-suffix">dias</span>
             </div>
           </div>
