@@ -242,21 +242,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="stat-item highlight">
           <div>
             <div class="stat-label-sm">Spread médio crédito PF</div>
-            <div class="stat-num" id="cnt-1">0%</div>
+            <div class="stat-num" id="cnt-1">—</div>
           </div>
           <div class="stat-desc">diferença entre captação e concessão de crédito</div>
         </div>
         <div class="stat-item">
           <div>
             <div class="stat-label-sm">Saldo carteira crédito livre PF</div>
-            <div class="stat-num" id="cnt-2">R$ 0</div>
+            <div class="stat-num" id="cnt-2">—</div>
           </div>
           <div class="stat-desc">em operações ativas no sistema financeiro nacional</div>
         </div>
         <div class="stat-item">
           <div>
             <div class="stat-label-sm">Modalidades monitoradas pelo BCB</div>
-            <div class="stat-num" id="cnt-3">0</div>
+            <div class="stat-num" id="cnt-3">—</div>
           </div>
           <div class="stat-desc">séries históricas de taxas publicadas mensalmente</div>
         </div>
@@ -479,7 +479,7 @@ document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 function animateCounter(id, target, prefix, suffix, decimals) {
   const el = document.getElementById(id);
   if (!el) return;
-  const duration = 1800;
+  const duration = 1600;
   const start = performance.now();
   function update(now) {
     const p = Math.min((now - start) / duration, 1);
@@ -490,14 +490,69 @@ function animateCounter(id, target, prefix, suffix, decimals) {
   }
   requestAnimationFrame(update);
 }
-const statsObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting) {
-    animateCounter('cnt-1', 28.4, '', '% a.a.', 1);
-    animateCounter('cnt-2', 1.2, 'R$ ', ' tri', 1);
-    animateCounter('cnt-3', 47, '', '', 0);
-    statsObserver.disconnect();
+
+// CONTADORES BCB — fetch real com fallback estático
+const _cntFallback = {
+  1: () => animateCounter('cnt-1', 30, '~', '%', 0),
+  2: () => { const e = document.getElementById('cnt-2'); if (e) e.textContent = 'R$ 1,2 tri'; },
+  3: () => animateCounter('cnt-3', 8, '', '', 0),
+};
+let _cntData = null; // null = ainda carregando; false = falhou; objeto = ok
+
+async function _buscarDadosBCB() {
+  // Spread médio PF: BCB/SGS série 20786
+  try {
+    const r = await Promise.race([
+      fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.20786/dados/ultimos/1?formato=json'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000)),
+    ]);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+    const spread = d && d.length ? parseFloat(d[0].valor) : NaN;
+    if (!isNaN(spread) && spread > 0) {
+      _cntData = { spread };
+      return;
+    }
+  } catch (_) {}
+  _cntData = false;
+}
+
+function _renderContadores() {
+  const el1 = document.getElementById('cnt-1');
+  if (_cntData && _cntData.spread) {
+    animateCounter('cnt-1', _cntData.spread, '', '% a.a.', 1);
+  } else {
+    _cntFallback[1]();
   }
-}, { threshold: 0.4 });
+  _cntFallback[2](); // saldo: sempre estático (sem série SGS direta para carteira livre PF)
+  _cntFallback[3](); // modalidades: contagem fixa do app
+}
+
+// Iniciar fetch imediatamente
+['cnt-1','cnt-2','cnt-3'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.textContent = 'carregando…';
+});
+_buscarDadosBCB();
+
+// Disparar animação quando seção entrar na viewport
+const statsObserver = new IntersectionObserver(entries => {
+  if (!entries[0].isIntersecting) return;
+  statsObserver.disconnect();
+  if (_cntData !== null) {
+    // Fetch já terminou (sucesso ou falha) — animar imediatamente
+    _renderContadores();
+  } else {
+    // Ainda carregando — esperar resolução (máx 8 s)
+    const t0 = Date.now();
+    const poll = setInterval(() => {
+      if (_cntData !== null || Date.now() - t0 > 8000) {
+        clearInterval(poll);
+        _renderContadores();
+      }
+    }, 200);
+  }
+}, { threshold: 0.2 });
 const statsEl = document.querySelector('.stat-stack');
 if (statsEl) statsObserver.observe(statsEl);
 </script>
