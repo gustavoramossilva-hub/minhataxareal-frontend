@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MinhaTaxaReal — Simulador de Taxa Real</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
+<meta name="theme-color" content="#3730A3">
+<meta property="og:title" content="MinhaTaxaReal — Calcule a Taxa Real do Seu Financiamento">
+<meta property="og:description" content="Simule financiamentos com Price, SAC e SACRE. Compare com as taxas médias do Banco Central. Relatório PDF completo.">
+<meta property="og:url" content="https://minhataxareal.com.br">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MinhaTaxaReal — Calculadora de Financiamento">
+<meta name="twitter:description" content="Calcule parcelas, saldo devedor e taxa real. Price, SAC, SACRE e Hamburguês em um só lugar.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -32,6 +42,11 @@
     --radius: 12px;
     --radius-sm: 8px;
     --radius-lg: 16px;
+    --brand-indigo: #3730A3;
+    --brand-indigo-dark: #1E1B4B;
+    --brand-lime: #A3E635;
+    --brand-dark-bg: #111118;
+    --brand-white: #FFFFFF;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -703,10 +718,7 @@
 <body>
 
 <header>
-  <div class="logo">
-    <span class="logo-dot"></span>
-    MinhaTaxaReal
-  </div>
+  <a href="index.html" style="display:inline-flex;align-items:center;text-decoration:none;"><svg width="180" height="36" viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MinhaTaxaReal"><rect x="0" y="2" width="36" height="36" rx="9" fill="#3730A3"/><polyline points="6,32 13,22 20,26 26,16" fill="none" stroke="#A3E635" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="30,10 30,18 23,14" fill="#A3E635"/><text x="44" y="15" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#A3E635" letter-spacing="2.5">MINHA</text><text x="43" y="31" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#ffffff" letter-spacing="-0.5">TaxaReal</text></svg></a>
   
   <!-- Voltar ao painel -->
   <a href="app.html" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text2);text-decoration:none;letter-spacing:.04em;display:flex;align-items:center;gap:6px;transition:color .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">← Painel</a>
@@ -3093,10 +3105,19 @@ function gerarPDF() {
   const _hdrH = 40 + (_laudoLines.length > 0 ? _laudoLines.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
   doc.rect(0, 0, 210, _hdrH, 'F');
-  doc.setTextColor(212, 240, 60);
-  doc.setFontSize(18);
+  // Logo: ícone indigo + texto
+  doc.setFillColor(55, 48, 163); // #3730A3
+  doc.roundedRect(lm, 5, 10, 10, 2, 2, 'F');
+  doc.setDrawColor(163, 230, 53); // #A3E635
+  doc.setLineWidth(0.6);
+  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm + 1.2, 13.5);
+  doc.setTextColor(163, 230, 53);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
-  doc.text('MinhaTaxaReal', lm, 16);
+  doc.text('MINHA', lm + 12, 9, { charSpace: 0.8 });
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.text('TaxaReal', lm + 11.5, 15.5);
   doc.setTextColor(180, 180, 180);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -5796,10 +5817,19 @@ function gerarPDFInadimplencia() {
   const _hdrHI = 40 + (_llinesI.length > 0 ? _llinesI.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
   doc.rect(0, 0, 210, _hdrHI, 'F');
-  doc.setTextColor(212, 240, 60);
-  doc.setFontSize(18);
+  // Logo PDF inadimplência
+  doc.setFillColor(55, 48, 163);
+  doc.roundedRect(lm, 5, 10, 10, 2, 2, 'F');
+  doc.setDrawColor(163, 230, 53);
+  doc.setLineWidth(0.6);
+  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm + 1.2, 13.5);
+  doc.setTextColor(163, 230, 53);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
-  doc.text('MinhaTaxaReal', lm, 16);
+  doc.text('MINHA', lm + 12, 9, { charSpace: 0.8 });
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.text('TaxaReal', lm + 11.5, 15.5);
   doc.setTextColor(180, 180, 180);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
