@@ -1429,10 +1429,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- ══ MODO ATUALIZAÇÃO MONETÁRIA ══ -->
     <div id="mode-atualizacao" style="display:none">
       <p class="panel-title" style="margin-bottom:4px">Atualização Monetária</p>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Cálculo para cumprimento de sentença conforme EC 113/2021.</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Lance os valores a serem atualizados e apure o total corrigido até a data de apuração.</p>
 
       <div class="form-group">
-        <label class="form-label">Valor da condenação <span class="form-hint">R$</span></label>
+        <label class="form-label">Valor base <span class="form-hint">R$</span></label>
         <div class="input-prefix-wrap">
           <span class="input-prefix">R$</span>
           <input type="text" id="atl-valor" placeholder="0,00" oninput="maskCurrency(this)" />
@@ -1464,19 +1464,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Natureza da dívida</label>
+        <label class="form-label">Finalidade</label>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="civel" checked style="accent-color:var(--accent)"> Cível geral
+            <input type="radio" name="atl-natureza" value="civel" checked style="accent-color:var(--accent)"> Contrato / Execução extrajudicial
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="radio" name="atl-natureza" value="judicial" style="accent-color:var(--accent)"> Processo judicial cível
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
             <input type="radio" name="atl-natureza" value="fazenda" style="accent-color:var(--accent)"> Fazenda Pública
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="bancaria" style="accent-color:var(--accent)"> Bancária
+            <input type="radio" name="atl-natureza" value="trabalhista" style="accent-color:var(--accent)"> Trabalhista
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="radio" name="atl-natureza" value="trabalhista" style="accent-color:var(--accent)"> Trabalhista
+            <input type="radio" name="atl-natureza" value="outro" style="accent-color:var(--accent)"> Outro
           </label>
         </div>
       </div>
@@ -6503,7 +6506,7 @@ async function calcularAtualizacao() {
   const dataApuracao = document.getElementById('atl-data-apuracao')?.value;
   const natureza = document.querySelector('input[name="atl-natureza"]:checked')?.value || 'civel';
 
-  if (!valor || valor <= 0) { showAlert(alertEl, 'Informe o valor da condenação.'); return; }
+  if (!valor || valor <= 0) { showAlert(alertEl, 'Informe o valor base.'); return; }
   if (!dataBase) { showAlert(alertEl, 'Informe a data base.'); return; }
   if (!dataApuracao) { showAlert(alertEl, 'Informe a data de apuração.'); return; }
   if (dataApuracao <= dataBase) { showAlert(alertEl, 'A data de apuração deve ser posterior à data base.'); return; }
@@ -6598,7 +6601,9 @@ async function calcularAtualizacao() {
           </div>
         </div>
         <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px">
-          Atualização calculada conforme Emenda Constitucional 113/2021, que unificou os índices de correção monetária e juros de mora para condenações judiciais em IPCA-E + SELIC.
+          Atualização calculada com base nos índices oficiais divulgados pelo Banco Central do Brasil:<br>
+          · IPCA-E: BCB/SGS série 13522 &nbsp;· SELIC: BCB/SGS série 4390 &nbsp;· INPC: BCB/SGS série 188<br><br>
+          Os valores apresentados têm caráter informativo e educacional. Recomenda-se a revisão por profissional habilitado.
         </div>
         <div style="overflow-x:auto">
           <table class="amort-table" style="width:100%;font-size:11px">
