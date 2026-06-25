@@ -1021,6 +1021,15 @@ async function finalizarCadastro() {
     setUser(loginRes.user);
     atualizarHeader(loginRes.user);
 
+    // Disparo para GTM — evento de cadastro
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'event': 'cadastro_concluido',
+      'event_category': 'trial',
+      'event_label': 'trial_15_dias',
+      'value': 1
+    });
+
     // 3) Redireciona para o checkout Kiwify conforme plano
     const kiwifyUrls = {
       standard: 'https://pay.kiwify.com.br/VISiBG7',
