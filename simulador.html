@@ -687,6 +687,25 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     if (nameEl) nameEl.textContent = me.name || '';
     const planEl = document.getElementById('user-header-plan');
     if (planEl) planEl.textContent = window.userPremium ? 'premium' : (me.plan === 'subscription' ? 'assinante' : 'ativo');
+
+    // Trial banner
+    const banner = document.getElementById('trial-banner');
+    if (banner && me.trial) {
+      if (me.trialExpirado) {
+        const modal = document.getElementById('modal-trial-expirado');
+        if (modal) modal.style.display = 'flex';
+      } else if (me.trialAtivo) {
+        const dias = me.diasRestantesTrial || 0;
+        if (dias <= 3) {
+          banner.style.cssText += ';background:rgba(234,88,12,.18);border-bottom:1px solid rgba(251,146,60,.25);color:#fb923c';
+          banner.innerHTML = `⚠ Trial Premium expira em <strong>${dias} dia${dias !== 1 ? 's' : ''}</strong> — <a href="https://pay.kiwify.com.br/1xAQ6ev" target="_blank" style="color:inherit;font-weight:bold;text-decoration:underline">Assinar Premium</a>`;
+        } else {
+          banner.style.cssText += ';background:rgba(55,48,163,.25);border-bottom:1px solid rgba(163,230,53,.2);color:#a3e635';
+          banner.innerHTML = `✦ Trial Premium ativo — <strong>${dias} dias restantes</strong> · <a href="https://pay.kiwify.com.br/1xAQ6ev" target="_blank" style="color:inherit;text-decoration:underline">Ver planos</a>`;
+        }
+        banner.style.display = 'block';
+      }
+    }
   }
 
   async function verificarTokenBackground(token) {
@@ -774,6 +793,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button onclick="(function(){localStorage.removeItem('mtr_token');localStorage.removeItem('mtr_user');window.location.href='auth.html'})()" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:none;cursor:pointer;letter-spacing:.04em;padding:4px 8px;border-radius:8px;transition:color .15s" onmouseover="this.style.color='#f05252'" onmouseout="this.style.color='var(--text3)'">sair</button>
   </div>
 </header>
+
+<div id="trial-banner" style="display:none;padding:11px 40px;font-size:12px;font-family:'DM Mono',monospace;text-align:center;letter-spacing:.03em"></div>
 
 <div class="app-shell">
 
@@ -7041,6 +7062,34 @@ async function atlExportarExcel(dados) {
       <button class="calc-btn" style="flex:1" onclick="atlGerarSerie()">Adicionar série</button>
       <button class="clear-btn" style="flex:1" onclick="atlFecharModalSerie()">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL TRIAL EXPIRADO -->
+<div id="modal-trial-expirado" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:#16181c;border:1px solid rgba(255,255,255,.13);border-radius:16px;padding:36px;max-width:460px;width:90%">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:32px;margin-bottom:12px">⏰</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;color:#f0ede8">Seu trial expirou</div>
+      <div style="font-size:13px;color:#9a9894;line-height:1.6">Seus 15 dias de acesso Premium encerraram. Escolha um plano para continuar.</div>
+    </div>
+    <div style="display:grid;gap:12px;margin-bottom:20px">
+      <a href="https://pay.kiwify.com.br/1xAQ6ev" target="_blank" style="display:block;background:rgba(212,240,60,.1);border:1px solid rgba(212,240,60,.35);border-radius:12px;padding:18px 20px;text-decoration:none;color:#f0ede8">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">Premium</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;color:#d4f03c">R$ 39,90/mês</span>
+        </div>
+        <div style="font-size:12px;color:#9a9894">Atualização Monetária · Export PDF/Excel · Índices BCB completos</div>
+      </a>
+      <a href="https://pay.kiwify.com.br/5QNQifx" target="_blank" style="display:block;background:#1e2026;border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:18px 20px;text-decoration:none;color:#f0ede8">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">Standard</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;color:#9a9894">R$ 19,90/mês</span>
+        </div>
+        <div style="font-size:12px;color:#9a9894">Simulador de Taxa Real · Comparativo BCB · Relatório básico</div>
+      </a>
+    </div>
+    <button onclick="localStorage.removeItem('mtr_token');localStorage.removeItem('mtr_user');location.href='auth.html'" style="width:100%;background:none;border:1px solid rgba(255,255,255,.07);border-radius:99px;padding:11px;font-family:'DM Mono',monospace;font-size:12px;color:#767370;cursor:pointer">Sair da conta</button>
   </div>
 </div>
 
