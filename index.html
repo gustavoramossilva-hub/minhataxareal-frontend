@@ -10,8 +10,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- End Google Tag Manager -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MinhaTaxaReal — Calcule a Taxa Efetiva do Seu Financiamento</title>
-<meta name="description" content="Calcule a taxa efetiva real de qualquer financiamento e compare com a média do Banco Central. Ferramenta educacional para visualizar contratos de crédito.">
+<title>MinhaTaxaReal — Cálculo Financeiro Profissional</title>
+<meta name="description" content="Apure a taxa efetiva real (TIR) de qualquer financiamento e compare com a média do Banco Central. Price, SAC, SACRE, Hamburguês, atualização monetária e série histórica BCB.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
 <meta name="theme-color" content="#3730A3">
@@ -214,18 +214,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="glow glow-1"></div>
   <div class="glow glow-2"></div>
   <div class="hero">
-    <div class="hero-eyebrow">Educação financeira</div>
-    <h1 class="hero-title">Entenda de vez<br>os números do<br>seu <em>crédito</em></h1>
-    <p class="hero-sub">Financiamento, consignado, crédito pessoal — o MinhaTaxaReal organiza os dados do seu contrato de forma visual e compara com as médias públicas do Banco Central.</p>
+    <div class="hero-eyebrow">Cálculo Financeiro Profissional</div>
+    <h1 class="hero-title">Calcule. Compare.<br><em>Comprove.</em></h1>
+    <p class="hero-sub">Da taxa nominal ao custo efetivo real — o MinhaTaxaReal entrega em segundos o que leva horas para calcular manualmente. Price, SAC, SACRE, Hamburguês e séries históricas do Banco Central em um só lugar.</p>
     <div class="hero-actions">
-      <a href="auth.html" class="btn-primary">Calcular minha taxa →</a>
-      <a href="#como-funciona" class="btn-ghost">Como funciona? ↓</a>
+      <a href="auth.html" class="btn-primary">Acessar as ferramentas →</a>
+      <a href="#como-funciona" class="btn-ghost">Ver como funciona ↓</a>
     </div>
-    <p style="font-size:13px;color:var(--text2);font-style:italic;margin-bottom:20px">"Menos que um café por semana. Mais clareza sobre o seu dinheiro."</p>
+    <p style="font-size:13px;color:var(--text2);font-style:italic;margin-bottom:20px">Metodologia TIR · Dados BCB/SGS · Export Excel e PDF · Série histórica completa</p>
     <div class="hero-badges">
-      <span class="badge">Simples e visual</span>
-      <span class="badge">Sem jargão técnico</span>
-      <span class="badge">Resultado em segundos</span>
+      <span class="badge">Metodologia TIR</span>
+      <span class="badge">Dados BCB/SGS</span>
+      <span class="badge">Export Excel e PDF</span>
+      <span class="badge">Série histórica completa</span>
     </div>
   </div>
 </div>
@@ -234,39 +235,63 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section class="problem" id="problema">
   <div class="section-inner">
     <div class="reveal">
-      <div class="section-label">Por dentro do crédito</div>
-      <h2 class="section-title">Entenda os números da<br>sua operação de crédito</h2>
+      <div class="section-label">Números que importam</div>
+      <h2 class="section-title">Precisão técnica em<br>cada cálculo</h2>
     </div>
     <div class="problem-grid">
       <div class="stat-stack reveal">
         <div class="stat-item highlight">
           <div>
-            <div class="stat-label-sm">Spread médio crédito PF</div>
-            <div class="stat-num" id="cnt-1">—</div>
+            <div class="stat-label-sm">Modalidades de crédito monitoradas</div>
+            <div class="stat-num">8</div>
           </div>
-          <div class="stat-desc">diferença entre captação e concessão de crédito</div>
+          <div class="stat-desc">pelo BCB mensalmente</div>
         </div>
         <div class="stat-item">
           <div>
-            <div class="stat-label-sm">Saldo carteira crédito livre PF</div>
-            <div class="stat-num" id="cnt-2">—</div>
+            <div class="stat-label-sm">Sistemas de amortização</div>
+            <div class="stat-num">4</div>
           </div>
-          <div class="stat-desc">em operações ativas no sistema financeiro nacional</div>
+          <div class="stat-desc">Price · SAC · SACRE · Hamburguês</div>
         </div>
         <div class="stat-item">
           <div>
-            <div class="stat-label-sm">Modalidades monitoradas pelo BCB</div>
-            <div class="stat-num" id="cnt-3">—</div>
+            <div class="stat-label-sm">Defasagem média dos dados BCB</div>
+            <div class="stat-num">60-90</div>
           </div>
-          <div class="stat-desc">séries históricas de taxas publicadas mensalmente</div>
+          <div class="stat-desc">dias — por isso a data do contrato importa</div>
         </div>
-        <div class="bacen-source">Fonte: Banco Central do Brasil — SGS / Nota de Crédito. Ref. Mai/2026.</div>
+        <div class="bacen-source">Fonte: Banco Central do Brasil — SGS / Nota de Crédito. Dados públicos.</div>
       </div>
       <div class="problem-text reveal" style="transition-delay:.15s">
-        <h3>Taxa nominal e taxa efetiva: entenda a diferença</h3>
-        <p>Todo contrato de crédito apresenta uma taxa nominal — o percentual declarado na proposta. A taxa efetiva é calculada a partir do fluxo real de caixa da operação e pode diferir da nominal dependendo do sistema de amortização, das tarifas e da forma de cobrança.</p>
-        <p>O MinhaTaxaReal aplica o método TIR (Taxa Interna de Retorno), o mesmo utilizado pelo Banco Central para calcular e publicar as médias mensais das modalidades de crédito.</p>
-        <p>Com isso, você pode comparar matematicamente a taxa do seu contrato com a média de mercado para a mesma modalidade — tudo com base em dados públicos do BCB.</p>
+        <h3>Por que profissionais usam o MinhaTaxaReal</h3>
+        <p style="font-style:italic;color:var(--text3);margin-bottom:20px">Não é uma calculadora. É uma ferramenta de análise.</p>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div>
+            <p style="margin-bottom:3px">📊 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Taxa real apurada pelo método TIR</strong></p>
+            <p style="margin-bottom:0">O mesmo método que o BCB usa para publicar as médias mensais. Você obtém a taxa efetiva real e compara diretamente com o parâmetro oficial de mercado.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">📋 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Série histórica BCB por data do contrato</strong></p>
+            <p style="margin-bottom:0">O sistema busca automaticamente a taxa média BCB do período correspondente à data de assinatura — não a taxa de hoje. Precisão histórica para análises retroativas.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">📁 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Export Excel auditável linha por linha</strong></p>
+            <p style="margin-bottom:0">Tabela de amortização completa com prestação, juros, amortização e saldo devedor mês a mês. Pronto para uso profissional, revisão e documentação.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">⚖️ <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Apuração de inadimplência com fontes documentadas</strong></p>
+            <p style="margin-bottom:0">Reconstitua o fluxo com pagamentos em atraso ou ausentes. Cada taxa referenciada à série SGS correspondente, com competência e data.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">📅 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Atualização monetária com múltiplos lançamentos</strong></p>
+            <p style="margin-bottom:0">Lance parcelas individualmente ou em série. Honorários, multa, juros e custas em campos separados. Índices IPCA-E, SELIC e INPC via API oficial do BCB.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">🔒 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Conformidade e rastreabilidade total</strong></p>
+            <p style="margin-bottom:0">Cada cálculo cita a série SGS utilizada, a competência do dado e a metodologia aplicada. Transparência para uso profissional sem surpresas.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -277,26 +302,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="section-inner">
     <div class="reveal">
       <div class="section-label">Como funciona</div>
-      <h2 class="section-title">Três passos, resultado imediato</h2>
+      <h2 class="section-title">Do contrato ao resultado<br>em três etapas</h2>
     </div>
     <div class="steps">
       <div class="step reveal">
         <div class="step-num">01 —</div>
         <div class="step-icon">📄</div>
-        <h3 class="step-title">Insira os dados do contrato</h3>
-        <p class="step-desc">Informe o valor financiado, o número de parcelas e o valor de cada parcela. Dados que constam em qualquer contrato de crédito.</p>
+        <h3 class="step-title">Informe os dados do contrato</h3>
+        <p class="step-desc">Valor financiado, número de parcelas, valor de cada parcela e data de assinatura. Tudo que consta em qualquer contrato de crédito.</p>
       </div>
       <div class="step reveal" style="transition-delay:.1s">
         <div class="step-num">02 —</div>
         <div class="step-icon">⚙️</div>
         <h3 class="step-title">Cálculo automático via TIR</h3>
-        <p class="step-desc">O algoritmo resolve a Taxa Interna de Retorno do fluxo de caixa — o mesmo método matemático usado pelo Banco Central nas suas estatísticas.</p>
+        <p class="step-desc">O algoritmo apura a Taxa Interna de Retorno do fluxo de caixa e busca automaticamente a taxa média BCB da competência correspondente à data do contrato.</p>
       </div>
       <div class="step reveal" style="transition-delay:.2s">
         <div class="step-num">03 —</div>
         <div class="step-icon">📊</div>
-        <h3 class="step-title">Compare com a média BCB</h3>
-        <p class="step-desc">Veja sua taxa lado a lado com a média mais recente do BCB para a mesma modalidade. Gráfico e tabela de amortização completos.</p>
+        <h3 class="step-title">Resultado completo e documentado</h3>
+        <p class="step-desc">Taxa efetiva real, comparativo BCB, tabela de amortização completa, gráfico de evolução e export em Excel e PDF com fontes citadas.</p>
       </div>
     </div>
   </div>
@@ -307,15 +332,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="section-inner">
     <div class="reveal">
       <div class="section-label">Ferramentas</div>
-      <h2 class="section-title">Tudo que você precisa<br>em um lugar só</h2>
+      <h2 class="section-title">Ferramentas para análise<br>profissional de contratos</h2>
     </div>
     <div class="features-grid">
       <a href="auth.html" class="feat-card featured reveal">
         <div class="feat-icon">📊</div>
         <h3 class="feat-name">Simulador de Taxa Real</h3>
-        <p class="feat-desc">Calcule a taxa efetiva (TIR) de qualquer financiamento Price ou SAC. Compare com a média BCB. Veja tabela de amortização completa e gráfico de evolução da dívida.</p>
+        <p class="feat-desc">Apure a taxa efetiva (TIR) de qualquer financiamento. Compare com a média BCB do período do contrato. Tabela de amortização completa e gráfico de evolução.</p>
         <div class="feat-tags">
-          <span class="feat-tag">Price / SAC / Hamburguês / SACRE</span>
+          <span class="feat-tag">Price · SAC · SACRE · Hamburguês</span>
           <span class="feat-tag">Gráfico</span>
           <span class="feat-tag">BCB comparativo</span>
           <span class="feat-tag">Export PDF</span>
@@ -328,24 +353,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <div class="feat-icon">📋</div>
         <h3 class="feat-name">Apuração de Inadimplência</h3>
-        <p class="feat-desc">Calcule o valor atualizado de um contrato em atraso com integração à série histórica real do Banco Central. Compara os valores aplicados com o parâmetro de referência e a taxa média de mercado, mês a mês.</p>
+        <p class="feat-desc">Reconstitua o fluxo do contrato com atrasos e pagamentos parciais. Taxa efetiva mês a mês com série histórica real do BCB. Três cenários de apuração.</p>
         <div class="feat-tags">
           <span class="feat-tag">Série histórica BCB</span>
           <span class="feat-tag">3 cenários</span>
-          <span class="feat-tag">IPCA / INPC / SELIC / TR</span>
-          <span class="feat-tag">PDF completo</span>
+          <span class="feat-tag">IPCA · INPC · SELIC · TR</span>
+          <span class="feat-tag">Export PDF</span>
         </div>
       </a>
-      <a href="auth.html" class="feat-card reveal" style="transition-delay:.2s">
-        <div class="feat-icon">💰</div>
-        <h3 class="feat-name">Gestão Financeira</h3>
-        <p class="feat-desc">Organize receitas e despesas, acompanhe seu fluxo de caixa mensal e visualize sua saúde financeira com gráficos intuitivos.</p>
+      <a href="auth.html" class="feat-card reveal" style="border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface));transition-delay:.2s">
+        <div class="feat-premium-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Premium
+        </div>
+        <div class="feat-icon">🔍</div>
+        <h3 class="feat-name">Apuração de Extrato</h3>
+        <p class="feat-desc">Lance os pagamentos mês a mês conforme o extrato bancário e apure a taxa efetiva real aplicada em cada período. Identifique divergências entre a taxa contratada e a efetivamente cobrada.</p>
         <div class="feat-tags">
-          <span class="feat-tag">Fluxo de caixa</span>
-          <span class="feat-tag">Categorias</span>
-          <span class="feat-tag">Relatórios</span>
+          <span class="feat-tag">Lançamento mensal</span>
+          <span class="feat-tag">Taxa efetiva por período</span>
+          <span class="feat-tag">Export Excel</span>
         </div>
       </a>
+      <a href="auth.html" class="feat-card reveal" style="border-color:rgba(212,240,60,.2);background:linear-gradient(135deg,var(--adim),var(--surface));transition-delay:.3s">
+        <div class="feat-premium-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Premium
+        </div>
+        <div class="feat-icon">📅</div>
+        <h3 class="feat-name">Atualização Monetária</h3>
+        <p class="feat-desc">Atualize valores individualmente ou em série. Honorários, multa, juros e custas em campos separados. IPCA-E, SELIC e INPC via API BCB. Resultado consolidado por tipo.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Múltiplos lançamentos</span>
+          <span class="feat-tag">Honorários · Multa</span>
+          <span class="feat-tag">IPCA-E · SELIC · INPC</span>
+        </div>
+      </a>
+      <div class="feat-card feat-soon reveal" style="transition-delay:.4s;grid-column:span 2">
+        <div class="feat-icon">🔄</div>
+        <h3 class="feat-name">Portabilidade de Crédito</h3>
+        <p class="feat-desc">Compare a taxa do contrato atual com propostas de portabilidade. Calcule a diferença real em reais ao longo do contrato.</p>
+        <span class="feat-soon-badge">Em breve</span>
+      </div>
     </div>
   </div>
 </section>
@@ -355,13 +404,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="section-inner">
     <div class="reveal" style="text-align:center">
       <div class="section-label" style="justify-content:center">Planos</div>
-      <h2 class="section-title" style="text-align:center">Simples e transparente</h2>
-      <p class="section-sub" style="margin:0 auto;text-align:center">Ativação única para começar com 30 dias de acesso. Assine mensalmente para continuar usando e ter sempre os dados mais recentes do Banco Central.</p>
+      <h2 class="section-title" style="text-align:center">Escolha o plano<br>para o seu uso</h2>
+      <p class="section-sub" style="margin:0 auto;text-align:center">Acesso imediato após a ativação. Cancele quando quiser.</p>
     </div>
     <div class="pricing-grid" style="grid-template-columns:1fr 1fr 1fr;max-width:1100px;margin:60px auto 0">
       <!-- Standard -->
       <div class="price-card reveal">
         <div class="price-label">Standard</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:6px">Para análises pontuais</div>
         <div style="margin-bottom:20px">
           <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px">
             <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Ativação única</div>
@@ -370,13 +420,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
         </div>
         <ul class="price-items">
-          <li>Simulador de taxa real (TIR) com comparativo Bacen</li>
-          <li>Auditoria de contrato com saldo devedor atualizado</li>
-          <li>Sistemas Price, SAC, Hamburguês e SACRE</li>
-          <li>CET — inclui IOF, tarifas e seguros no custo efetivo (Res. CMN 4.601/2017)</li>
-          <li>Relatório PDF com resultados e tabela de amortização resumida</li>
-          <li>Histórico de operações</li>
-          <li>7 dias de garantia — reembolso total</li>
+          <li>Simulador de taxa real (TIR)</li>
+          <li>Comparativo com média BCB</li>
+          <li>Price, SAC, SACRE e Hamburguês</li>
+          <li>CET com IOF e tarifas</li>
+          <li>Tabela de amortização completa</li>
+          <li>Export PDF</li>
+          <li>Histórico de simulações</li>
+          <li>7 dias de garantia</li>
         </ul>
         <a href="https://pay.kiwify.com.br/5QNQifx" class="price-cta secondary">Assinar Standard</a>
       </div>
@@ -385,22 +436,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="price-card featured reveal" style="transition-delay:.1s">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div class="price-label" style="margin-bottom:0">Premium</div>
-          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:#d4f03c;color:#0a0b0d;font-weight:700;padding:3px 10px;border-radius:99px">Recomendado para profissionais</span>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:#d4f03c;color:#0a0b0d;font-weight:700;padding:3px 10px;border-radius:99px">Mais completo</span>
         </div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:6px">Para uso profissional intensivo</div>
         <div style="margin-bottom:20px">
           <div style="background:var(--adim);border:1px solid rgba(212,240,60,.2);border-radius:8px;padding:10px 14px">
             <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Ativação única</div>
             <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--accent);line-height:1">R$ 69,90</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid rgba(212,240,60,.15)">+ R$ 39,90/mês (promocional)</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid rgba(212,240,60,.15)">+ R$ 39,90/mês para continuar</div>
           </div>
         </div>
         <ul class="price-items">
-          <li>Tudo do plano Standard</li>
-          <li>Apuração de Inadimplência com série histórica do Banco Central (SGS) mês a mês</li>
-          <li>Leasing com VRG (Valor Residual Garantido) — parcela, tabela e taxa efetiva</li>
-          <li>Financiamento IPCA+ — projeção mensal indexada com correção do saldo devedor</li>
-          <li>PDF completo: comparativo de taxas + tabela de amortização integral</li>
-          <li>7 dias de garantia — reembolso total</li>
+          <li>Tudo do Standard</li>
+          <li>Apuração de Inadimplência com série histórica BCB mês a mês</li>
+          <li>Apuração de Extrato bancário</li>
+          <li>Atualização Monetária com múltiplos lançamentos</li>
+          <li>Carência com capitalização em dias</li>
+          <li>Export Excel auditável linha a linha</li>
+          <li>PDF completo com fontes citadas</li>
+          <li>7 dias de garantia</li>
         </ul>
         <a href="https://pay.kiwify.com.br/1xAQ6ev" class="price-cta primary">Assinar Premium →</a>
       </div>
@@ -409,7 +463,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="price-card reveal" style="transition-delay:.2s;border-color:rgba(212,240,60,.15)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div class="price-label" style="margin-bottom:0">Corporativo</div>
-          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:var(--surface2);color:var(--text2);font-weight:600;padding:3px 10px;border-radius:99px;border:1px solid var(--border2)">Para escritórios</span>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:var(--surface2);color:var(--text2);font-weight:600;padding:3px 10px;border-radius:99px;border:1px solid var(--border2)">Para equipes</span>
         </div>
         <div style="margin-bottom:20px">
           <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px">
@@ -418,8 +472,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">Até 5 usuários simultâneos</div>
           </div>
         </div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:14px">Para escritórios e equipes</div>
         <ul class="price-items">
-          <li>Tudo do plano Premium</li>
+          <li>Tudo do Premium</li>
           <li>Até 5 usuários simultâneos</li>
           <li>Gestão de casos por processo</li>
           <li>Histórico ilimitado</li>
@@ -452,12 +507,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="footer-inner">
       <a href="#" style="display:inline-flex;align-items:center;text-decoration:none;"><svg width="140" height="28" viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MinhaTaxaReal"><rect x="0" y="2" width="36" height="36" rx="9" fill="#3730A3"/><polyline points="6,32 13,22 20,26 26,16" fill="none" stroke="#A3E635" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="30,10 30,18 23,14" fill="#A3E635"/><text x="44" y="15" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#A3E635" letter-spacing="2.5">MINHA</text><text x="43" y="31" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#ffffff" letter-spacing="-0.5">TaxaReal</text></svg></a>
       <div class="footer-links">
-        <a href="auth.html">Entrar</a>
+        <a href="#">Início</a>
+        <a href="#ferramentas">Ferramentas</a>
         <a href="#planos">Planos</a>
-        <a href="#problema">Sobre</a>
         <a href="termos.html">Termos de Uso</a>
+        <a href="auth.html">Entrar</a>
       </div>
-      <div class="footer-copy">© 2026 MinhaTaxaReal · Ferramenta educacional</div>
+      <div class="footer-copy">© 2026 MinhaTaxaReal · Ferramenta educacional de cálculo financeiro · Não é instituição financeira</div>
     </div>
   </div>
 </footer>
@@ -475,86 +531,6 @@ const observer = new IntersectionObserver(entries => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// COUNTER ANIMATION
-function animateCounter(id, target, prefix, suffix, decimals) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const duration = 1600;
-  const start = performance.now();
-  function update(now) {
-    const p = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 3);
-    const val = target * ease;
-    el.textContent = prefix + (decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString('pt-BR')) + suffix;
-    if (p < 1) requestAnimationFrame(update);
-  }
-  requestAnimationFrame(update);
-}
-
-// CONTADORES BCB — fetch real com fallback estático
-const _cntFallback = {
-  1: () => animateCounter('cnt-1', 30, '~', '%', 0),
-  2: () => { const e = document.getElementById('cnt-2'); if (e) e.textContent = 'R$ 1,2 tri'; },
-  3: () => animateCounter('cnt-3', 8, '', '', 0),
-};
-let _cntData = null; // null = ainda carregando; false = falhou; objeto = ok
-
-async function _buscarDadosBCB() {
-  // Spread médio PF: BCB/SGS série 20786
-  try {
-    const r = await Promise.race([
-      fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.20786/dados/ultimos/1?formato=json'),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000)),
-    ]);
-    if (!r.ok) throw new Error('http ' + r.status);
-    const d = await r.json();
-    const spread = d && d.length ? parseFloat(d[0].valor) : NaN;
-    if (!isNaN(spread) && spread > 0) {
-      _cntData = { spread };
-      return;
-    }
-  } catch (_) {}
-  _cntData = false;
-}
-
-function _renderContadores() {
-  const el1 = document.getElementById('cnt-1');
-  if (_cntData && _cntData.spread) {
-    animateCounter('cnt-1', _cntData.spread, '', '% a.a.', 1);
-  } else {
-    _cntFallback[1]();
-  }
-  _cntFallback[2](); // saldo: sempre estático (sem série SGS direta para carteira livre PF)
-  _cntFallback[3](); // modalidades: contagem fixa do app
-}
-
-// Iniciar fetch imediatamente
-['cnt-1','cnt-2','cnt-3'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.textContent = 'carregando…';
-});
-_buscarDadosBCB();
-
-// Disparar animação quando seção entrar na viewport
-const statsObserver = new IntersectionObserver(entries => {
-  if (!entries[0].isIntersecting) return;
-  statsObserver.disconnect();
-  if (_cntData !== null) {
-    // Fetch já terminou (sucesso ou falha) — animar imediatamente
-    _renderContadores();
-  } else {
-    // Ainda carregando — esperar resolução (máx 8 s)
-    const t0 = Date.now();
-    const poll = setInterval(() => {
-      if (_cntData !== null || Date.now() - t0 > 8000) {
-        clearInterval(poll);
-        _renderContadores();
-      }
-    }, 200);
-  }
-}, { threshold: 0.2 });
-const statsEl = document.querySelector('.stat-stack');
-if (statsEl) statsObserver.observe(statsEl);
 </script>
 </body>
 </html>
