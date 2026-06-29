@@ -153,10 +153,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       }
       if (res.ok) {
         const me = await res.json();
-        if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+        const trialAtivo = !!(me.trial && me.trialExpira && Date.now() < me.trialExpira);
+        if (!me.activationPaid && !trialAtivo) { window.location.href = 'auth.html?reason=activation'; return; }
         if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
           window.location.href = 'auth.html?reason=expired'; return;
         }
+        localStorage.setItem('mtr_user', JSON.stringify(me));
         aplicarDadosUsuario(me);
       }
     } catch (_) {
@@ -170,7 +172,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
     // Caminho rápido: cache disponível → mostra página imediatamente
     const cached = (() => { try { return JSON.parse(localStorage.getItem('mtr_user') || 'null'); } catch(_) { return null; } })();
-    if (cached && cached.activationPaid) {
+    const cachedTrialAtivo = !!(cached && cached.trial && cached.trialExpira && Date.now() < cached.trialExpira);
+    if (cached && (cached.activationPaid || cachedTrialAtivo)) {
       aplicarDadosUsuario(cached);
       verificarTokenBackground(token);
       return;
@@ -183,10 +186,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       });
       if (!res.ok) throw new Error('unauthorized');
       const me = await res.json();
-      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+      const trialAtivo = !!(me.trial && me.trialExpira && Date.now() < me.trialExpira);
+      if (!me.activationPaid && !trialAtivo) { window.location.href = 'auth.html?reason=activation'; return; }
       if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
         window.location.href = 'auth.html?reason=expired'; return;
       }
+      localStorage.setItem('mtr_user', JSON.stringify(me));
       aplicarDadosUsuario(me);
     } catch (e) {
       localStorage.removeItem('mtr_token');

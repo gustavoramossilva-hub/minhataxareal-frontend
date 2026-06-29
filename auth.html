@@ -1283,7 +1283,17 @@ function _showTermosLegacy() {
 // ═══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
   const retorno = await verificarRetornoPagamento();
-  if (!retorno) showPage('page-register');
+  if (!retorno) {
+    const reason = new URLSearchParams(window.location.search).get('reason');
+    if (reason === 'expired') {
+      showPage('page-login');
+      showAlert('alert-login', 'Sua assinatura expirou. Faça login para renovar.', 'alert-warn');
+    } else if (reason === 'activation') {
+      showPage('page-register');
+    } else {
+      showPage('page-register');
+    }
+  }
   if (location.hash === '#termos') showTermos();
 });
 </script>
