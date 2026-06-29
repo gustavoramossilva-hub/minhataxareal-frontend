@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /simulador.html
+Disallow: /app.html
+Disallow: /gestao-financeira.html
+Sitemap: https://minhataxareal.com.br/sitemap.xml
