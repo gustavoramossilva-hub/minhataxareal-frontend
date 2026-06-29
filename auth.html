@@ -547,28 +547,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="page" id="page-register">
   <div class="auth-card fade-in">
 
-    <!-- Indicador de progresso -->
-    <div class="progress-steps" id="reg-steps">
-      <div class="ps-item">
-        <div class="ps-dot active" id="step-dot-1">1</div>
-        <span class="ps-label active" id="step-lbl-1">Dados</span>
-      </div>
-      <div class="ps-line" id="step-line-1"></div>
-      <div class="ps-item">
-        <div class="ps-dot" id="step-dot-2">2</div>
-        <span class="ps-label" id="step-lbl-2">Plano</span>
-      </div>
-      <div class="ps-line" id="step-line-2"></div>
-      <div class="ps-item">
-        <div class="ps-dot" id="step-dot-3">3</div>
-        <span class="ps-label" id="step-lbl-3">Pagamento</span>
-      </div>
+    <!-- Trial badge -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,240,60,0.1);border:1px solid rgba(212,240,60,0.3);border-radius:99px;padding:4px 14px;margin-bottom:20px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:.04em">
+      ✦ 15 DIAS GRÁTIS · SEM CARTÃO
     </div>
 
     <!-- STEP 1: Dados pessoais -->
     <div id="reg-step-1">
-      <div class="card-title">Criar conta</div>
-      <div class="card-sub">Preencha seus dados para começar.</div>
+      <div class="card-title">Criar conta grátis</div>
+      <div class="card-sub">15 dias de acesso Premium completo. Sem cartão de crédito.</div>
 
       <div id="alert-register" class="alert"></div>
 
@@ -611,8 +598,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div id="confirma-ok" style="font-size:11px;color:var(--green);margin-top:4px;display:none">✓ Senhas coincidem</div>
       </div>
 
-      <button class="btn-primary" id="btn-reg-step1" onclick="irStep2()">
-        Continuar → Escolher plano
+      <button class="btn-primary" id="btn-reg-step1" onclick="registrarComTrial()">
+        Teste grátis por 15 dias →
       </button>
 
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text2)">
@@ -1051,6 +1038,58 @@ async function finalizarCadastro() {
 }
 
 // ═══════════════════════════════════════════════
+//  CADASTRO COM TRIAL — fluxo direto 1 passo
+// ═══════════════════════════════════════════════
+async function registrarComTrial() {
+  clearAlert('alert-register');
+  const nome  = document.getElementById('reg-nome').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const senha = document.getElementById('reg-senha').value;
+  const conf  = document.getElementById('reg-confirma').value;
+
+  if (!nome)                          return showAlert('alert-register', 'Informe seu nome completo.');
+  if (!email || !email.includes('@')) return showAlert('alert-register', 'Informe um e-mail válido.');
+  if (senha.length < 8)               return showAlert('alert-register', 'A senha deve ter ao menos 8 caracteres.');
+  if (senha !== conf)                 return showAlert('alert-register', 'As senhas não coincidem.');
+
+  setLoading('btn-reg-step1', true);
+  try {
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: { name: nome, email, password: senha, tier: 'premium' },
+    });
+
+    const loginRes = await api('/api/auth/login', {
+      method: 'POST',
+      body: { email, password: senha },
+    });
+    setToken(loginRes.token);
+    setUser(loginRes.user);
+    atualizarHeader(loginRes.user);
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'event': 'cadastro_concluido',
+      'event_category': 'trial',
+      'event_label': 'trial_15_dias',
+      'value': 1
+    });
+
+    showAlert('alert-register', '✅ Conta criada! Seu acesso Premium gratuito está ativo por 15 dias. Redirecionando...', 'alert-success');
+    setTimeout(() => { window.location.href = 'simulador.html'; }, 2000);
+
+  } catch (e) {
+    setLoading('btn-reg-step1', false);
+    if (e.status === 409) {
+      showAlert('alert-register', 'Este e-mail já possui cadastro. Faça login.', 'alert-warn');
+      setTimeout(() => showPage('page-login'), 2000);
+    } else {
+      showAlert('alert-register', e.message || 'Erro ao criar conta. Tente novamente.');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
 //  LOGIN
 // ═══════════════════════════════════════════════
 async function login() {
@@ -1079,12 +1118,13 @@ async function login() {
 
 // ─── Decide para onde mandar após login ───
 function rotearPosLogin(user) {
-  if (!user.activationPaid) {
-    showPage('page-ativacao');
+  const trialAtivo = !!(user.trial && user.trialExpira && Date.now() < user.trialExpira);
+  if (trialAtivo || user.activationPaid) {
+    irParaApp();
   } else if (user.plan === 'subscription' && user.planExpiry && user.planExpiry < Date.now()) {
     showPage('page-vencida');
   } else {
-    irParaApp();
+    showPage('page-ativacao');
   }
 }
 
