@@ -555,7 +555,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- STEP 1: Dados pessoais -->
     <div id="reg-step-1">
       <div class="card-title">Criar conta grátis</div>
-      <div class="card-sub">15 dias de acesso Premium completo. Sem cartão de crédito.</div>
+      <div class="card-sub">10 dias de acesso Premium completo. Sem cartão de crédito.</div>
 
       <div id="alert-register" class="alert"></div>
 
@@ -599,7 +599,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <button class="btn-primary" id="btn-reg-step1" onclick="registrarComTrial()">
-        Teste grátis por 15 dias →
+        Teste grátis por 10 dias →
       </button>
 
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text2)">
@@ -1075,7 +1075,7 @@ async function registrarComTrial() {
       'value': 1
     });
 
-    showAlert('alert-register', '✅ Conta criada! Seu acesso Premium gratuito está ativo por 15 dias. Redirecionando...', 'alert-success');
+    showAlert('alert-register', '✅ Conta criada! Seu acesso Premium gratuito está ativo por 10 dias. Redirecionando...', 'alert-success');
     setTimeout(() => { window.location.href = 'simulador.html'; }, 2000);
 
   } catch (e) {
