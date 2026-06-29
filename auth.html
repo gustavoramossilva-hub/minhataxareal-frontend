@@ -460,6 +460,21 @@ input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
 }
 .fade-in { animation: fadeUp .3s ease forwards; }
 
+/* ── BENEFÍCIOS TRIAL ── */
+.beneficios-trial {
+  background: rgba(55,48,163,0.2);
+  border: 1px solid rgba(55,48,163,0.4);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+}
+.beneficios-trial p {
+  color: #cccccc;
+  font-size: 13px;
+  margin: 0.3rem 0;
+  line-height: 1.4;
+}
+
 /* ── RESPONSIVO ── */
 @media (max-width: 700px) {
   header { padding: 16px 20px; }
@@ -499,10 +514,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- ══════════════════════════════════════════
      PÁGINA 1: LOGIN
 ══════════════════════════════════════════ -->
-<div class="page active" id="page-login">
+<div class="page" id="page-login">
   <div class="auth-card fade-in">
-    <div class="card-title">Bem-vindo de volta</div>
-    <div class="card-sub">Entre com sua conta para acessar a plataforma.</div>
+    <div class="card-title">Entrar na conta</div>
+    <div class="card-sub">Acesse o simulador com seu e-mail e senha.</div>
 
     <div id="alert-login" class="alert"></div>
 
@@ -544,18 +559,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- ══════════════════════════════════════════
      PÁGINA 2: CADASTRO
 ══════════════════════════════════════════ -->
-<div class="page" id="page-register">
+<div class="page active" id="page-register">
   <div class="auth-card fade-in">
-
-    <!-- Trial badge -->
-    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,240,60,0.1);border:1px solid rgba(212,240,60,0.3);border-radius:99px;padding:4px 14px;margin-bottom:20px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:.04em">
-      ✦ 15 DIAS GRÁTIS · SEM CARTÃO
-    </div>
 
     <!-- STEP 1: Dados pessoais -->
     <div id="reg-step-1">
-      <div class="card-title">Criar conta grátis</div>
-      <div class="card-sub">10 dias de acesso Premium completo. Sem cartão de crédito.</div>
+      <div class="card-title" style="text-align:center">Acesse a plataforma</div>
+      <p style="color:#A3E635;font-size:13px;text-align:center;margin:8px 0 24px;font-weight:500">10 dias grátis · Sem cartão de crédito · Cancele quando quiser</p>
+
+      <div class="beneficios-trial">
+        <p>✅ Price, SAC, SACRE e Hamburguês</p>
+        <p>✅ Comparativo com taxas BCB</p>
+        <p>✅ Export Excel e PDF auditável</p>
+        <p>✅ Inadimplência e Atualização Monetária</p>
+      </div>
 
       <div id="alert-register" class="alert"></div>
 
@@ -592,19 +609,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="input-wrap">
           <input type="password" id="reg-confirma" placeholder="Repita a senha"
                  oninput="checkConfirma()"
-                 onkeydown="if(event.key==='Enter')irStep2()">
+                 onkeydown="if(event.key==='Enter')registrarComTrial()">
           <button class="eye-btn" onclick="toggleSenha('reg-confirma', this)" tabindex="-1">👁</button>
         </div>
         <div id="confirma-ok" style="font-size:11px;color:var(--green);margin-top:4px;display:none">✓ Senhas coincidem</div>
       </div>
 
-      <button class="btn-primary" id="btn-reg-step1" onclick="registrarComTrial()">
-        Teste grátis por 10 dias →
+      <button id="btn-reg-step1" onclick="registrarComTrial()" style="width:100%;background:#A3E635;color:#111111;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;padding:14px 28px;border-radius:8px;border:none;cursor:pointer;margin-top:6px;transition:background .15s" onmouseover="this.style.background='#8fca28'" onmouseout="this.style.background='#A3E635'">
+        Teste grátis por 10 dias
       </button>
 
-      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text2)">
-        Já tem conta?
-        <button class="btn-ghost" onclick="showPage('page-login')">Entrar</button>
+      <button onclick="showPage('page-login')" style="width:100%;background:transparent;color:#ffffff;font-size:14px;font-weight:600;text-align:center;margin-top:12px;border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:10px 20px;cursor:pointer;transition:border-color .2s;font-family:'DM Sans',sans-serif" onmouseover="this.style.borderColor='rgba(255,255,255,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.25)'">
+        Já tenho conta → Entrar
+      </button>
+
+      <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">
+        Ao continuar você concorda com os
+        <button class="btn-ghost" style="font-size:12px" onclick="showTermos()">Termos de Uso</button>
       </p>
     </div>
 
@@ -1262,7 +1283,7 @@ function _showTermosLegacy() {
 // ═══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
   const retorno = await verificarRetornoPagamento();
-  if (!retorno) showPage('page-login');
+  if (!retorno) showPage('page-register');
   if (location.hash === '#termos') showTermos();
 });
 </script>
