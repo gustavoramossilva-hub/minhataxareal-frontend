@@ -3,4 +3,5 @@ Allow: /
 Disallow: /simulador.html
 Disallow: /app.html
 Disallow: /gestao-financeira.html
+Disallow: /bcb-diagnostico.html
 Sitemap: https://minhataxareal.com.br/sitemap.xml
