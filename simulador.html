@@ -723,10 +723,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       }
       if (res.ok) {
         const me = await res.json();
-        if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+        const trialAtivo = !!(me.trial && me.trialExpira && Date.now() < me.trialExpira);
+        if (!me.activationPaid && !trialAtivo) { window.location.href = 'auth.html?reason=activation'; return; }
         if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
           window.location.href = 'auth.html?reason=expired'; return;
         }
+        localStorage.setItem('mtr_user', JSON.stringify(me));
         aplicarDadosUsuario(me);
       }
     } catch (_) {
@@ -741,7 +743,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     // ── CAMINHO RÁPIDO: cache disponível ─────────────────────────────
     // Aplica dados locais imediatamente — página fica interativa sem esperar o servidor
     const cached = (() => { try { return JSON.parse(localStorage.getItem('mtr_user') || 'null'); } catch(_) { return null; } })();
-    if (cached && cached.activationPaid) {
+    const cachedTrialAtivo = !!(cached && cached.trial && cached.trialExpira && Date.now() < cached.trialExpira);
+    if (cached && (cached.activationPaid || cachedTrialAtivo)) {
       aplicarDadosUsuario(cached);
       // Verifica JWT em background; só redireciona se for 401/403
       verificarTokenBackground(token);
@@ -755,10 +758,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       });
       if (!res.ok) throw new Error('unauthorized');
       const me = await res.json();
-      if (!me.activationPaid) { window.location.href = 'auth.html?reason=activation'; return; }
+      const trialAtivo = !!(me.trial && me.trialExpira && Date.now() < me.trialExpira);
+      if (!me.activationPaid && !trialAtivo) { window.location.href = 'auth.html?reason=activation'; return; }
       if (me.plan === 'subscription' && me.planExpiry && me.planExpiry < Date.now()) {
         window.location.href = 'auth.html?reason=expired'; return;
       }
+      localStorage.setItem('mtr_user', JSON.stringify(me));
       aplicarDadosUsuario(me);
     } catch (e) {
       localStorage.removeItem('mtr_token');

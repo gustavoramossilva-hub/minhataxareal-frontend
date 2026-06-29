@@ -282,7 +282,8 @@ async function checkAccess() {
   // ── CAMINHO RÁPIDO: cache do usuário disponível ──────────────────
   // Mostra o painel imediatamente sem esperar o servidor
   const cached = (() => { try { return JSON.parse(localStorage.getItem('mtr_user') || 'null'); } catch(_) { return null; } })();
-  if (cached && cached.activationPaid) {
+  const cachedTrialAtivo = !!(cached && cached.trial && cached.trialExpira && Date.now() < cached.trialExpira);
+  if (cached && (cached.activationPaid || cachedTrialAtivo)) {
     mostrarPainel(cached);
     // Verifica token em background — redireciona apenas se for 401/403
     verificarTokenBackground(token);
