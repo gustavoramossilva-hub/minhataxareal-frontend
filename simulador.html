@@ -901,21 +901,59 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="badge-premium">Premium</span>
         </div>
         <div id="carencia-fields" style="margin-top:10px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
-            <div>
+          <!-- Toggle manual / datas -->
+          <div style="margin-bottom:10px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+              <input type="checkbox" id="carencia-manual-toggle" onchange="onCarenciaToggle()" style="width:14px;height:14px;accent-color:var(--accent)">
+              Informar dias manualmente (modo legado)
+            </label>
+          </div>
+
+          <!-- Modo datas (padrão) -->
+          <div id="carencia-modo-datas">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+              <div>
+                <label class="form-label">Data de liberação do crédito</label>
+                <span class="form-hint" style="display:block;margin-bottom:4px">data em que o valor foi creditado na conta</span>
+                <input type="date" id="data-liberacao" style="width:100%" onchange="onCarenciaChange()" />
+              </div>
+              <div>
+                <label class="form-label">Data do 1º vencimento</label>
+                <span class="form-hint" style="display:block;margin-bottom:4px">conforme consta no contrato</span>
+                <input type="date" id="data-primeiro-vencimento" style="width:100%" onchange="onCarenciaChange()" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Critério de cálculo da carência</label>
+              <select id="criterio-carencia" onchange="onCarenciaChange()">
+                <option value="opcaoA">Opção A — Até 30 dias antes do 1º vencimento (padrão bancário)</option>
+                <option value="opcaoB">Opção B — Até a véspera do 1º vencimento</option>
+              </select>
+            </div>
+            <div id="carencia-calculado-box" style="display:none;padding:8px 12px;background:rgba(163,230,53,0.08);border:1px solid rgba(163,230,53,0.25);border-radius:8px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:12px">
+              <span style="color:var(--text2)">Período calculado: </span>
+              <span id="carencia-calculado-texto" style="color:var(--accent);font-weight:600">—</span>
+            </div>
+          </div>
+
+          <!-- Modo manual (oculto por padrão) -->
+          <div id="carencia-modo-manual" style="display:none">
+            <div class="form-group">
               <label class="form-label">Período de carência <span class="form-hint">dias</span></label>
               <div class="input-suffix-wrap">
                 <input type="number" id="carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" oninput="onCarenciaChange()" />
                 <span class="input-suffix">dias</span>
               </div>
             </div>
-            <div>
-              <label class="form-label">Tipo de carência</label>
-              <select id="carencia-tipo" onchange="onCarenciaChange()">
-                <option value="juros">Juros correndo (padrão bancário)</option>
-                <option value="total">Carência total (sem juros)</option>
-              </select>
-            </div>
+          </div>
+
+          <!-- Tipo (sempre visível) -->
+          <div class="form-group">
+            <label class="form-label">Tipo de carência</label>
+            <select id="carencia-tipo" onchange="onCarenciaChange()">
+              <option value="juros">Juros correndo (padrão bancário)</option>
+              <option value="total">Carência total (sem juros)</option>
+            </select>
           </div>
           <div id="carencia-info" style="display:none;font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--amber)">
             ⓘ Durante a carência o saldo cresce com juros compostos usando taxa diária equivalente: <span id="carencia-taxa-diaria-info">—</span> a.d. O principal aumenta antes da amortização começar.
@@ -1307,21 +1345,54 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div class="form-group">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
+        <!-- Toggle manual / datas (inad2) -->
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+            <input type="checkbox" id="inad2-carencia-manual-toggle" onchange="onInad2CarenciaToggle()" style="width:14px;height:14px;accent-color:var(--accent)">
+            Informar dias manualmente (modo legado)
+          </label>
+        </div>
+
+        <!-- Modo datas (padrão) -->
+        <div id="inad2-carencia-modo-datas">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+            <div>
+              <label class="form-label">Data de liberação do crédito</label>
+              <span class="form-hint" style="display:block;margin-bottom:4px">data do crédito na conta</span>
+              <input type="date" id="inad2-data-liberacao" style="width:100%" onchange="onInad2CarenciaChange()" />
+            </div>
+            <div>
+              <label class="form-label">Critério de carência</label>
+              <span class="form-hint" style="display:block;margin-bottom:4px">base para calcular o período</span>
+              <select id="inad2-criterio-carencia" onchange="onInad2CarenciaChange()" style="width:100%">
+                <option value="opcaoA">Opção A — 30 dias antes do 1º venc.</option>
+                <option value="opcaoB">Opção B — Véspera do 1º venc.</option>
+              </select>
+            </div>
+          </div>
+          <div id="inad2-carencia-calculado-box" style="display:none;padding:8px 12px;background:rgba(163,230,53,0.08);border:1px solid rgba(163,230,53,0.25);border-radius:8px;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:12px">
+            <span style="color:var(--text2)">Período calculado: </span>
+            <span id="inad2-carencia-calculado-texto" style="color:var(--accent);font-weight:600">—</span>
+          </div>
+        </div>
+
+        <!-- Modo manual -->
+        <div id="inad2-carencia-modo-manual" style="display:none">
+          <div style="margin-bottom:10px">
             <label class="form-label">Carência contratual <span class="form-hint">dias</span></label>
             <div class="input-suffix-wrap">
               <input type="number" id="inad2-carencia-dias" placeholder="ex: 90, 120, 180" min="0" max="1800" oninput="atualizarIndicadorContrato()" />
               <span class="input-suffix">dias</span>
             </div>
           </div>
-          <div>
-            <label class="form-label">Tipo de carência</label>
-            <select id="inad2-carencia-tipo" onchange="atualizarIndicadorContrato()">
-              <option value="juros">Juros correndo (padrão bancário)</option>
-              <option value="total">Carência total (sem juros)</option>
-            </select>
-          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Tipo de carência</label>
+          <select id="inad2-carencia-tipo" onchange="atualizarIndicadorContrato();onInad2CarenciaChange()">
+            <option value="juros">Juros correndo (padrão bancário)</option>
+            <option value="total">Carência total (sem juros)</option>
+          </select>
         </div>
         <div id="inad2-carencia-aviso" style="display:none;font-size:10.5px;color:var(--amber);font-family:'DM Mono',monospace;margin-top:6px">
           ⓘ Cada mês de carência usa a taxa BCB daquele período — reconstituição pericial mês a mês.
@@ -2217,8 +2288,23 @@ function calcular() {
   }
 
   // Carência (apenas no modo simular, exclusivo Premium)
-  const carenciaDias = (state.modo === 'simular' && window.userPremium === true)
-    ? (parseInt(document.getElementById('carencia-dias')?.value) || 0) : 0;
+  let carenciaDias = 0;
+  let carenciaDataInfo = null;
+  if (state.modo === 'simular' && window.userPremium === true) {
+    const manual = document.getElementById('carencia-manual-toggle')?.checked;
+    if (manual) {
+      carenciaDias = parseInt(document.getElementById('carencia-dias')?.value) || 0;
+    } else {
+      const lib  = document.getElementById('data-liberacao')?.value;
+      const venc = document.getElementById('data-primeiro-vencimento')?.value;
+      const crit = document.getElementById('criterio-carencia')?.value || 'opcaoA';
+      if (lib && venc) {
+        const r = calcularDiasCarencia(lib, venc, crit);
+        carenciaDias    = r.dias;
+        carenciaDataInfo = { lib, venc, crit, dias: r.dias, dataInicio: r.dataInicio, dataFim: r.dataFim };
+      }
+    }
+  }
   const carenciaTipo = state.modo === 'simular'
     ? (document.getElementById('carencia-tipo')?.value || 'juros') : 'juros';
   // Converte dias → meses aproximados para o bisseção da TIR
@@ -2268,11 +2354,12 @@ function calcular() {
   state.sistema          = sistema;
   state.cetMes           = cetMes;
   state.cetEncargos      = temCET ? { iof: cetIof, tarifas: cetTarifas, seguros: cetSeguros } : null;
-  state.carenciaDias     = carenciaDias;
-  state.carenciaTipo     = carenciaTipo;
-  state.saldoCarencia    = pvBase;
+  state.carenciaDias       = carenciaDias;
+  state.carenciaTipo       = carenciaTipo;
+  state.carenciaDataInfo   = carenciaDataInfo;
+  state.saldoCarencia      = pvBase;
   state.taxaDiariaCarencia = taxaDiariaCarencia;
-  state.jurosCarencia    = jurosCarencia;
+  state.jurosCarencia      = jurosCarencia;
 
   // Gera tabelas — linha de carência prefixada às linhas de amortização
   const amortPrice = gerarTabelaPrice(pvBase, taxaMes, n).map(r => ({ ...r, parc: r.parc }));
@@ -2508,18 +2595,95 @@ function gerarRowsCarencia(pv, taxaMes, dias, tipoCarencia) {
   return { rows: [row], saldoAposCarencia: saldoApos, taxaDiaria, juros };
 }
 
+function calcularDiasCarencia(dataLiberacao, dataPrimeiroVencimento, criterio) {
+  const libDate  = new Date(dataLiberacao + 'T00:00:00');
+  const vencDate = new Date(dataPrimeiroVencimento + 'T00:00:00');
+  const dataFim  = new Date(vencDate);
+  if (criterio === 'opcaoA') {
+    dataFim.setDate(dataFim.getDate() - 30);
+  } else {
+    dataFim.setDate(dataFim.getDate() - 1);
+  }
+  const dias = Math.max(0, Math.round((dataFim - libDate) / 86400000));
+  return { dias, dataInicio: libDate, dataFim, criterio };
+}
+
+function onCarenciaToggle() {
+  const manual = document.getElementById('carencia-manual-toggle')?.checked;
+  document.getElementById('carencia-modo-datas').style.display  = manual ? 'none' : '';
+  document.getElementById('carencia-modo-manual').style.display = manual ? '' : 'none';
+  onCarenciaChange();
+}
+
 function onCarenciaChange() {
-  const dias = parseInt(document.getElementById('carencia-dias')?.value) || 0;
-  const tipo = document.getElementById('carencia-tipo')?.value;
-  const info = document.getElementById('carencia-info');
-  if (info) {
-    info.style.display = (dias > 0 && tipo === 'juros') ? '' : 'none';
-    if (dias > 0 && tipo === 'juros') {
-      // Atualiza taxa diária info (sem taxa ainda, só quando calcular rodar)
-      const el = document.getElementById('carencia-taxa-diaria-info');
-      if (el) el.textContent = '(veja no resumo após calcular)';
+  const manual = document.getElementById('carencia-manual-toggle')?.checked;
+  let dias = 0;
+  if (manual) {
+    dias = parseInt(document.getElementById('carencia-dias')?.value) || 0;
+  } else {
+    const lib  = document.getElementById('data-liberacao')?.value;
+    const venc = document.getElementById('data-primeiro-vencimento')?.value;
+    const crit = document.getElementById('criterio-carencia')?.value || 'opcaoA';
+    const box  = document.getElementById('carencia-calculado-box');
+    const txt  = document.getElementById('carencia-calculado-texto');
+    if (lib && venc) {
+      const r = calcularDiasCarencia(lib, venc, crit);
+      dias = r.dias;
+      if (box && txt) {
+        box.style.display = '';
+        const fmt = d => d.toLocaleDateString('pt-BR');
+        txt.textContent = r.dias + ' dias (de ' + fmt(r.dataInicio) + ' até ' + fmt(r.dataFim) + ')';
+      }
+    } else if (box) {
+      box.style.display = 'none';
     }
   }
+  const tipo = document.getElementById('carencia-tipo')?.value;
+  const info = document.getElementById('carencia-info');
+  if (info) info.style.display = (dias > 0 && tipo === 'juros') ? '' : 'none';
+}
+
+function onInad2CarenciaToggle() {
+  const manual = document.getElementById('inad2-carencia-manual-toggle')?.checked;
+  document.getElementById('inad2-carencia-modo-datas').style.display  = manual ? 'none' : '';
+  document.getElementById('inad2-carencia-modo-manual').style.display = manual ? '' : 'none';
+  onInad2CarenciaChange();
+}
+
+function onInad2CarenciaChange() {
+  const manual = document.getElementById('inad2-carencia-manual-toggle')?.checked;
+  const box = document.getElementById('inad2-carencia-calculado-box');
+  const txt = document.getElementById('inad2-carencia-calculado-texto');
+  if (!manual) {
+    const lib  = document.getElementById('inad2-data-liberacao')?.value;
+    const venc = document.getElementById('inad2-data-inicio')?.value;
+    const crit = document.getElementById('inad2-criterio-carencia')?.value || 'opcaoA';
+    if (lib && venc && box && txt) {
+      const r = calcularDiasCarencia(lib, venc, crit);
+      box.style.display = '';
+      const fmt = d => d.toLocaleDateString('pt-BR');
+      txt.textContent = r.dias + ' dias (de ' + fmt(r.dataInicio) + ' até ' + fmt(r.dataFim) + ')';
+    } else if (box) {
+      box.style.display = 'none';
+    }
+  }
+  const tipo = document.getElementById('inad2-carencia-tipo')?.value;
+  const aviso = document.getElementById('inad2-carencia-aviso');
+  if (aviso) {
+    const dias = _getInad2CarenciaDias();
+    aviso.style.display = (dias > 0 && tipo === 'juros') ? '' : 'none';
+  }
+  atualizarIndicadorContrato();
+}
+
+function _getInad2CarenciaDias() {
+  const manual = document.getElementById('inad2-carencia-manual-toggle')?.checked;
+  if (manual) return parseInt(document.getElementById('inad2-carencia-dias')?.value) || 0;
+  const lib  = document.getElementById('inad2-data-liberacao')?.value;
+  const venc = document.getElementById('inad2-data-inicio')?.value;
+  const crit = document.getElementById('inad2-criterio-carencia')?.value || 'opcaoA';
+  if (!lib || !venc) return 0;
+  return calcularDiasCarencia(lib, venc, crit).dias;
 }
 
 function initCarenciaGate() {
@@ -3104,7 +3268,15 @@ async function gerarExcel() {
     ...(state.carenciaDias > 0 ? [
       [],
       ['CARÊNCIA'],
+      ...(state.carenciaDataInfo ? [
+        ['Data de liberação do crédito',  state.carenciaDataInfo.dataInicio.toLocaleDateString('pt-BR')],
+        ['Data do 1º vencimento',         state.carenciaDataInfo.dataFim ? new Date(state.carenciaDataInfo.venc).toLocaleDateString('pt-BR') : '—'],
+        ['Critério aplicado',             state.carenciaDataInfo.crit === 'opcaoA' ? 'Opção A — 30 dias antes do 1º vencimento' : 'Opção B — véspera do 1º vencimento'],
+        ['Data de fim da carência',       state.carenciaDataInfo.dataFim.toLocaleDateString('pt-BR')],
+        ['Memória de cálculo',            'Carência de ' + state.carenciaDias + ' dias calculada de ' + state.carenciaDataInfo.dataInicio.toLocaleDateString('pt-BR') + ' até ' + state.carenciaDataInfo.dataFim.toLocaleDateString('pt-BR')],
+      ] : []),
       ['Dias de carência',          _xlsxNum(state.carenciaDias)],
+      ['Tipo de carência',          state.carenciaTipo === 'total' ? 'Carência total (sem juros)' : 'Juros correndo (padrão bancário)'],
       ['Taxa diária equiv. (%)',    _xlsxNum(state.taxaDiariaCarencia * 100)],
       ['Juros capitalizados (R$)',  _xlsxMoeda(state.jurosCarencia)],
       ['Saldo após carência (R$)',  _xlsxMoeda(state.saldoCarencia)],
@@ -3430,6 +3602,7 @@ function gerarPDF() {
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
 
+  const _fmtDate = d => (d instanceof Date ? d : new Date(d)).toLocaleDateString('pt-BR');
   const dados1 = [
     ['Modalidade', bacen.nome],
     ['Valor Líquido Recebido', fmtBRL(state.valorLiquido)],
@@ -3438,6 +3611,17 @@ function gerarPDF() {
     ['Sistema de Amortização', state.sistema.toUpperCase()],
     ['Montante Total Pago', fmtBRL(total)],
     ['Total de Juros', fmtBRL(juros)],
+    ...(state.carenciaDias > 0 ? [
+      ['Carência contratual', state.carenciaDias + ' dias — ' + (state.carenciaTipo === 'total' ? 'sem juros' : 'juros correndo')],
+      ...(state.carenciaDataInfo ? [
+        ['  Data de liberação', _fmtDate(state.carenciaDataInfo.dataInicio)],
+        ['  Data do 1º vencimento', _fmtDate(state.carenciaDataInfo.venc)],
+        ['  Critério', state.carenciaDataInfo.crit === 'opcaoA' ? 'Opção A — 30 dias antes do vencimento' : 'Opção B — véspera do vencimento'],
+        ['  Período apurado', 'de ' + _fmtDate(state.carenciaDataInfo.dataInicio) + ' até ' + _fmtDate(state.carenciaDataInfo.dataFim)],
+      ] : []),
+      ['  Juros capitalizados', fmtBRL(state.jurosCarencia)],
+      ['  Saldo após carência', fmtBRL(state.saldoCarencia)],
+    ] : []),
   ];
   dados1.forEach(([k, v]) => {
     doc.setFont('helvetica', 'bold');
@@ -5178,7 +5362,7 @@ function atualizarIndicadorContrato() {
   }
 
   // Carência — estimativa com TIR (será refinada com BCB no cálculo)
-  const carenciaDiasInd = parseInt(document.getElementById('inad2-carencia-dias')?.value) || 0;
+  const carenciaDiasInd = _getInad2CarenciaDias();
   const carenciaTipoInd = document.getElementById('inad2-carencia-tipo')?.value || 'juros';
   const avisoCarencia   = document.getElementById('inad2-carencia-aviso');
   if (avisoCarencia) avisoCarencia.style.display = (carenciaDiasInd > 0 && carenciaTipoInd === 'juros') ? '' : 'none';
