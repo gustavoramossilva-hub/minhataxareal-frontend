@@ -2356,8 +2356,8 @@ function gerarTabelaPrice(pv, i, n) {
   let saldo = pv;
   for (let k = 1; k <= n; k++) {
     const juros = saldo * i;
-    const amort = pmt - juros;
-    saldo = Math.max(0, saldo - amort);
+    let amort = pmt - juros;
+    if (k === n) { amort = saldo; saldo = 0; } else { saldo = Math.max(0, parseFloat((saldo - amort).toFixed(2))); }
     rows.push({ parc: k, pmt: pmt, juros, amort, saldo });
   }
   return rows;
@@ -2370,9 +2370,9 @@ function gerarTabelaSAC(pv, i, n) {
   let saldo = pv;
   for (let k = 1; k <= n; k++) {
     const juros = saldo * i;
-    const pmt = amortConst + juros;
-    saldo = Math.max(0, saldo - amortConst);
-    rows.push({ parc: k, pmt, juros, amort: amortConst, saldo });
+    let amort = amortConst;
+    if (k === n) { amort = saldo; saldo = 0; } else { saldo = Math.max(0, parseFloat((saldo - amortConst).toFixed(2))); }
+    rows.push({ parc: k, pmt: amort + juros, juros, amort, saldo });
   }
   return rows;
 }
@@ -2406,8 +2406,8 @@ function gerarTabelaIPCAPlus(pv, taxaFixaMes, ipcaMes, n) {
     const prazoRest = n - k + 1;
     const pmt = saldo * taxaFixaMes * Math.pow(1 + taxaFixaMes, prazoRest) / (Math.pow(1 + taxaFixaMes, prazoRest) - 1);
     const juros = saldo * taxaFixaMes;
-    const amort = pmt - juros;
-    saldo = Math.max(0, saldo - amort);
+    let amort = pmt - juros;
+    if (k === n) { amort = saldo; saldo = 0; } else { saldo = Math.max(0, parseFloat((saldo - amort).toFixed(2))); }
     totalJuros += juros;
     rows.push({ parc: k, pmt, juros, amort, corr, saldo });
   }
@@ -2428,9 +2428,9 @@ function gerarTabelaSACRE(pv, i, n, tr, B) {
       prestacaoAtual = saldo / prazoRest + saldo * i;
     }
     const juros = saldo * i;
-    const amort = prestacaoAtual - juros;
-    saldo = Math.max(0, saldo - amort);
-    rows.push({ parc: m, pmt: prestacaoAtual, juros, amort, saldo, trCorr });
+    let amort = prestacaoAtual - juros;
+    if (m === n) { amort = saldo; saldo = 0; } else { saldo = Math.max(0, parseFloat((saldo - amort).toFixed(2))); }
+    rows.push({ parc: m, pmt: m === n ? amort + juros : prestacaoAtual, juros, amort, saldo, trCorr });
   }
   return rows;
 }
@@ -3047,7 +3047,8 @@ function _carregarSheetJS() {
   });
 }
 
-function _xlsxNum(v) { return typeof v === 'number' ? v : 0; }
+function _xlsxNum(v) { return typeof v === 'number' ? Math.round(v * 100) / 100 : 0; }
+function _xlsxMoeda(v) { const n = typeof v === 'number' ? Math.round(v * 100) / 100 : 0; return { v: n, t: 'n', z: '#,##0.00' }; }
 
 async function gerarExcel() {
   if (window.userPremium !== true) {
@@ -3085,11 +3086,11 @@ async function gerarExcel() {
     ['DADOS DA OPERAÇÃO'],
     ['Modalidade',               bacen.nome],
     ['Sistema de amortização',   state.sistema.toUpperCase()],
-    ['Valor líquido (R$)',       _xlsxNum(state.valorLiquido)],
+    ['Valor líquido (R$)',       _xlsxMoeda(state.valorLiquido)],
     ['Nº de parcelas',           _xlsxNum(state.numParcelas)],
-    ['Valor da parcela (R$)',    _xlsxNum(state.valorParcela)],
-    ['Total pago (R$)',          _xlsxNum(total)],
-    ['Total de juros (R$)',      _xlsxNum(total - state.valorLiquido)],
+    ['Valor da parcela (R$)',    _xlsxMoeda(state.valorParcela)],
+    ['Total pago (R$)',          _xlsxMoeda(total)],
+    ['Total de juros (R$)',      _xlsxMoeda(total - state.valorLiquido)],
     [],
     ['TAXAS APURADAS'],
     ['Taxa efetiva (TIR) a.m. (%)',  _xlsxNum(taxa * 100)],
@@ -3105,8 +3106,8 @@ async function gerarExcel() {
       ['CARÊNCIA'],
       ['Dias de carência',          _xlsxNum(state.carenciaDias)],
       ['Taxa diária equiv. (%)',    _xlsxNum(state.taxaDiariaCarencia * 100)],
-      ['Juros capitalizados (R$)',  _xlsxNum(state.jurosCarencia)],
-      ['Saldo após carência (R$)',  _xlsxNum(state.saldoCarencia)],
+      ['Juros capitalizados (R$)',  _xlsxMoeda(state.jurosCarencia)],
+      ['Saldo após carência (R$)',  _xlsxMoeda(state.saldoCarencia)],
     ] : []),
   ];
   const wsR = XLSX.utils.aoa_to_sheet(resumo);
@@ -3114,17 +3115,118 @@ async function gerarExcel() {
   XLSX.utils.book_append_sheet(wb, wsR, 'Resumo');
 
   // ── Sheet 2: Amortização ──
-  const tabela = state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice;
+  const tabela = (state.sistema === 'sac' ? state.tabelaSAC : state.tabelaPrice) || [];
   const amort = [
     ['Parcela', 'Tipo', 'PMT (R$)', 'Juros (R$)', 'Amortizacao (R$)', 'Saldo Devedor (R$)'],
     ...tabela.map(r => r.isCarencia
-      ? ['Carencia', r.tipoCarencia === 'total' ? 'Total (sem juros)' : 'Juros capitalizando', 0, _xlsxNum(r.juros), 0, _xlsxNum(r.saldo)]
-      : [_xlsxNum(r.parc), 'Amortizacao', _xlsxNum(r.pmt), _xlsxNum(r.juros), _xlsxNum(r.amort), _xlsxNum(r.saldo)]
+      ? ['Carencia', r.tipoCarencia === 'total' ? 'Total (sem juros)' : 'Juros capitalizando', _xlsxMoeda(0), _xlsxMoeda(r.juros), _xlsxMoeda(0), _xlsxMoeda(r.saldo)]
+      : [_xlsxNum(r.parc), 'Amortizacao', _xlsxMoeda(r.pmt), _xlsxMoeda(r.juros), _xlsxMoeda(r.amort), _xlsxMoeda(r.saldo)]
     ),
   ];
   const wsA = XLSX.utils.aoa_to_sheet(amort);
   wsA['!cols'] = [{wch:10},{wch:22},{wch:14},{wch:14},{wch:18},{wch:20}];
   XLSX.utils.book_append_sheet(wb, wsA, 'Amortizacao');
+
+  // ── Sheet 3: Memória de Cálculo ──
+  const totalAmort = tabela.reduce((s, r) => s + (r.amort || 0), 0);
+  const totalJurosPagos = tabela.reduce((s, r) => s + (r.juros || 0), 0);
+  const saldoUltimaLinha = tabela.length > 0 ? tabela[tabela.length - 1].saldo : 0;
+  const formulaMap = {
+    price: 'PMT = PV × [i(1+i)^n] / [(1+i)^n - 1]',
+    sac:   'Amort = PV / n; PMT(k) = Amort + Saldo(k-1) × i',
+    sacre: 'Recalcula PMT a cada bloco TR; Amort(k) = PMT - Juros(k)',
+  };
+  const seriesCodigo = (SGS_CODIGOS && SGS_CODIGOS[state.modalidade]) ? SGS_CODIGOS[state.modalidade] : '—';
+  const memoria = [
+    ['MinhaTaxaReal — Memória de Cálculo'],
+    [],
+    ['METODOLOGIA'],
+    ['Sistema de amortização', state.sistema.toUpperCase()],
+    ['Fórmula aplicada', formulaMap[state.sistema] || '—'],
+    ['Convenção de juros', 'Juros compostos mensais'],
+    [],
+    ['FONTES OFICIAIS'],
+    ['Fonte das taxas de referência', 'Banco Central do Brasil — SGS (Sistema Gerenciador de Séries Temporais)'],
+    ['Série SGS utilizada', seriesCodigo],
+    ['Denominação', bacen.nome],
+    ['Taxa de referência (a.m.)', _xlsxNum(bacen.taxaMes)],
+    ['Taxa de referência (a.a.)', _xlsxNum(bacen.taxaAno)],
+    ['URL da API', 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + seriesCodigo + '/dados/ultimos/12?formato=json'],
+    [],
+    ['PARÂMETROS UTILIZADOS'],
+    ['Valor líquido recebido (R$)', _xlsxMoeda(state.valorLiquido)],
+    ['Valor da parcela (R$)',       _xlsxMoeda(state.valorParcela)],
+    ['Número de parcelas',          _xlsxNum(state.numParcelas)],
+    ['Modalidade / produto',        bacen.nome],
+    ...(state.carenciaDias > 0 ? [['Dias de carência', _xlsxNum(state.carenciaDias)]] : []),
+    [],
+    ['VALIDAÇÃO DO CÁLCULO'],
+    ['Saldo devedor na última parcela (R$)', _xlsxMoeda(saldoUltimaLinha)],
+    ['Total amortizado (R$)',                _xlsxMoeda(totalAmort)],
+    ['Total de juros pagos (R$)',            _xlsxMoeda(totalJurosPagos)],
+    ['Total pago (R$)',                      _xlsxMoeda(total)],
+    ['Verificação: Total amortizado = Valor financiado', Math.abs(totalAmort - state.valorLiquido) < 0.10 ? 'OK ✓' : 'Verificar ✗'],
+  ];
+  const wsMem = XLSX.utils.aoa_to_sheet(memoria);
+  wsMem['!cols'] = [{wch:42},{wch:60}];
+  XLSX.utils.book_append_sheet(wb, wsMem, 'Memoria de Calculo');
+
+  // ── Sheet 4: Comparativo BCB ──
+  const difMes   = taxa * 100 - bacen.taxaMes;
+  const difAnual = taxaAno - bacen.taxaAno;
+  const compBCB = [
+    ['MinhaTaxaReal — Comparativo com Taxas Médias BCB'],
+    [],
+    ['Métrica', 'Contratado / Calculado', 'Média BCB', 'Diferença (p.p.)'],
+    ['Taxa efetiva (a.m.) (%)',  _xlsxNum(taxa * 100),   _xlsxNum(bacen.taxaMes),  _xlsxNum(difMes)],
+    ['Taxa efetiva (a.a.) (%)',  _xlsxNum(taxaAno),       _xlsxNum(bacen.taxaAno),  _xlsxNum(difAnual)],
+    [],
+    ['INTERPRETAÇÃO'],
+    ['Modalidade de referência', bacen.nome],
+    ['Série SGS',                seriesCodigo],
+    ['Diferença a.m. (p.p.)',    _xlsxNum(difMes)],
+    ['Diferença relativa (%)',   bacen.taxaMes > 0 ? _xlsxNum(difMes / bacen.taxaMes * 100) : '—'],
+    ['Situação', difMes <= 0 ? 'Dentro ou abaixo da média BCB' : difMes <= 2 ? 'Acima da média BCB (atenção)' : 'Significativamente acima da média BCB'],
+    [],
+    ['Nota', 'Taxa média BCB: série SGS ' + seriesCodigo + ' — ' + bacen.nome + '. Fonte: dadosabertos.bcb.gov.br'],
+  ];
+  const wsComp = XLSX.utils.aoa_to_sheet(compBCB);
+  wsComp['!cols'] = [{wch:32},{wch:26},{wch:20},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, wsComp, 'Comparativo BCB');
+
+  // ── Sheet 5: Quesitos Sugeridos (Premium) ──
+  const difRelativa = bacen.taxaMes > 0 ? difMes / bacen.taxaMes * 100 : 0;
+  const quesitos = [
+    ['QUESITOS SUGERIDOS — Para uso do profissional habilitado'],
+    ['Aviso: Os quesitos abaixo são sugeridos com base nos resultados do cálculo. Devem ser revisados e adaptados pelo advogado ou perito conforme as especificidades do caso.'],
+    [],
+    ['QUESITOS DO AUTOR'],
+    ['1.', 'Qual o sistema de amortização utilizado no contrato?'],
+    ['2.', 'Qual a taxa de juros efetiva mensal e anual aplicada?'],
+    ['3.', 'Qual a taxa média BCB para a modalidade ' + bacen.nome + '?'],
+    ['4.', 'A taxa contratada está acima da média BCB? Em quanto?'],
+    ...(difRelativa > 50 ? [
+      ['5.', 'A diferença supera o patamar de 50% estabelecido como parâmetro pelo STJ (REsp 1.061.530/RS)?'],
+    ] : []),
+    ...(state.carenciaDias > 0 ? [
+      ['6.', 'O período de carência resultou em capitalização de juros ao saldo devedor?'],
+      ['7.', 'Qual o impacto da carência no CET efetivo do contrato?'],
+    ] : []),
+    [],
+    ['QUESITOS DO RÉU'],
+    ['1.', 'O sistema de amortização está previsto contratualmente?'],
+    ['2.', 'A taxa aplicada está dentro dos limites autorizados pelo BCB?'],
+    [],
+    ['REFERÊNCIA PARA RESPOSTA'],
+    ['Taxa efetiva apurada (a.m.)',   _xlsxNum(taxa * 100)   + '%'],
+    ['Taxa efetiva apurada (a.a.)',   _xlsxNum(taxaAno)       + '%'],
+    ['Taxa média BCB (a.m.)',         _xlsxNum(bacen.taxaMes) + '%'],
+    ['Diferença (p.p. a.m.)',         _xlsxNum(difMes)        + ' p.p.'],
+    ['Sistema de amortização',        state.sistema.toUpperCase()],
+  ];
+  const wsQ = XLSX.utils.aoa_to_sheet(quesitos);
+  wsQ['!cols'] = [{wch:6},{wch:90}];
+  XLSX.utils.book_append_sheet(wb, wsQ, 'Quesitos Sugeridos');
 
   XLSX.writeFile(wb, 'minhataxareal_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
@@ -3300,26 +3402,22 @@ function gerarPDF() {
   const _hdrH = 40 + (_laudoLines.length > 0 ? _laudoLines.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
   doc.rect(0, 0, 210, _hdrH, 'F');
-  // Logo: ícone indigo + texto
-  doc.setFillColor(55, 48, 163); // #3730A3
-  doc.roundedRect(lm, 5, 10, 10, 2, 2, 'F');
-  doc.setDrawColor(163, 230, 53); // #A3E635
-  doc.setLineWidth(0.6);
-  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm + 1.2, 13.5);
-  doc.setTextColor(163, 230, 53);
-  doc.setFontSize(6);
+  // Logo: texto formatado
   doc.setFont('helvetica', 'bold');
-  doc.text('MINHA', lm + 12, 9, { charSpace: 0.8 });
+  doc.setFontSize(9);
+  doc.setTextColor(163, 230, 53);
+  doc.text('MINHA', lm, 14, { charSpace: 1 });
+  doc.setFontSize(17);
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.text('TaxaReal', lm + 11.5, 15.5);
-  doc.setTextColor(180, 180, 180);
+  doc.text('TaxaReal', lm, 23);
+  // Subtítulo na coluna direita
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Relatório de Análise de Crédito', lm, 23);
-  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR'), lm, 29);
-  let _ly = 35;
-  _laudoLines.forEach(line => { _ly += 6; doc.text(line, lm, _ly); });
+  doc.setTextColor(180, 180, 180);
+  doc.text('Relatório de Análise de Crédito', lm + 50, 13);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR'), lm + 50, 19);
+  let _ly = 27;
+  _laudoLines.forEach(line => { doc.text(line, lm + 50, _ly); _ly += 6; });
   doc.setFillColor(212, 240, 60);
   doc.rect(lm, _hdrH - 6, pw, 1, 'F');
 
@@ -3487,10 +3585,14 @@ function gerarPDF() {
     });
   } else {
     if (tabela.length > 12) {
-      doc.setTextColor(150, 150, 150);
-      doc.setFontSize(7);
-      doc.text('... tabela completa disponível no plano Premium (' + tabela.length + ' parcelas)', lm + 2, y + 4);
-      y += 8;
+      y += 2;
+      doc.setFillColor(255, 248, 220);
+      doc.roundedRect(lm, y, pw, 16, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(140, 90, 0);
+      doc.text('Tabela parcial — exibindo 12 de ' + tabela.length + ' parcelas.', lm + 3, y + 6);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(100, 65, 0);
+      doc.text('Faça upgrade para o plano Premium para visualizar a tabela completa no PDF.', lm + 3, y + 12);
+      y += 20;
     }
   }
 
@@ -6012,26 +6114,21 @@ function gerarPDFInadimplencia() {
   const _hdrHI = 40 + (_llinesI.length > 0 ? _llinesI.length * 6 + 4 : 0);
   doc.setFillColor(14, 15, 17);
   doc.rect(0, 0, 210, _hdrHI, 'F');
-  // Logo PDF inadimplência
-  doc.setFillColor(55, 48, 163);
-  doc.roundedRect(lm, 5, 10, 10, 2, 2, 'F');
-  doc.setDrawColor(163, 230, 53);
-  doc.setLineWidth(0.6);
-  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm + 1.2, 13.5);
-  doc.setTextColor(163, 230, 53);
-  doc.setFontSize(6);
+  // Logo PDF inadimplência: texto formatado
   doc.setFont('helvetica', 'bold');
-  doc.text('MINHA', lm + 12, 9, { charSpace: 0.8 });
+  doc.setFontSize(9);
+  doc.setTextColor(163, 230, 53);
+  doc.text('MINHA', lm, 14, { charSpace: 1 });
+  doc.setFontSize(17);
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.text('TaxaReal', lm + 11.5, 15.5);
-  doc.setTextColor(180, 180, 180);
+  doc.text('TaxaReal', lm, 23);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Apuração de Inadimplência — Memória de Cálculo', lm, 23);
-  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: Banco Central do Brasil — SGS', lm, 29);
-  let _lyI = 35;
-  _llinesI.forEach(line => { _lyI += 6; doc.text(line, lm, _lyI); });
+  doc.setTextColor(180, 180, 180);
+  doc.text('Apuração de Inadimplência — Memória de Cálculo', lm + 50, 13);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: BCB/SGS', lm + 50, 19);
+  let _lyI = 27;
+  _llinesI.forEach(line => { doc.text(line, lm + 50, _lyI); _lyI += 6; });
   doc.setFillColor(212, 240, 60);
   doc.rect(lm, _hdrHI - 6, pw, 1, 'F');
   y = _hdrHI + 10;
@@ -6944,41 +7041,68 @@ async function atlExportarPDF(dados) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const lm = 14, pw = 182;
-  // Header logo
-  doc.setFillColor(55,48,163); doc.roundedRect(lm,5,10,10,2,2,'F');
-  doc.setDrawColor(163,230,53); doc.setLineWidth(0.6);
-  doc.lines([[2,3],[2,-1.5],[2,1.5],[2,-3]], lm+1.2, 13.5);
-  doc.setTextColor(163,230,53); doc.setFontSize(6); doc.setFont('helvetica','bold');
-  doc.text('MINHA', lm+12, 9, { charSpace:0.8 });
-  doc.setTextColor(255,255,255); doc.setFontSize(13);
-  doc.text('TaxaReal', lm+11.5, 15.5);
+  const MARGEM_INF = 272, ALTURA_LINHA = 5.5;
+  const cols = [8,62,26,26,26,28];
+  const hdrs = ['#','Descrição','Valor Orig.','Correção','Juros','Total'];
+
+  function atlCabecalhoTabela(yPos) {
+    doc.setFillColor(55,48,163); doc.rect(lm, yPos-4, pw, 6, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    let x = lm;
+    hdrs.forEach((h,i) => { doc.text(h, x+1, yPos); x += cols[i]; });
+    return yPos + 4;
+  }
+
+  function atlNovaPagina(yPos) {
+    doc.addPage();
+    doc.setFillColor(14,15,17); doc.rect(0,0,210,18,'F');
+    doc.setTextColor(212,240,60); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text('MinhaTaxaReal — Atualização Monetária (cont.)', lm, 12);
+    doc.setFillColor(212,240,60); doc.rect(lm,16,pw,0.5,'F');
+    return atlCabecalhoTabela(24);
+  }
+
+  // Header página 1
+  // Logo: texto formatado
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.setTextColor(163,230,53);
+  doc.text('MINHA', lm, 10, { charSpace:0.8 });
+  doc.setFontSize(14);
+  doc.setTextColor(255,255,255);
+  doc.text('TaxaReal', lm, 17);
   doc.setTextColor(180,180,180); doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Relatório de Atualização Monetária', lm+26, 10);
+  doc.text('Relatório de Atualização Monetária', lm+40, 9);
   doc.setFontSize(7);
-  doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR') + '  ·  Tribunal: ' + (dados.tribunal||'—') + '  ·  Apuração: ' + dados.dataFmt, lm+26, 15);
-  doc.setDrawColor(55,48,163); doc.setLineWidth(0.4); doc.line(lm,19,lm+pw,19);
+  doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR') + '  ·  Tribunal: ' + (dados.tribunal||'—') + '  ·  Apuração: ' + dados.dataFmt, lm+40, 15);
+  doc.setDrawColor(163,230,53); doc.setLineWidth(0.6); doc.line(lm,21,lm+pw,21);
   let y = 26;
   doc.setTextColor(163,230,53); doc.setFontSize(13); doc.setFont('helvetica','bold');
   doc.text('Total Geral: ' + fmtBRL(dados.totalGeral), lm, y); y += 10;
-  // Cabeçalho tabela
-  const cols = [8,62,26,26,26,28];
-  const hdrs = ['#','Descrição','Valor Orig.','Correção','Juros','Total'];
-  doc.setFillColor(55,48,163); doc.rect(lm, y-4, pw, 6, 'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-  let x = lm;
-  hdrs.forEach((h,i) => { doc.text(h, x+1, y); x += cols[i]; });
-  y += 4;
+  y = atlCabecalhoTabela(y);
+
   dados.resultados.forEach((r, i) => {
+    if (y + ALTURA_LINHA > MARGEM_INF) y = atlNovaPagina(y);
     doc.setFillColor(i%2===0 ? 22:26, i%2===0 ? 24:27, i%2===0 ? 30:35);
-    doc.rect(lm, y-3.5, pw, 5.5, 'F');
-    doc.setTextColor(200,200,200); doc.setFont('helvetica','normal');
-    x = lm;
+    doc.rect(lm, y-3.5, pw, ALTURA_LINHA, 'F');
+    doc.setTextColor(200,200,200); doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    let x = lm;
     [String(r.num), r.desc.substring(0,30), fmtBRL(r.valor), fmtBRL(r.totalCorr), fmtBRL(r.totalJur), fmtBRL(r.total)].forEach((c,ci) => { doc.text(c, x+1, y); x += cols[ci]; });
-    y += 5.5;
+    y += ALTURA_LINHA;
   });
   y += 6;
+  if (y + 8 > MARGEM_INF) { doc.addPage(); y = 20; }
   doc.setFontSize(7); doc.setTextColor(110,110,110);
-  doc.text('Fontes BCB/SGS: 13522 (IPCA-E) · 4390 (SELIC) · 188 (INPC) · Carater informativo e educacional.', lm, y);
+  doc.text('Fontes BCB/SGS: 13522 (IPCA-E) · 4390 (SELIC) · 188 (INPC) · Caráter informativo e educacional.', lm, y);
+
+  // Rodapé em todas as páginas
+  const totalPgs = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPgs; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160);
+    doc.text('MinhaTaxaReal · Atualização Monetária · Fonte: BCB/SGS (dadosabertos.bcb.gov.br)', lm, 291);
+    doc.text('Página ' + p + ' de ' + totalPgs, 196, 291, { align:'right' });
+  }
   doc.save('atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.pdf');
 }
 
@@ -7011,13 +7135,15 @@ async function atlExportarExcel(dados) {
     ...dados.resultados.map(r => [r.num, r.desc, r.valor, r.data, r.tipo, r.totalCorr, r.totalJur, r.total]),
   ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(lancRows), 'Lancamentos');
-  // Aba Índices (primeiro lançamento)
+  // Aba Índices — todos os lançamentos com separação visual
   if (dados.resultados.length > 0) {
-    const r0 = dados.resultados[0];
-    const idxRows = [
-      ['Mes/Ano', r0.indiceCorr + ' (%)', r0.indiceJuros + ' (%)', 'Saldo (R$)'],
-      ...r0.detalhes.map(d => [d.mes, parseFloat(d.fCorr), parseFloat(d.fJur), d.saldo]),
-    ];
+    const idxRows = [];
+    dados.resultados.forEach((r, idx) => {
+      if (idxRows.length > 0) idxRows.push([]);
+      idxRows.push(['LANÇAMENTO ' + (idx + 1) + ' — ' + r.desc]);
+      idxRows.push(['Mes/Ano', r.indiceCorr + ' (%)', r.indiceJuros + ' (%)', 'Saldo (R$)']);
+      r.detalhes.forEach(d => idxRows.push([d.mes, parseFloat(d.fCorr), parseFloat(d.fJur), d.saldo]));
+    });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(idxRows), 'Indices');
   }
   XLSX.writeFile(wb, 'atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.xlsx');
