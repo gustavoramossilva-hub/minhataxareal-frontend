@@ -3392,36 +3392,29 @@ function gerarPDF() {
   const lm = 20;
   const pw = 170;
 
-  // Cabeçalho
+  // ── Header / Logo ──
   const _lf = getLaudoFields();
   const _laudoLines = [
-    _lf.perito   ? 'Perito / Responsável: ' + _lf.perito     : null,
-    _lf.processo ? 'Nº do Processo: '       + _lf.processo   : null,
-    _lf.vara     ? 'Vara / Juízo: '         + _lf.vara       : null,
+    _lf.perito   ? 'Perito / Responsável: ' + _lf.perito   : null,
+    _lf.processo ? 'Nº do Processo: '       + _lf.processo : null,
+    _lf.vara     ? 'Vara / Juízo: '         + _lf.vara     : null,
   ].filter(Boolean);
-  const _hdrH = 40 + (_laudoLines.length > 0 ? _laudoLines.length * 6 + 4 : 0);
-  doc.setFillColor(14, 15, 17);
+  const _hdrH = 40 + (_laudoLines.length > 0 ? _laudoLines.length * 6 + 6 : 0);
+  doc.setFillColor(17, 17, 24);
   doc.rect(0, 0, 210, _hdrH, 'F');
-  // Logo: texto formatado
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(163, 230, 53);
-  doc.text('MINHA', lm, 14, { charSpace: 1 });
-  doc.setFontSize(17);
-  doc.setTextColor(255, 255, 255);
-  doc.text('TaxaReal', lm, 23);
-  // Subtítulo na coluna direita
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 180, 180);
-  doc.text('Relatório de Análise de Crédito', lm + 50, 13);
-  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR'), lm + 50, 19);
-  let _ly = 27;
-  _laudoLines.forEach(line => { doc.text(line, lm + 50, _ly); _ly += 6; });
-  doc.setFillColor(212, 240, 60);
-  doc.rect(lm, _hdrH - 6, pw, 1, 'F');
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(163, 230, 53);
+  doc.text('MINHA', 15, 14);
+  doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+  doc.text('TaxaReal', 15, 26);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 180, 180);
+  doc.text('Relatório de Análise de Crédito', 15, 34);
+  doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR'), 195, 34, { align: 'right' });
+  let _ly = 34;
+  _laudoLines.forEach(line => { _ly += 6; doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(160, 160, 160); doc.text(line, 15, _ly); });
+  doc.setDrawColor(163, 230, 53); doc.setLineWidth(0.8); doc.line(15, _hdrH - 2, 195, _hdrH - 2);
 
-  y = _hdrH + 10;
+  y = _hdrH + 8;
   doc.setTextColor(30, 30, 30);
 
   // Seção 1
@@ -3686,9 +3679,10 @@ function gerarPDF() {
   const totalPagesMain = doc.internal.getNumberOfPages();
   for (let p = 1; p <= totalPagesMain; p++) {
     doc.setPage(p);
-    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(160, 160, 160);
-    doc.text('Documento gerado pela ferramenta educacional MinhaTaxaReal (minhataxareal.com.br). Não constitui laudo técnico oficial, assessoria financeira ou jurídica.', lm, 289);
-    doc.text('Fonte BCB: dadosabertos.bcb.gov.br  ·  Plano: ' + (window.userPremium ? 'Premium' : 'Standard') + '  ·  Página ' + p + ' de ' + totalPagesMain, 190, 292.5, { align: 'right' });
+    doc.setDrawColor(163, 230, 53); doc.setLineWidth(0.3); doc.line(15, 286, 195, 286);
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 120, 120);
+    doc.text('MinhaTaxaReal (minhataxareal.com.br) · Ferramenta educacional · Não constitui laudo técnico oficial', 105, 290, { align: 'center' });
+    doc.text('Página ' + p + ' de ' + totalPagesMain, 195, 290, { align: 'right' });
   }
   doc.setPage(totalPagesMain);
 
@@ -6083,11 +6077,10 @@ function gerarPDFInadimplencia() {
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(160, 160, 160);
-      doc.text('MinhaTaxaReal · Cálculo matemático para fins técnicos · Fonte: Banco Central do Brasil — SGS (dadosabertos.bcb.gov.br)', lm, 291);
-      doc.text('Página ' + p + ' de ' + totalPages, 190, 291, { align: 'right' });
+      doc.setDrawColor(163, 230, 53); doc.setLineWidth(0.3); doc.line(15, 286, 195, 286);
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 120, 120);
+      doc.text('MinhaTaxaReal (minhataxareal.com.br) · Ferramenta educacional · Não constitui laudo técnico oficial', 105, 290, { align: 'center' });
+      doc.text('Página ' + p + ' de ' + totalPages, 195, 290, { align: 'right' });
     }
   }
 
@@ -6111,27 +6104,21 @@ function gerarPDFInadimplencia() {
     _lfi.processo ? 'Nº do Processo: '       + _lfi.processo : null,
     _lfi.vara     ? 'Vara / Juízo: '         + _lfi.vara     : null,
   ].filter(Boolean);
-  const _hdrHI = 40 + (_llinesI.length > 0 ? _llinesI.length * 6 + 4 : 0);
-  doc.setFillColor(14, 15, 17);
+  const _hdrHI = 40 + (_llinesI.length > 0 ? _llinesI.length * 6 + 6 : 0);
+  doc.setFillColor(17, 17, 24);
   doc.rect(0, 0, 210, _hdrHI, 'F');
-  // Logo PDF inadimplência: texto formatado
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(163, 230, 53);
-  doc.text('MINHA', lm, 14, { charSpace: 1 });
-  doc.setFontSize(17);
-  doc.setTextColor(255, 255, 255);
-  doc.text('TaxaReal', lm, 23);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 180, 180);
-  doc.text('Apuração de Inadimplência — Memória de Cálculo', lm + 50, 13);
-  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: BCB/SGS', lm + 50, 19);
-  let _lyI = 27;
-  _llinesI.forEach(line => { doc.text(line, lm + 50, _lyI); _lyI += 6; });
-  doc.setFillColor(212, 240, 60);
-  doc.rect(lm, _hdrHI - 6, pw, 1, 'F');
-  y = _hdrHI + 10;
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(163, 230, 53);
+  doc.text('MINHA', 15, 14);
+  doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+  doc.text('TaxaReal', 15, 26);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 180, 180);
+  doc.text('Apuração de Inadimplência — Memória de Cálculo', 15, 34);
+  doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Fonte: BCB/SGS', 195, 34, { align: 'right' });
+  let _lyI = 34;
+  _llinesI.forEach(line => { _lyI += 6; doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(160, 160, 160); doc.text(line, 15, _lyI); });
+  doc.setDrawColor(163, 230, 53); doc.setLineWidth(0.8); doc.line(15, _hdrHI - 2, 195, _hdrHI - 2);
+  y = _hdrHI + 8;
 
   // ── Seção 1: Dados da Operação ──
   doc.setFillColor(240, 240, 240);
@@ -7063,20 +7050,18 @@ async function atlExportarPDF(dados) {
   }
 
   // Header página 1
-  // Logo: texto formatado
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(8);
-  doc.setTextColor(163,230,53);
-  doc.text('MINHA', lm, 10, { charSpace:0.8 });
-  doc.setFontSize(14);
-  doc.setTextColor(255,255,255);
-  doc.text('TaxaReal', lm, 17);
-  doc.setTextColor(180,180,180); doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Relatório de Atualização Monetária', lm+40, 9);
-  doc.setFontSize(7);
-  doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR') + '  ·  Tribunal: ' + (dados.tribunal||'—') + '  ·  Apuração: ' + dados.dataFmt, lm+40, 15);
-  doc.setDrawColor(163,230,53); doc.setLineWidth(0.6); doc.line(lm,21,lm+pw,21);
-  let y = 26;
+  doc.setFillColor(17, 17, 24);
+  doc.rect(0, 0, 210, 40, 'F');
+  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(163,230,53);
+  doc.text('MINHA', 15, 14);
+  doc.setFontSize(20); doc.setTextColor(255,255,255);
+  doc.text('TaxaReal', 15, 26);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(180,180,180);
+  doc.text('Relatório de Atualização Monetária', 15, 34);
+  doc.setFontSize(8); doc.setTextColor(150,150,150);
+  doc.text('Gerado em: ' + new Date().toLocaleDateString('pt-BR') + '  ·  Tribunal: ' + (dados.tribunal||'—'), 195, 34, { align:'right' });
+  doc.setDrawColor(163,230,53); doc.setLineWidth(0.8); doc.line(15, 38, 195, 38);
+  let y = 48;
   doc.setTextColor(163,230,53); doc.setFontSize(13); doc.setFont('helvetica','bold');
   doc.text('Total Geral: ' + fmtBRL(dados.totalGeral), lm, y); y += 10;
   y = atlCabecalhoTabela(y);
@@ -7099,9 +7084,10 @@ async function atlExportarPDF(dados) {
   const totalPgs = doc.internal.getNumberOfPages();
   for (let p = 1; p <= totalPgs; p++) {
     doc.setPage(p);
-    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160);
-    doc.text('MinhaTaxaReal · Atualização Monetária · Fonte: BCB/SGS (dadosabertos.bcb.gov.br)', lm, 291);
-    doc.text('Página ' + p + ' de ' + totalPgs, 196, 291, { align:'right' });
+    doc.setDrawColor(163, 230, 53); doc.setLineWidth(0.3); doc.line(15, 286, 195, 286);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(120, 120, 120);
+    doc.text('MinhaTaxaReal (minhataxareal.com.br) · Ferramenta educacional · Não constitui laudo técnico oficial', 105, 290, { align: 'center' });
+    doc.text('Página ' + p + ' de ' + totalPgs, 195, 290, { align:'right' });
   }
   doc.save('atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.pdf');
 }
