@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "minhataxareal-frontend",
+  "compatibility_date": "2026-07-02",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": ".",
+    "exclude": ["node_modules/**", ".git/**", ".wrangler/**", "scripts/**", "package*.json", "wrangler.jsonc", ".gitignore", ".wranglerignore"]
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "routes": [
+    { "pattern": "minhataxareal.com.br/*", "zone_name": "minhataxareal.com.br" },
+    { "pattern": "www.minhataxareal.com.br/*", "zone_name": "minhataxareal.com.br" }
+  ]
+}
