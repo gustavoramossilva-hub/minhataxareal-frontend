@@ -780,6 +780,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
 })();
 </script>
+<!-- MinhaTaxaReal © 2026 · minhataxareal.com.br · Código proprietário — reprodução proibida -->
+<meta name="author" content="MinhaTaxaReal">
+<meta name="copyright" content="MinhaTaxaReal 2026 - Todos os direitos reservados">
+<meta name="robots" content="noindex">
+<style>body{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}input,textarea,select{-webkit-user-select:text;-moz-user-select:text;-ms-user-select:text;user-select:text}</style>
+<script>(function(){if(window.self!==window.top){try{window.top.location.href='https://minhataxareal.com.br';}catch(e){}document.documentElement.style.display='none';return;}document.addEventListener('contextmenu',function(e){e.preventDefault();});document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.key==='u')||(e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='C'||e.key==='J'))||(e.ctrlKey&&e.key==='s')){e.preventDefault();}});})();</script>
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -1114,8 +1120,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <span class="input-suffix">% a.m.</span>
           </div>
         </div>
-        <div class="stj-badge">
-          <strong>Projeção:</strong> tabela gerada com IPCA constante. O custo real depende da variação mensal efetiva do IPCA ao longo do contrato.
+        <div class="stj-badge" style="background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.35);padding:10px 14px;border-radius:8px;margin-top:8px">
+          <strong>⚠ Projeção com IPCA constante.</strong> A tabela é gerada assumindo o IPCA informado fixo em todos os meses. Na prática, a variação mensal real do IPCA altera as prestações e o saldo devedor a cada período — o custo efetivo final pode ser maior ou menor.
         </div>
       </div>
 
@@ -2581,7 +2587,7 @@ function gerarTabelaLeasing(pv, i, n, vrg) {
   for (let k = 1; k <= n; k++) {
     const juros = saldo * i;
     const amort = pmt - juros;
-    saldo = Math.max(0, saldo - amort);
+    saldo = k === n ? 0 : Math.max(0, parseFloat((saldo - amort).toFixed(2)));
     const isUltima = k === n;
     rows.push({ parc: k, pmt: isUltima ? pmt + vrg : pmt, juros, amort, saldo: isUltima ? 0 : saldo, vrg: isUltima ? vrg : 0 });
   }
