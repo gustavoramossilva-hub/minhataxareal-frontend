@@ -1161,11 +1161,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
 
-      <!-- ══ ENCARGOS EMBUTIDOS NO PRINCIPAL (Premium) ══ -->
+      <!-- ══ COMPOSIÇÃO DO VALOR FINANCIADO (Premium) ══ -->
       <div id="section-encargos-embutidos">
         <hr class="form-divider">
         <div class="premium-title" style="cursor:pointer;user-select:none" onclick="toggleEncargosPanel()">
-          <p class="panel-title" style="margin-bottom:0">⚙️ Encargos embutidos no principal</p>
+          <p class="panel-title" style="margin-bottom:0">⚙️ Composição do valor financiado</p>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge-premium">Premium</span>
             <span id="encargos-chevron" style="font-size:14px;color:var(--text2);transition:transform .2s">▼</span>
@@ -1173,7 +1173,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <div id="encargos-panel" style="display:none;margin-top:10px">
           <div class="metodo-info-box">
-            Identifica a diferença entre o valor líquido recebido pelo mutuário e o valor financiado no contrato, apurando a taxa efetiva real sobre o valor efetivamente creditado.
+            Analisa a composição do valor principal financiado, identificando os valores incluídos além do crédito efetivamente creditado na conta, e calcula a taxa efetiva sobre o valor líquido recebido.
           </div>
           <div id="encargos-fields">
             <div class="form-group">
@@ -1220,7 +1220,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
             <!-- Resumo calculado em tempo real -->
             <div id="encargos-resumo-inline" style="display:none;margin-top:4px;padding:12px 14px;border-radius:8px;border:1.5px solid var(--accent);background:rgba(163,230,53,.06);font-size:11.5px;font-family:'DM Mono',monospace;line-height:1.7">
-              <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;letter-spacing:.03em">RESUMO DOS ENCARGOS EMBUTIDOS</div>
+              <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;letter-spacing:.03em">COMPOSIÇÃO DO VALOR FINANCIADO</div>
               <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Valor financiado no contrato:</span><span id="enc-vf" style="color:var(--text);font-weight:600">—</span></div>
               <div id="enc-iof-row" style="display:none"><div style="padding-left:12px;display:flex;justify-content:space-between"><span style="color:var(--text2)">(-) IOF declarado:</span><span id="enc-iof-val" style="color:var(--text2)">—</span></div></div>
               <div id="enc-seg-row" style="display:none"><div style="padding-left:12px;display:flex;justify-content:space-between"><span style="color:var(--text2)">(-) Seguro prestamista:</span><span id="enc-seg-val" style="color:var(--text2)">—</span></div></div>
@@ -1234,7 +1234,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
           <div id="upsell-encargos" style="display:none">
             <div class="premium-upsell-inline">
-              <p>⭐ <strong style="color:var(--text)">Apuração de encargos embutidos no principal</strong> disponível no plano Premium.</p>
+              <p>⭐ <strong style="color:var(--text)">Análise da composição do valor financiado</strong> disponível no plano Premium.</p>
               <button onclick="window.open('https://pay.kiwify.com.br/1xAQ6ev','_blank')">Fazer upgrade →</button>
             </div>
           </div>
@@ -2427,7 +2427,7 @@ function calcular() {
   const temCET = (cetIof + cetTarifas + cetSeguros) > 0;
   const cetMes = temCET ? calcularCET(pv, n, pmt, cetTarifas, cetIof, cetSeguros) : null;
 
-  // Encargos embutidos no principal (Premium)
+  // Composição do valor financiado (Premium)
   let encargosState = null;
   let taxaMesLiquido = null;
   if (window.userPremium === true) {
@@ -2814,7 +2814,7 @@ function initCarenciaGate() {
 }
 
 // ════════════════════════════════════════════
-//  ENCARGOS EMBUTIDOS NO PRINCIPAL
+//  COMPOSIÇÃO DO VALOR FINANCIADO
 // ════════════════════════════════════════════
 function toggleEncargosPanel() {
   const panel   = document.getElementById('encargos-panel');
@@ -2888,11 +2888,11 @@ function onEncargosChange() {
     if (pct > 5) {
       borderColor = 'var(--red,#ef4444)';
       difEl.style.color = 'var(--red,#ef4444)';
-      if (alert) { alert.style.display = ''; alert.style.background = 'rgba(239,68,68,.1)'; alert.style.color = 'var(--red,#ef4444)'; alert.textContent = '⚠️ Há ' + fmtBRL(res.diferencaNaoExplicada) + ' em encargos não identificados no contrato (> 5% do financiado).'; }
+      if (alert) { alert.style.display = ''; alert.style.background = 'rgba(239,68,68,.1)'; alert.style.color = 'var(--red,#ef4444)'; alert.textContent = 'Diferença de ' + fmtBRL(res.diferencaNaoExplicada) + ' entre o valor financiado e a soma do valor recebido com os itens informados (> 5% do financiado).'; }
     } else {
       borderColor = 'var(--amber,#f59e0b)';
       difEl.style.color = 'var(--amber,#f59e0b)';
-      if (alert) { alert.style.display = ''; alert.style.background = 'rgba(245,158,11,.1)'; alert.style.color = 'var(--amber,#f59e0b)'; alert.textContent = '⚠️ Há ' + fmtBRL(res.diferencaNaoExplicada) + ' em encargos não identificados no contrato.'; }
+      if (alert) { alert.style.display = ''; alert.style.background = 'rgba(245,158,11,.1)'; alert.style.color = 'var(--amber,#f59e0b)'; alert.textContent = 'Diferença de ' + fmtBRL(res.diferencaNaoExplicada) + ' entre o valor financiado e a soma do valor recebido com os itens informados.'; }
     }
   } else {
     borderColor = 'var(--accent)';
@@ -3061,7 +3061,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
     carenciaBox.innerHTML = '';
   }
 
-  // ── Análise de encargos embutidos ──
+  // ── Composição do valor financiado ──
   let encargosBox = document.getElementById('encargos-analise');
   const enc = state.encargos;
   if (enc) {
@@ -3079,12 +3079,12 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
       enc.seguro > 0 ? `<div style="display:flex;justify-content:space-between;padding-left:12px"><span style="color:var(--text2)">Seguro prestamista:</span><span>${fmtBRL(enc.seguro)}</span></div>` : '',
       enc.tacTec > 0 ? `<div style="display:flex;justify-content:space-between;padding-left:12px"><span style="color:var(--text2)">TAC/TEC/Tarifas:</span><span>${fmtBRL(enc.tacTec)}</span></div>` : '',
       enc.outros > 0 ? `<div style="display:flex;justify-content:space-between;padding-left:12px"><span style="color:var(--text2)">Outros encargos:</span><span>${fmtBRL(enc.outros)}</span></div>` : '',
-      enc.diferencaNaoExplicada > 0.01 ? `<div style="display:flex;justify-content:space-between;padding-left:12px"><span style="color:var(--amber,#f59e0b)">Não identificados:</span><span style="color:var(--amber,#f59e0b);font-weight:700">${fmtBRL(enc.diferencaNaoExplicada)}</span></div>` : '',
+      enc.diferencaNaoExplicada > 0.01 ? `<div style="display:flex;justify-content:space-between;padding-left:12px"><span style="color:var(--amber,#f59e0b)">Diferença a conciliar:</span><span style="color:var(--amber,#f59e0b);font-weight:700">${fmtBRL(enc.diferencaNaoExplicada)}</span></div>` : '',
     ].filter(Boolean).join('');
 
     const encHtml = `
       <div style="border:1.5px solid ${bordaLiq};border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace">
-        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:12px;letter-spacing:.03em">ANÁLISE DE ENCARGOS EMBUTIDOS</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:12px;letter-spacing:.03em">COMPOSIÇÃO DO VALOR FINANCIADO</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px">
           <div><div style="font-size:10px;text-transform:uppercase;color:var(--text2);margin-bottom:2px">Valor financiado (contrato)</div><strong>${fmtBRL(pv)}</strong></div>
           <div><div style="font-size:10px;text-transform:uppercase;color:var(--text2);margin-bottom:2px">Valor recebido (líquido)</div><strong style="color:var(--accent)">${fmtBRL(enc.valorLiquidoRecebido)}</strong></div>
@@ -3112,13 +3112,13 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
             </div>
           </div>
         </div>
-        ${difRelBCB > 50 ? `<div style="background:rgba(239,68,68,.1);border:1px solid var(--red,#ef4444);border-radius:6px;padding:8px;font-size:10.5px;color:var(--red,#ef4444);font-weight:600;margin-bottom:10px">⚠️ A taxa efetiva sobre o valor líquido recebido supera em mais de 50% a média BCB para esta modalidade. Parâmetro de referência: REsp 1.061.530/RS.</div>` : ''}
+        ${difRelBCB > 50 ? `<div style="background:rgba(245,158,11,.1);border:1px solid var(--amber,#f59e0b);border-radius:6px;padding:8px;font-size:10.5px;color:var(--amber,#f59e0b);font-weight:600;margin-bottom:10px">ℹ️ A taxa apurada sobre o valor líquido recebido está mais de 50% acima da média BCB para esta modalidade.</div>` : ''}
         <div style="font-size:10.5px;color:var(--text2);line-height:1.6;border-top:1px solid var(--border);padding-top:8px">
-          <strong style="color:var(--text)">Nota técnica:</strong> A taxa efetiva sobre o valor líquido recebido (${fmtPct(taxaLiqMes * 100)} a.m. / ${fmtPct(taxaLiqAno)} a.a.) representa o custo real da operação para o mutuário, considerando todos os encargos financiados embutidos no principal.
+          <strong style="color:var(--text)">Nota técnica:</strong> A taxa efetiva sobre o valor líquido recebido (${fmtPct(taxaLiqMes * 100)} a.m. / ${fmtPct(taxaLiqAno)} a.a.) representa o custo efetivo da operação calculado sobre o valor efetivamente creditado ao tomador.
         </div>
       </div>
       <div style="font-size:10.5px;color:var(--text2);line-height:1.6;background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:16px">
-        ℹ️ A análise de encargos embutidos é de natureza matemática e informativa. A avaliação sobre a legalidade de cada encargo é de competência exclusiva do profissional jurídico ou perito habilitado, conforme a legislação aplicável ao caso concreto.
+        ℹ️ Esta análise é de natureza matemática e informativa. Os valores informados são de responsabilidade do usuário e devem ser verificados junto à documentação contratual.
       </div>`;
     if (encargosBox) {
       encargosBox.innerHTML = encHtml;
@@ -3143,7 +3143,7 @@ function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
         <div class="metric-card" style="border-color:var(--amber,#f59e0b);background:rgba(245,158,11,.06)">
           <div class="mc-label">Taxa s/ Valor Líquido Recebido</div>
           <div class="mc-value" style="font-size:19px;color:var(--amber,#f59e0b)">${fmtPct(taxaLiqMes * 100)} <span style="font-size:14px">a.m.</span></div>
-          <div class="mc-sub">${fmtPct(taxaLiqAno)} ao ano · custo real dos encargos embutidos</div>
+          <div class="mc-sub">${fmtPct(taxaLiqAno)} ao ano · taxa s/ valor líquido recebido</div>
         </div>`);
     }
   }
@@ -3550,14 +3550,14 @@ async function gerarExcel() {
     ] : []),
     ...(state.encargos ? [
       [],
-      ['ENCARGOS EMBUTIDOS NO PRINCIPAL'],
+      ['COMPOSIÇÃO DO VALOR FINANCIADO'],
       ['Valor financiado (contrato) (R$)',          _xlsxMoeda(state.valorLiquido)],
       ...(state.encargos.iof    > 0 ? [['(-) IOF declarado (R$)',           _xlsxMoeda(state.encargos.iof)]]    : []),
       ...(state.encargos.seguro > 0 ? [['(-) Seguro prestamista (R$)',      _xlsxMoeda(state.encargos.seguro)]] : []),
       ...(state.encargos.tacTec > 0 ? [['(-) TAC/TEC/Tarifas (R$)',         _xlsxMoeda(state.encargos.tacTec)]] : []),
       ...(state.encargos.outros > 0 ? [['(-) Outros encargos (R$)',          _xlsxMoeda(state.encargos.outros)]] : []),
       ['(=) Valor líquido recebido (R$)',           _xlsxMoeda(state.encargos.valorLiquidoRecebido)],
-      ['Encargos não identificados (R$)',           _xlsxMoeda(state.encargos.diferencaNaoExplicada)],
+      ['Diferença a conciliar (R$)',                _xlsxMoeda(state.encargos.diferencaNaoExplicada)],
       [],
       ['IMPACTO NA TAXA'],
       ['Taxa s/ valor financiado (a.m.) (%)',       _xlsxNum(state.taxaCalculada * 100)],
@@ -3648,19 +3648,19 @@ async function gerarExcel() {
       const pctSuperior = state.taxaCalculada > 0 ? ((taxaLiqMes - state.taxaCalculada) / state.taxaCalculada * 100) : 0;
       return [
         [],
-        ['METODOLOGIA DE APURAÇÃO DE ENCARGOS EMBUTIDOS'],
-        ['', 'O presente cálculo apurou a taxa efetiva real sobre o valor líquido efetivamente recebido pelo mutuário (' + fmtBRL(enc.valorLiquidoRecebido) + '), em contraposição ao valor financiado declarado no contrato (' + fmtBRL(state.valorLiquido) + ').'],
-        ['', 'A diferença de ' + fmtBRL(totalEnc) + ' representa encargos financiados embutidos no principal.'],
+        ['METODOLOGIA — COMPOSIÇÃO DO VALOR FINANCIADO'],
+        ['', 'O presente cálculo apurou a taxa efetiva sobre o valor líquido efetivamente recebido pelo tomador (' + fmtBRL(enc.valorLiquidoRecebido) + '), em relação ao valor total financiado declarado no contrato (' + fmtBRL(state.valorLiquido) + ').'],
+        ['', 'A diferença de ' + fmtBRL(totalEnc) + ' corresponde aos valores incluídos no principal financiado além do crédito efetivamente creditado.'],
         ...(enc.iof    > 0 ? [['IOF declarado (R$)',        fmtBRL(enc.iof)]]    : []),
         ...(enc.seguro > 0 ? [['Seguro prestamista (R$)',   fmtBRL(enc.seguro)]] : []),
         ...(enc.tacTec > 0 ? [['TAC/TEC/Tarifas (R$)',      fmtBRL(enc.tacTec)]] : []),
         ...(enc.outros > 0 ? [['Outros encargos (R$)',       fmtBRL(enc.outros)]] : []),
-        ...(enc.diferencaNaoExplicada > 0.01 ? [['Encargos não identificados (R$)', fmtBRL(enc.diferencaNaoExplicada)]] : []),
+        ...(enc.diferencaNaoExplicada > 0.01 ? [['Diferença a conciliar (R$)', fmtBRL(enc.diferencaNaoExplicada)]] : []),
         ['Taxa efetiva s/ financiado (a.m./%)', _xlsxNum(state.taxaCalculada * 100)],
         ['Taxa efetiva s/ financiado (a.a./%)', _xlsxNum(taxaFinAno)],
         ['Taxa efetiva s/ líquido recebido (a.m./%)', _xlsxNum(taxaLiqMes * 100)],
         ['Taxa efetiva s/ líquido recebido (a.a./%)', _xlsxNum(taxaLiqAno)],
-        ['', 'A taxa efetiva real sobre o valor líquido recebido (' + _xlsxNum(taxaLiqMes * 100) + '% a.m. / ' + _xlsxNum(taxaLiqAno) + '% a.a.) representa o custo efetivo real da operação, sendo ' + _xlsxNum(pctSuperior) + '% superior à taxa apurada sobre o valor financiado.'],
+        ['', 'A taxa efetiva sobre o valor líquido recebido (' + _xlsxNum(taxaLiqMes * 100) + '% a.m. / ' + _xlsxNum(taxaLiqAno) + '% a.a.) é ' + _xlsxNum(pctSuperior) + '% superior à taxa apurada sobre o valor total financiado.'],
       ];
     })() : []),
   ];
@@ -3703,7 +3703,7 @@ async function gerarExcel() {
     ['3.', 'Qual a taxa média BCB para a modalidade ' + bacen.nome + '?'],
     ['4.', 'A taxa contratada está acima da média BCB? Em quanto?'],
     ...(difRelativa > 50 ? [
-      ['5.', 'A diferença supera o patamar de 50% estabelecido como parâmetro pelo STJ (REsp 1.061.530/RS)?'],
+      ['5.', 'Qual o diferencial entre a taxa apurada e a taxa média de mercado BCB para a modalidade ' + bacen.nome + '?'],
     ] : []),
     ...(state.carenciaDias > 0 ? [
       ['6.', 'O período de carência resultou em capitalização de juros ao saldo devedor?'],
@@ -3715,10 +3715,10 @@ async function gerarExcel() {
       const taxaLiqMes = enc.taxaMesLiquido || state.taxaCalculada;
       const taxaLiqAno = (Math.pow(1 + taxaLiqMes, 12) - 1) * 100;
       return [
-        [String(base) + '.', 'O valor líquido creditado na conta do mutuário (' + fmtBRL(enc.valorLiquidoRecebido) + ') corresponde ao valor financiado declarado no contrato (' + fmtBRL(state.valorLiquido) + ')?'],
-        [String(base + 1) + '.', 'Qual o impacto dos encargos financiados (' + fmtBRL(state.valorLiquido - enc.valorLiquidoRecebido) + ') sobre a taxa efetiva real da operação?'],
-        [String(base + 2) + '.', 'A taxa efetiva real apurada sobre o valor líquido recebido (' + _xlsxNum(taxaLiqMes * 100) + '% a.m. / ' + _xlsxNum(taxaLiqAno) + '% a.a.) está dentro da média de mercado divulgada pelo Banco Central para a modalidade ' + BACEN[state.modalidade]?.nome + '?'],
-        ...(enc.diferencaNaoExplicada > 0.01 ? [[String(base + 3) + '.', 'A que se refere a diferença de ' + fmtBRL(enc.diferencaNaoExplicada) + ' entre o valor financiado declarado e a soma do valor líquido recebido com os encargos identificados?']] : []),
+        [String(base) + '.', 'Qual o valor efetivamente creditado na conta do tomador (' + fmtBRL(enc.valorLiquidoRecebido) + ') em relação ao valor total financiado declarado no contrato (' + fmtBRL(state.valorLiquido) + ')?'],
+        [String(base + 1) + '.', 'Qual a taxa efetiva apurada sobre o valor líquido creditado ao tomador (' + _xlsxNum(taxaLiqMes * 100) + '% a.m. / ' + _xlsxNum(taxaLiqAno) + '% a.a.)?'],
+        [String(base + 2) + '.', 'Qual a composição do valor total financiado de ' + fmtBRL(state.valorLiquido) + ', discriminando o crédito efetivamente disponibilizado (' + fmtBRL(enc.valorLiquidoRecebido) + ') e os demais valores incluídos no principal?'],
+        ...(enc.diferencaNaoExplicada > 0.01 ? [[String(base + 3) + '.', 'A que se refere a diferença de ' + fmtBRL(enc.diferencaNaoExplicada) + ' entre o valor financiado e a soma do valor creditado com os itens informados?']] : []),
       ];
     })() : []),
     [],
@@ -4017,7 +4017,7 @@ function gerarPDF() {
   doc.text(situacaoTxt, lm + 3, y + 7);
   y += 16;
 
-  // Seção 3 — Encargos embutidos (condicional)
+  // Seção 3 — Composição do valor financiado (condicional)
   const _enc = state.encargos;
   if (_enc) {
     const _taxaLiqMes = _enc.taxaMesLiquido || taxa;
@@ -4030,7 +4030,7 @@ function gerarPDF() {
     doc.setFillColor(240, 240, 240);
     doc.roundedRect(lm, y, pw, 7, 2, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
-    doc.text('3. ANÁLISE DE ENCARGOS EMBUTIDOS NO PRINCIPAL', lm + 3, y + 5);
+    doc.text('3. COMPOSIÇÃO DO VALOR FINANCIADO', lm + 3, y + 5);
     y += 12;
 
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
@@ -4042,7 +4042,7 @@ function gerarPDF() {
       ...(_enc.seguro > 0 ? [['  Seguro prestamista', fmtBRL(_enc.seguro)]] : []),
       ...(_enc.tacTec > 0 ? [['  TAC/TEC/Tarifas', fmtBRL(_enc.tacTec)]] : []),
       ...(_enc.outros > 0 ? [['  Outros encargos', fmtBRL(_enc.outros)]] : []),
-      ...(_enc.diferencaNaoExplicada > 0.01 ? [['  Não identificados', fmtBRL(_enc.diferencaNaoExplicada)]] : []),
+      ...(_enc.diferencaNaoExplicada > 0.01 ? [['  Diferença a conciliar', fmtBRL(_enc.diferencaNaoExplicada)]] : []),
     ];
     _encDados.forEach(([k, v]) => {
       if (y + 6 > 272) { doc.addPage(); y = 20; }
@@ -4073,10 +4073,10 @@ function gerarPDF() {
 
     if (_difRelBCB > 50) {
       y += 2;
-      doc.setFillColor(200, 50, 50, 20);
+      doc.setFillColor(245, 158, 11, 20);
       doc.roundedRect(lm, y, pw, 10, 2, 2, 'F');
-      doc.setTextColor(180, 30, 30); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-      doc.text('ATENÇÃO: Taxa efetiva s/ valor líquido supera 50% da média BCB. Ref.: REsp 1.061.530/RS.', lm + 3, y + 7);
+      doc.setTextColor(160, 100, 0); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text('Taxa apurada s/ valor líquido recebido está mais de 50% acima da média BCB para esta modalidade.', lm + 3, y + 7);
       y += 14;
     }
 
@@ -4084,8 +4084,8 @@ function gerarPDF() {
     doc.setFillColor(245, 245, 245);
     doc.roundedRect(lm, y, pw, 14, 2, 2, 'F');
     doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(100, 100, 100);
-    const _disclaimer = 'A análise de encargos embutidos é de natureza matemática e informativa. A avaliação sobre a legalidade de';
-    const _disclaimer2 = 'cada encargo é de competência exclusiva do profissional jurídico ou perito habilitado.';
+    const _disclaimer = 'Esta análise é de natureza matemática e informativa. Os valores informados são de responsabilidade do';
+    const _disclaimer2 = 'usuário e devem ser verificados junto à documentação contratual.';
     doc.text(_disclaimer, lm + 3, y + 5);
     doc.text(_disclaimer2, lm + 3, y + 11);
     y += 18;
