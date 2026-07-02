@@ -780,6 +780,26 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
 })();
 </script>
+<!-- PDF.js — leitura de PDFs digitais -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- Tesseract.js — OCR para escaneados -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<style>
+.upload-ia-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px}
+.upload-ia-header{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px}
+.upload-ia-desc{font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px}
+.btn-upload-ia{width:100%;padding:8px 12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#0e0f11;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-upload-ia:hover{opacity:.88}
+.upload-ia-aviso{font-size:10px;color:var(--text3);text-align:center;margin:8px 0 0;line-height:1.4}
+.upload-loading{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-top:10px;padding:8px;background:var(--surface);border-radius:var(--radius-sm)}
+.upload-sucesso{font-size:11px;color:#a3e635;background:rgba(163,230,53,.08);border:1px solid rgba(163,230,53,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
+.upload-erro{font-size:11px;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
+.separador-ou{font-size:10px;color:var(--text3);text-align:center;margin:0 0 14px;letter-spacing:.08em}
+.campo-ia-preenchido{border-color:rgba(163,230,53,.55)!important;background:rgba(163,230,53,.05)!important}
+@keyframes ia-spin{to{transform:rotate(360deg)}}
+.ia-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:ia-spin .8s linear infinite;flex-shrink:0}
+</style>
 <!-- MinhaTaxaReal © 2026 · minhataxareal.com.br · Código proprietário — reprodução proibida -->
 <meta name="author" content="MinhaTaxaReal">
 <meta name="copyright" content="MinhaTaxaReal 2026 - Todos os direitos reservados">
@@ -1259,6 +1279,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div id="extrato-form">
+        <!-- ══ UPLOAD PDF IA ══ -->
+        <div class="upload-ia-box" id="upload-extrato-box">
+          <div class="upload-ia-header">
+            <span>📄</span>
+            <span>Preencher automaticamente</span>
+            <span class="badge-premium">Premium</span>
+          </div>
+          <p class="upload-ia-desc">Envie o contrato ou extrato em PDF ou imagem. O sistema extrai os dados automaticamente usando leitura inteligente de documentos — sem enviar seus dados para servidores externos.</p>
+          <input type="file" id="input-pdf-extrato" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+          <button class="btn-upload-ia" onclick="document.getElementById('input-pdf-extrato').click()">📎 Selecionar contrato ou extrato</button>
+          <div id="status-upload-extrato" style="display:none"></div>
+          <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        </div>
+        <div class="separador-ou">── ou preencha manualmente ──</div>
+
         <p class="panel-title" style="font-size:11px;margin-bottom:10px">Dados do Contrato</p>
 
         <div class="form-group">
@@ -1335,13 +1370,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button onclick="calcularExtrato()" class="calc-btn">⚡ Calcular Apuração</button>
 
         <hr class="form-divider" style="margin-top:16px">
-        <!-- Placeholder IA -->
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center;opacity:.7">
-          <div style="font-size:18px;margin-bottom:6px">📎</div>
-          <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:4px">Em breve: preenchimento automático via IA</div>
-          <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px">Faça upload do contrato ou extrato em PDF e a IA preencherá os campos automaticamente.</div>
-          <button disabled style="padding:6px 16px;background:var(--surface);border:1px solid var(--border);border-radius:99px;color:var(--text3);font-size:11px;cursor:not-allowed">Em breve</button>
-        </div>
       </div>
     </div>
 
@@ -1625,6 +1653,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <!-- Conteúdo (somente premium) -->
       <div id="atl-content">
+        <!-- ══ UPLOAD PDF IA ══ -->
+        <div class="upload-ia-box" id="upload-atualizacao-box">
+          <div class="upload-ia-header">
+            <span>📄</span>
+            <span>Extrair valores do documento</span>
+            <span class="badge-premium">Premium</span>
+          </div>
+          <p class="upload-ia-desc">Envie a sentença, cálculo ou planilha em PDF ou imagem. O sistema identifica os valores e datas automaticamente.</p>
+          <input type="file" id="input-pdf-atualizacao" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+          <button class="btn-upload-ia" onclick="document.getElementById('input-pdf-atualizacao').click()">📎 Selecionar documento</button>
+          <div id="status-upload-atualizacao" style="display:none"></div>
+          <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        </div>
+        <div class="separador-ou">── ou adicione manualmente ──</div>
+
         <p class="panel-title" style="margin-bottom:4px">Atualização Monetária</p>
         <p style="font-size:11px;color:var(--text3);margin-bottom:16px;line-height:1.5">Lance os valores a serem atualizados e apure o total corrigido até a data de apuração.</p>
 
@@ -7737,6 +7780,459 @@ async function atlExportarExcel(dados) {
   }
   XLSX.writeFile(wb, 'atualizacao-monetaria-' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
+</script>
+
+<script>
+// ════════════════════════════════════════════
+//  LEITURA AUTOMÁTICA DE PDF — PDF.js + Tesseract.js
+// ════════════════════════════════════════════
+
+let _ocrStatusId = null;
+
+async function extrairTextoPDF(arquivo) {
+  const arrayBuffer = await arquivo.arrayBuffer();
+
+  // Tentar PDF.js (PDFs digitais)
+  try {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let textoCompleto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pagina = await pdf.getPage(i);
+      const conteudo = await pagina.getTextContent();
+      textoCompleto += conteudo.items.map(item => item.str).join(' ') + '\n';
+    }
+    if (textoCompleto.trim().length > 100) {
+      return { texto: textoCompleto, metodo: 'digital' };
+    }
+  } catch(e) {
+    console.log('PDF.js falhou, tentando OCR:', e.message);
+  }
+
+  // Fallback OCR para PDFs escaneados / imagens
+  try {
+    const ab2 = await arquivo.arrayBuffer();
+    let canvas;
+
+    if (arquivo.type && arquivo.type.startsWith('image/')) {
+      // Imagem direta
+      const blob = new Blob([ab2], { type: arquivo.type });
+      const url = URL.createObjectURL(blob);
+      const img = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = url;
+      });
+      canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+    } else {
+      // PDF escaneado — renderizar primeira página
+      const pdf = await pdfjsLib.getDocument({ data: ab2 }).promise;
+      const pagina = await pdf.getPage(1);
+      const viewport = pagina.getViewport({ scale: 2.0 });
+      canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await pagina.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
+
+    const resultado = await Tesseract.recognize(canvas, 'por', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          _atualizarProgressoOCR(Math.round(m.progress * 100));
+        }
+      }
+    });
+    return { texto: resultado.data.text, metodo: 'ocr' };
+
+  } catch(e) {
+    throw new Error('Não foi possível extrair texto do arquivo. Verifique se é um PDF ou imagem válido.');
+  }
+}
+
+function _atualizarProgressoOCR(pct) {
+  const el = _ocrStatusId ? document.getElementById(_ocrStatusId) : null;
+  if (el && el.style.display !== 'none') {
+    el.className = 'upload-loading';
+    el.innerHTML = `<div class="ia-spinner"></div><span>Reconhecendo texto (OCR): ${pct}%...</span>`;
+  }
+}
+
+// ─── EXTRAÇÃO DE DADOS DO CONTRATO ───────────────────────
+function extrairDadosContrato(texto) {
+  const t = texto.replace(/\s+/g, ' ');
+  const T = t.toUpperCase();
+  const dados = {};
+
+  // Valor financiado
+  const rxValor = [
+    /VALOR\s+(?:FINANCIADO|DO\s+CR[EÉ]DITO|LIBERADO|L[IÍ]QUIDO)[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PRINCIPAL[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /MONTANTE[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /CR[EÉ]DITO\s+CONCEDIDO[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /VALOR\s+DO\s+EMPR[EÉ]STIMO[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+  ];
+  for (const rx of rxValor) {
+    const m = T.match(rx);
+    if (m) { dados.valor_financiado = parseMoeda(m[1]); break; }
+  }
+
+  // Taxa mensal
+  const rxMes = [
+    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?MENSAL[:\s]+([\d,]+)\s*%/i,
+    /JUROS\s+(?:REMUNERATOR[IÍ]OS\s+)?MENSAIS?[:\s]+([\d,]+)\s*%/i,
+    /([\d,]+)\s*%\s*(?:A\.M\.|AO\s+M[EÊ]S|A\.?\s*M\.?)\b/i,
+    /TAXA\s+MENSAL[:\s]+([\d,]+)/i,
+  ];
+  for (const rx of rxMes) {
+    const m = T.match(rx);
+    if (m) { dados.taxa_nominal_mensal = parseFloat(m[1].replace(',', '.')); break; }
+  }
+
+  // Taxa anual
+  const rxAno = [
+    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?ANUAL[:\s]+([\d,]+)\s*%/i,
+    /([\d,]+)\s*%\s*(?:A\.A\.|AO\s+ANO|A\.?\s*A\.?)\b/i,
+    /TAXA\s+ANUAL[:\s]+([\d,]+)/i,
+  ];
+  for (const rx of rxAno) {
+    const m = T.match(rx);
+    if (m) { dados.taxa_nominal_anual = parseFloat(m[1].replace(',', '.')); break; }
+  }
+
+  // Número de parcelas
+  const rxParc = [
+    /(\d+)\s*(?:PARCELAS?|PRESTA[CÇ][OÕ]ES?)\s+(?:DE|MENSAIS?)/i,
+    /PRAZO[:\s]+(\d+)\s*(?:MESES?|PARCELAS?)/i,
+    /N[UÚ]MERO\s+DE\s+PARCELAS?[:\s]+(\d+)/i,
+    /QUANTIDADE\s+DE\s+PARCELAS?[:\s]+(\d+)/i,
+    /EM\s+(\d+)\s+(?:PARCELAS?|PRESTA[CÇ][OÕ]ES?)/i,
+  ];
+  for (const rx of rxParc) {
+    const m = T.match(rx);
+    if (m) { const n = parseInt(m[1]); if (n > 0 && n <= 600) { dados.num_parcelas = n; break; } }
+  }
+
+  // Valor da parcela
+  const rxPmt = [
+    /(?:VALOR\s+DA\s+)?PARCELA[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PRESTA[CÇ][AÃ]O[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PMT[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+  ];
+  for (const rx of rxPmt) {
+    const m = T.match(rx);
+    if (m) { dados.valor_parcela = parseMoeda(m[1]); break; }
+  }
+
+  // Data assinatura
+  const rxDataAss = [
+    /DATA\s+(?:DE\s+)?(?:ASSINATURA|CONTRATO|EMISS[AÃ]O)[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /FIRMADO\s+EM[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /DATA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+  ];
+  for (const rx of rxDataAss) {
+    const m = T.match(rx);
+    if (m && validarDataStr(m[1])) { dados.data_assinatura = m[1]; break; }
+  }
+
+  // Data liberação
+  const rxDataLib = [
+    /DATA\s+(?:DE\s+)?(?:LIBERA[CÇ][AÃ]O|CR[EÉ]DITO)[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /LIBERADO\s+EM[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /DATA\s+DE\s+OPERA[CÇ][AÃ]O[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+  ];
+  for (const rx of rxDataLib) {
+    const m = T.match(rx);
+    if (m && validarDataStr(m[1])) { dados.data_liberacao = m[1]; break; }
+  }
+
+  // Primeiro vencimento
+  const rxVenc = [
+    /(?:PRIMEIRO|1[oº°])\s+VENCIMENTO[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /VENCIMENTO\s+(?:DA\s+)?(?:PRIMEIRA|1[aª])\s+PARCELA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /DATA\s+(?:DO\s+)?(?:PRIMEIRO|1[oº°])\s+PAGAMENTO[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+    /1[aªoº°]\s+PARCELA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
+  ];
+  for (const rx of rxVenc) {
+    const m = T.match(rx);
+    if (m && validarDataStr(m[1])) { dados.data_primeiro_vencimento = m[1]; break; }
+  }
+
+  // Sistema de amortização
+  if (/TABELA\s+PRICE|SISTEMA\s+PRICE|AMORTIZA[CÇ][AÃ]O\s+FRANCESA|PARCELAS\s+FIXAS/i.test(T)) {
+    dados.sistema_amortizacao = 'price';
+  } else if (/SISTEMA\s+SAC|AMORTIZA[CÇ][AÃ]O\s+CONSTANTE|TABELA\s+SAC/i.test(T)) {
+    dados.sistema_amortizacao = 'sac';
+  } else if (/SACRE/i.test(T)) {
+    dados.sistema_amortizacao = 'sacre';
+  }
+
+  // IOF
+  const rxIOF = [
+    /\bIOF\b[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /IMPOSTO\s+(?:SOBRE\s+)?OPERA[CÇ][OÕ]ES[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+  ];
+  for (const rx of rxIOF) {
+    const m = T.match(rx);
+    if (m) { dados.iof = parseMoeda(m[1]); break; }
+  }
+
+  // Seguro
+  const rxSeg = [
+    /SEGURO\s+(?:PRESTAMISTA|DE\s+VIDA|RESIDENCIAL)?[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PR[EÊ]MIO\s+(?:DE\s+SEGURO)?[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+  ];
+  for (const rx of rxSeg) {
+    const m = T.match(rx);
+    if (m) { dados.seguro_prestamista = parseMoeda(m[1]); break; }
+  }
+
+  // CET mensal
+  const rxCET = [
+    /CET\s+MENSAL[:\s]+([\d,]+)\s*%/i,
+    /CUSTO\s+EFETIVO\s+TOTAL\s+MENSAL[:\s]+([\d,]+)/i,
+  ];
+  for (const rx of rxCET) {
+    const m = T.match(rx);
+    if (m) { dados.cet_mensal = parseFloat(m[1].replace(',', '.')); break; }
+  }
+
+  // Banco
+  const bancos = ['ITAÚ','BRADESCO','SANTANDER','BANCO DO BRASIL','CAIXA ECONÔMICA','NUBANK',
+    'INTER','C6 BANK','SAFRA','BTG','SICOOB','SICREDI','VOTORANTIM','HONDA BANK',
+    'VOLKSWAGEN FINANCEIRA','TOYOTA','PORTO SEGURO','CETELEM','BMFBOVESPA'];
+  for (const b of bancos) {
+    if (T.includes(b)) {
+      dados.nome_banco = b.charAt(0) + b.slice(1).toLowerCase();
+      break;
+    }
+  }
+
+  return dados;
+}
+
+// ─── EXTRAÇÃO DE LINHAS DE EXTRATO ───────────────────────
+function extrairLinhasExtrato(texto) {
+  const linhas = [];
+  // Padrão: MM/AAAA seguido de valor
+  const rx = /(\d{2}\/\d{4})\s+([\d.]+,\d{2})/g;
+  let m;
+  while ((m = rx.exec(texto)) !== null) {
+    const v = parseMoeda(m[2]);
+    if (v > 0) {
+      linhas.push({
+        mes_ano: m[1],
+        valor_pago: v,
+        situacao: 'pago',
+      });
+    }
+  }
+  return linhas;
+}
+
+// ─── EXTRAÇÃO PARA ATUALIZAÇÃO ───────────────────────────
+function extrairLancamentosAtualizacao(texto) {
+  const T = texto.toUpperCase();
+  const lancamentos = [];
+
+  const padroes = [
+    { rx: /PRINCIPAL[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'principal', desc: 'Principal' },
+    { rx: /HONOR[AÁ]RIOS[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'honorarios', desc: 'Honorários advocatícios' },
+    { rx: /MULTA[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'multa', desc: 'Multa' },
+    { rx: /CUSTAS[:\s]+R?\$?\s*([\d.]+,\d{2})/gi, tipo: 'outros', desc: 'Custas processuais' },
+  ];
+
+  for (const p of padroes) {
+    let match;
+    while ((match = p.rx.exec(T)) !== null) {
+      lancamentos.push({
+        descricao: p.desc,
+        valor_original: parseMoeda(match[1]),
+        data_base: match[2] || null,
+        tipo: p.tipo,
+      });
+    }
+  }
+
+  return lancamentos;
+}
+
+// ─── UTILITÁRIOS ─────────────────────────────────────────
+function parseMoeda(str) {
+  if (!str) return null;
+  const s = str.toString().replace(/[^\d.,]/g, '');
+  if (!s) return null;
+  // BR: 50.000,00
+  if (s.includes(',') && s.includes('.') && s.lastIndexOf(',') > s.lastIndexOf('.')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || null;
+  }
+  // US: 50,000.00
+  if (s.includes(',') && s.includes('.') && s.lastIndexOf('.') > s.lastIndexOf(',')) {
+    return parseFloat(s.replace(/,/g, '')) || null;
+  }
+  if (s.includes(',')) return parseFloat(s.replace(',', '.')) || null;
+  return parseFloat(s) || null;
+}
+
+function validarDataStr(str) {
+  if (!str) return false;
+  const [d, mo, a] = str.split('/');
+  if (!d || !mo || !a) return false;
+  const dt = new Date(`${a}-${mo}-${d}`);
+  return !isNaN(dt.getTime()) && parseInt(a) >= 1990 && parseInt(a) <= 2050;
+}
+
+function _ddmmToISO(str) {
+  if (!str) return '';
+  const p = str.split('/');
+  return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : '';
+}
+
+function _numToBRL(v) {
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function highlightCampoIA(el) {
+  if (!el) return;
+  el.classList.add('campo-ia-preenchido');
+}
+
+function contarCamposPreenchidos(dados) {
+  let count = 0;
+  const dc = dados.dados_contrato || dados;
+  ['valor_financiado','taxa_nominal_mensal','num_parcelas','valor_parcela',
+   'data_assinatura','data_liberacao','data_primeiro_vencimento',
+   'sistema_amortizacao','iof','seguro_prestamista','nome_banco'].forEach(c => {
+    if (dc[c] != null) count++;
+  });
+  if (dados.extrato && dados.extrato.length) count += dados.extrato.length;
+  if (dados.lancamentos && dados.lancamentos.length) count += dados.lancamentos.length;
+  return count;
+}
+
+// ─── PREENCHIMENTO — EXTRATO ──────────────────────────────
+function preencherCamposExtrato(dados) {
+  const dc = dados.dados_contrato || {};
+
+  if (dc.valor_financiado) {
+    const el = document.getElementById('ext-valor');
+    if (el) { el.value = _numToBRL(dc.valor_financiado); highlightCampoIA(el); }
+  }
+  if (dc.taxa_nominal_mensal) {
+    const el = document.getElementById('ext-taxa-nominal');
+    if (el) { el.value = dc.taxa_nominal_mensal.toFixed(2); highlightCampoIA(el); }
+  }
+  if (dc.num_parcelas) {
+    const el = document.getElementById('ext-parcelas');
+    if (el) { el.value = dc.num_parcelas; highlightCampoIA(el); }
+  }
+  if (dc.sistema_amortizacao) {
+    const el = document.getElementById('ext-sistema');
+    if (el) { el.value = dc.sistema_amortizacao; highlightCampoIA(el); }
+  }
+  const dataInicio = dc.data_liberacao || dc.data_assinatura;
+  if (dataInicio) {
+    const el = document.getElementById('ext-data-inicio');
+    if (el) { el.value = _ddmmToISO(dataInicio); highlightCampoIA(el); }
+  }
+
+  // Preencher linhas de extrato
+  if (dados.extrato && dados.extrato.length) {
+    const tbody = document.getElementById('ext-tabela-body');
+    if (tbody) tbody.innerHTML = '';
+    _extRowId = 0;
+    dados.extrato.forEach(linha => {
+      extAddRow();
+      const id = _extRowId;
+      const mesEl = document.getElementById('ext-mesano-' + id);
+      const pagoEl = document.getElementById('ext-pago-' + id);
+      const sitEl = document.getElementById('ext-sit-' + id);
+      if (mesEl && linha.mes_ano) { mesEl.value = linha.mes_ano; highlightCampoIA(mesEl); }
+      if (pagoEl && linha.valor_pago) {
+        pagoEl.value = _numToBRL(linha.valor_pago);
+        maskCurrency(pagoEl);
+        highlightCampoIA(pagoEl);
+      }
+      if (sitEl && linha.situacao) { sitEl.value = linha.situacao; highlightCampoIA(sitEl); }
+    });
+  }
+}
+
+// ─── PREENCHIMENTO — ATUALIZAÇÃO ─────────────────────────
+function preencherCamposAtualizacao(dados) {
+  if (!dados.lancamentos || !dados.lancamentos.length) return;
+  const tbody = document.getElementById('atl-tabela-body');
+  if (tbody) tbody.innerHTML = '';
+  _atlRowId = 0;
+  dados.lancamentos.forEach(lanc => {
+    atlAddLancamento({
+      desc: lanc.descricao || '',
+      valor: lanc.valor_original ? _numToBRL(lanc.valor_original) : '',
+      data: _ddmmToISO(lanc.data_base || ''),
+      tipo: lanc.tipo || 'principal',
+    });
+  });
+}
+
+// ─── EVENT LISTENERS ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  const inputExtrato = document.getElementById('input-pdf-extrato');
+  const inputAtl = document.getElementById('input-pdf-atualizacao');
+
+  if (inputExtrato) {
+    inputExtrato.addEventListener('change', async function(e) {
+      const arquivo = e.target.files[0];
+      if (!arquivo) return;
+      _ocrStatusId = 'status-upload-extrato';
+      const status = document.getElementById('status-upload-extrato');
+      status.style.display = '';
+      status.className = 'upload-loading';
+      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
+      try {
+        const resultado = await extrairTextoPDF(arquivo);
+        status.innerHTML = '<div class="ia-spinner"></div><span>Identificando dados do contrato...</span>';
+        const dc = extrairDadosContrato(resultado.texto);
+        const linhas = extrairLinhasExtrato(resultado.texto);
+        preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+        const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
+        const metodo = resultado.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)';
+        status.className = 'upload-sucesso';
+        status.innerHTML = `✅ ${total} campo(s) identificado(s) automaticamente${metodo}.<br><small>Campos destacados em verde — revise antes de calcular.</small>`;
+      } catch(erro) {
+        status.className = 'upload-erro';
+        status.innerHTML = `❌ ${erro.message}<br><small>Preencha os campos manualmente abaixo.</small>`;
+      }
+      e.target.value = '';
+    });
+  }
+
+  if (inputAtl) {
+    inputAtl.addEventListener('change', async function(e) {
+      const arquivo = e.target.files[0];
+      if (!arquivo) return;
+      _ocrStatusId = 'status-upload-atualizacao';
+      const status = document.getElementById('status-upload-atualizacao');
+      status.style.display = '';
+      status.className = 'upload-loading';
+      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
+      try {
+        const resultado = await extrairTextoPDF(arquivo);
+        status.innerHTML = '<div class="ia-spinner"></div><span>Identificando valores e datas...</span>';
+        const lancs = extrairLancamentosAtualizacao(resultado.texto);
+        preencherCamposAtualizacao({ lancamentos: lancs });
+        status.className = 'upload-sucesso';
+        status.innerHTML = `✅ ${lancs.length} lançamento(s) identificado(s).<br><small>Revise os valores antes de calcular.</small>`;
+      } catch(erro) {
+        status.className = 'upload-erro';
+        status.innerHTML = `❌ ${erro.message}<br><small>Adicione os lançamentos manualmente.</small>`;
+      }
+      e.target.value = '';
+    });
+  }
+});
 </script>
 
 <!-- Modal — Série de Parcelas (fora do left-panel para position:fixed funcionar) -->
