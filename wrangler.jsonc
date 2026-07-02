@@ -6,8 +6,7 @@
     "enabled": true
   },
   "assets": {
-    "directory": ".",
-    "exclude": ["node_modules/**", ".git/**", ".wrangler/**", "scripts/**", "package*.json", "wrangler.jsonc", ".gitignore", ".wranglerignore"]
+    "directory": "."
   },
   "compatibility_flags": [
     "nodejs_compat"
