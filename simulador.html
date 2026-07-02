@@ -1648,7 +1648,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <select id="atl-indice" style="width:100%">
             <option value="auto">Automático (conforme finalidade e data)</option>
             <option value="ipca_selic">IPCA-E + SELIC (EC 113/2021)</option>
-            <option value="inpc_1pct">INPC + 1% a.m. (art. 406 CC)</option>
+            <option value="inpc_1pct">INPC + 1% a.m.</option>
             <option value="ipca_6aa">IPCA-E + 6% a.a.</option>
           </select>
         </div>
@@ -1734,7 +1734,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div><label class="form-label">Fase</label>
                   <select id="atl-hon-fase">
                     <option value="sucumbencia">Sucumbência</option>
-                    <option value="cumprimento">Cumprimento (art. 523 CPC)</option>
+                    <option value="cumprimento">Fase de cumprimento</option>
                     <option value="contratual">Honorários contratuais</option>
                   </select>
                 </div>
@@ -1992,15 +1992,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 // Fallback usado se API falhar — valores reais confirmados em testes BCB (referência: mar/2024)
 // taxaAno = (1 + taxaMes/100)^12 - 1
+// taxaAno = ((1 + taxaMes/100)^12 − 1) × 100  — calculado exatamente a partir de taxaMes
 const BACEN_FALLBACK = {
-  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 5.78,  taxaAno: 82.67,  ref: 'fallback' },
-  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.91,  taxaAno: 25.41,  ref: 'fallback' },
+  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 5.78,  taxaAno: 96.24,  ref: 'fallback' },
+  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.91,  taxaAno: 25.49,  ref: 'fallback' },
   habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 1.70,  taxaAno: 22.41,  ref: 'fallback' },
   capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.72,  taxaAno: 22.73,  ref: 'fallback' },
-  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.77,  taxaAno: 23.42,  ref: 'fallback' },
-  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.86,  taxaAno: 24.75,  ref: 'fallback' },
-  cheque:         { nome: 'Cheque Especial',                  taxaMes: 10.35, taxaAno: 231.40, ref: 'fallback' },
-  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 18.57, taxaAno: 622.30, ref: 'fallback' },
+  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.77,  taxaAno: 23.50,  ref: 'fallback' },
+  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.86,  taxaAno: 24.86,  ref: 'fallback' },
+  cheque:         { nome: 'Cheque Especial',                  taxaMes: 10.35, taxaAno: 225.99, ref: 'fallback' },
+  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 18.57, taxaAno: 671.97, ref: 'fallback' },
 };
 
 // Códigos SGS primários por modalidade — séries 254xx retornam % a.m. (confirmado em testes reais)
@@ -5212,10 +5213,10 @@ function renderResultadosHamburguês(r) {
   const alertSit = document.getElementById('alert-situacao');
   if (r.capitaliza) {
     alertSit.className = 'alert show alert-warn';
-    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> com taxa diária equivalente (${fmtPct(r.iDiariaEq * 100, 4)} a.d. = <em>(1 + ${fmtPct(r.taxaMensal)}/mês)^(1/30) − 1</em>). O Método Hamburguês em sua forma original (puro) opera com juros <em>simples</em>: <em>J = i_diária × Σ(SD × dias)</em>. A capitalização composta eleva o custo final e deve estar expressamente prevista no instrumento contratual.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
+    alertSit.innerHTML = `<strong>⚠ Capitalização ativada.</strong> O cálculo usou juros <em>compostos</em> com taxa diária equivalente (${fmtPct(r.iDiariaEq * 100, 4)} a.d. = <em>(1 + ${fmtPct(r.taxaMensal)}/mês)^(1/30) − 1</em>). O Método Hamburguês em sua forma original (puro) opera com juros <em>simples</em>: <em>J = i_diária × Σ(SD × dias)</em>. A capitalização composta eleva o custo final da operação.${r.usaIOF ? ' IOF calculado com alíquota diária sobre saldo devedor + adicional flat de 0,38% sobre o valor do crédito.' : ''}`;
   } else {
     alertSit.className = 'alert show alert-info';
-    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — taxa proporcional diária sobre saldo devedor.${r.usaIOF ? ' IOF inclui alíquota diária + adicional flat 0,38% (Decreto 6.306/2007 art. 8° §3°).' : ''}`;
+    alertSit.innerHTML = `<strong>ℹ Juros simples (Hamburguês puro).</strong> Cada período acumula o "número devedor" (SD × dias). O total de juros é: <em>J = ${fmtPct(r.iDiaria * 100, 4)} a.d. × ${r.totalND.toLocaleString('pt-BR',{maximumFractionDigits:2})} = ${fmtBRL(r.totalJuros)}</em>. Sem capitalização — taxa proporcional diária sobre saldo devedor.${r.usaIOF ? ' IOF calculado com alíquota diária sobre saldo devedor + adicional flat de 0,38% sobre o valor do crédito.' : ''}`;
   }
 
   // ── Ocultar seções inapropriadas ──
