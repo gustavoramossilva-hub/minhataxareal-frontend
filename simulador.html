@@ -2039,18 +2039,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 //    20754 = Cartão rotativo PF
 // ════════════════════════════════════════════
 
-// Fallback usado se API falhar — valores reais confirmados em testes BCB (referência: mar/2024)
-// taxaAno = (1 + taxaMes/100)^12 - 1
+// Fallback usado se API falhar
+// Fallbacks atualizados em 07/07/2026 — valores obtidos diretamente da API SGS
+// Referência: competência mai/2026 (dado mais recente disponível na data da atualização)
 // taxaAno = ((1 + taxaMes/100)^12 − 1) × 100  — calculado exatamente a partir de taxaMes
+// Obs.: série 20719 (consignado INSS) publica % a.a. (19,68) — convertida para % a.m.
 const BACEN_FALLBACK = {
-  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 5.78,  taxaAno: 96.24,  ref: 'fallback' },
-  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.91,  taxaAno: 25.49,  ref: 'fallback' },
-  habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 1.70,  taxaAno: 22.41,  ref: 'fallback' },
-  capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.72,  taxaAno: 22.73,  ref: 'fallback' },
-  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 1.77,  taxaAno: 23.50,  ref: 'fallback' },
-  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.86,  taxaAno: 24.86,  ref: 'fallback' },
-  cheque:         { nome: 'Cheque Especial',                  taxaMes: 10.35, taxaAno: 225.99, ref: 'fallback' },
-  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 18.57, taxaAno: 671.97, ref: 'fallback' },
+  pessoal:        { nome: 'Crédito Pessoal',                 taxaMes: 6.81,  taxaAno: 120.47, ref: 'fallback' },
+  veiculo:        { nome: 'Financiamento de Veículos',       taxaMes: 1.97,  taxaAno: 26.38,  ref: 'fallback' },
+  habitacional:   { nome: 'Crédito Habitacional',            taxaMes: 1.82,  taxaAno: 24.16,  ref: 'fallback' },
+  capital:        { nome: 'Capital de Giro (PJ)',             taxaMes: 1.78,  taxaAno: 23.58,  ref: 'fallback' },
+  consignado:     { nome: 'Crédito Consignado (privado)',     taxaMes: 2.08,  taxaAno: 28.02,  ref: 'fallback' },
+  consignadoINSS: { nome: 'Crédito Consignado (INSS)',        taxaMes: 1.51,  taxaAno: 19.70,  ref: 'fallback' },
+  cheque:         { nome: 'Cheque Especial',                  taxaMes: 12.19, taxaAno: 297.61, ref: 'fallback' },
+  cartao:         { nome: 'Cartão de Crédito Rotativo',       taxaMes: 18.25, taxaAno: 647.52, ref: 'fallback' },
 };
 
 // Códigos SGS primários por modalidade — séries 254xx retornam % a.m. (confirmado em testes reais)
@@ -2115,7 +2117,7 @@ async function buscarTaxaPorData(codigo, dataContrato, series) {
   const seriesList = Array.isArray(series) ? series : (series ? [series] : [codigo]);
   const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   let d = new Date(dataContrato);
-  for (let defasagem = 0; defasagem < 5; defasagem++) {
+  for (let defasagem = 0; defasagem < 8; defasagem++) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const ano = d.getFullYear();
     const fim = ultimoDiaMes(d.getMonth() + 1, ano);
@@ -4657,8 +4659,11 @@ function _bacenRefHtml(chave, b) {
     comp = ' · estimativa';
   }
   const serie = SGS_CODIGOS[chave] || '—';
-  const tooltip = 'Taxa efetiva média das operações contratadas no período, conforme divulgado pelo Banco Central do Brasil — SGS série ' + serie + '. Inclui juros e encargos, exceto IOF e tarifas. Publicada com defasagem média de 60 a 90 dias.';
-  return `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(b.taxaMes)} a.m.</strong>${comp} ⓘ</span>`;
+  const tooltip = 'Taxa efetiva média das operações contratadas no período, conforme divulgado pelo Banco Central do Brasil — SGS série ' + serie + '. Inclui juros e encargos, exceto IOF e tarifas. Publicada com defasagem média de 90 a 120 dias.';
+  if (b.ref && b.ref !== 'fallback') {
+    return `<span title="${tooltip}" style="cursor:help">Taxa BCB: <strong>${fmtPct(b.taxaMes)} a.m.</strong> (série ${serie}${comp} — dado mais recente disponível) ⓘ</span>`;
+  }
+  return `<span title="${tooltip}" style="cursor:help">Taxa de referência: <strong>${fmtPct(b.taxaMes)} a.m.</strong> (estimativa — dado BCB indisponível para o período) ⓘ</span>`;
 }
 
 function updateBacenRef() {
@@ -4698,16 +4703,16 @@ function exibirAlertaBCB(alertElId, nivel, dados) {
   let msg = '';
   if (nivel === 1) {
     msg = `<strong>Contrato recente detectado</strong><br>
-As taxas médias do BCB são publicadas com defasagem de 60 a 90 dias. O cálculo foi realizado com a referência mais recente disponível: competência <strong>${competencia || '—'}</strong>${defasagem > 0 ? ' (defasagem de ' + defasagem + ' ' + (defasagem === 1 ? 'mês' : 'meses') + ')' : ''}.<br>
+O Banco Central publica as taxas médias com defasagem que pode chegar a 120 dias. O cálculo foi realizado com a referência mais recente disponível: competência <strong>${competencia || '—'}</strong>${defasagem > 0 ? ' (defasagem de ' + defasagem + ' ' + (defasagem === 1 ? 'mês' : 'meses') + ')' : ''}.<br>
 Série BCB/SGS: <strong>${serie || '—'}</strong>.`;
   } else if (nivel === 2) {
     msg = `<strong>Informação sobre a taxa de referência</strong><br>
-O Banco Central publica as taxas médias com defasagem de 60 a 90 dias. Dado exibido refere-se à competência <strong>${competencia || '—'}</strong> (defasagem de ${defasagem || '?'} ${defasagem === 1 ? 'mês' : 'meses'}).<br>
+O Banco Central publica as taxas médias com defasagem que pode chegar a 120 dias. Dado exibido refere-se à competência <strong>${competencia || '—'}</strong> (defasagem de ${defasagem || '?'} ${defasagem === 1 ? 'mês' : 'meses'}).<br>
 <span style="color:#A3E635;font-weight:bold">✅ O cálculo foi realizado normalmente com a referência disponível.</span><br>
 Fonte: BCB/SGS série <strong>${serie || '—'}</strong>.`;
   } else {
     msg = `<strong>ℹ️ Informação sobre a taxa de referência</strong><br><br>
-O Banco Central publica as taxas médias com defasagem de 60 a 90 dias. Para a competência solicitada (${competencia||'—'}), o dado oficial ainda não está disponível.<br><br>
+O Banco Central publica as taxas médias com defasagem que pode chegar a 120 dias. Para a competência solicitada (${competencia||'—'}), o dado oficial ainda não está disponível.<br><br>
 <span style="color:#A3E635;font-weight:bold">✅ O cálculo foi realizado normalmente com a estimativa de referência disponível.</span><br><br>
 Para maior precisão, informe a taxa do contrato no campo <em>"Taxa nominal informada"</em>.`;
   }
@@ -4753,8 +4758,8 @@ async function onDataContratoChange(selectId, labelId) {
     const p    = resultado.ref.split('/');
     const comp = p.length === 3 ? mesesNomes[parseInt(p[1])-1] + '/' + p[2] : resultado.competencia;
     const serie = resultado.serie || codigo || '—';
-    const tooltip = 'Taxa efetiva média BCB — SGS série ' + serie + ' — competência ' + comp + '. Publicada com defasagem média de 60 a 90 dias.';
-    labelEl.innerHTML = `<span title="${tooltip}" style="cursor:help">Taxa efetiva média de mercado (BCB): <strong>${fmtPct(resultado.taxaMes)} a.m.</strong> · competência ${comp} · série ${serie} ⓘ</span>`;
+    const tooltip = 'Taxa efetiva média BCB — SGS série ' + serie + ' — competência ' + comp + '. Publicada com defasagem média de 90 a 120 dias.';
+    labelEl.innerHTML = `<span title="${tooltip}" style="cursor:help">Taxa BCB: <strong>${fmtPct(resultado.taxaMes)} a.m.</strong> (série ${serie}, competência ${comp} — dado mais recente disponível) ⓘ</span>`;
     if (BACEN[chave]) { BACEN[chave].taxaMes = resultado.taxaMes; BACEN[chave].taxaAno = resultado.taxaAno; BACEN[chave].ref = resultado.ref; }
 
     // Determina nível do alerta — informativo apenas, nunca bloqueia
