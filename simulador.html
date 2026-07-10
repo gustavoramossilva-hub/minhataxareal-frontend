@@ -7445,7 +7445,7 @@ function atlAddLancamento(data = {}) {
   tr.innerHTML = `
     <td style="text-align:center;color:var(--text3);font-size:10px"></td>
     <td><input type="text" placeholder="Descrição" value="${data.desc||''}" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:11px;padding:2px 0;outline:none"/></td>
-    <td><div class="input-prefix-wrap" style="min-width:0"><input type="text" inputmode="decimal" placeholder="0,00" value="${data.valor||''}" oninput="maskCurrency(this)" style="font-size:11px"/></div></td>
+    <td><input type="text" inputmode="decimal" placeholder="0,00" value="${data.valor||''}" oninput="maskCurrency(this)" style="width:100%;min-width:90px;font-size:11px;padding:4px 6px"/></td>
     <td><input type="date" value="${data.data||''}" style="width:100%;font-size:11px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 4px"/></td>
     <td><select style="width:100%;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px">
       ${tipoOpts.map((v,i)=>`<option value="${v}"${(data.tipo||'principal')===v?' selected':''}>${tipoNm[i]}</option>`).join('')}

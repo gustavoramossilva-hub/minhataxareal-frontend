@@ -1125,16 +1125,21 @@ async function login() {
   if (!email || !senha) return showAlert('alert-login', 'Preencha e-mail e senha.');
 
   setLoading('btn-login', true);
+  const avisoDemora = setTimeout(() => {
+    showAlert('alert-login', 'Conectando ao servidor — pode levar até 60 segundos na primeira tentativa do dia.', 'alert-info');
+  }, 4000);
   try {
     const res = await api('/api/auth/login', {
       method: 'POST',
       body: { email, password: senha },
     });
+    clearTimeout(avisoDemora);
     setToken(res.token);
     setUser(res.user);
     atualizarHeader(res.user);
     rotearPosLogin(res.user);
   } catch (e) {
+    clearTimeout(avisoDemora);
     setLoading('btn-login', false);
     showAlert('alert-login', e.message || 'E-mail ou senha incorretos.');
     document.getElementById('login-senha').classList.add('error');
