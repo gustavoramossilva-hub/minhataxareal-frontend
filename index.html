@@ -11,7 +11,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MinhaTaxaReal — Cálculo Financeiro Profissional</title>
-<meta name="description" content="Apure a taxa efetiva real (TIR) de qualquer financiamento e compare com a média do Banco Central. Price, SAC, SACRE, Hamburguês, atualização monetária e série histórica BCB.">
+<meta name="description" content="Apure a taxa efetiva real (TIR) de qualquer financiamento e compare com a média do Banco Central. Price, SAC, SACRE, Hamburguês, Leasing, IPCA+, atualização monetária e série histórica BCB.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' rx='14' fill='%233730A3'/><polyline points='8,48 20,32 30,38 40,22' fill='none' stroke='%23A3E635' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><polygon points='45,14 44,25 36,19' fill='%23A3E635'/></svg>">
 <meta name="theme-color" content="#3730A3">
@@ -216,7 +216,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="hero">
     <div class="hero-eyebrow">Cálculo Financeiro Profissional</div>
     <h1 class="hero-title">Calcule. Compare.<br><em>Comprove.</em></h1>
-    <p class="hero-sub">Da taxa nominal ao custo efetivo real — o MinhaTaxaReal entrega em segundos o que leva horas para calcular manualmente. Price, SAC, SACRE, Hamburguês e séries históricas do Banco Central em um só lugar.</p>
+    <p class="hero-sub">Da taxa nominal ao custo efetivo real — o MinhaTaxaReal entrega em segundos o que leva horas para calcular manualmente. Price, SAC, SACRE, Hamburguês, Leasing, IPCA+ e séries históricas do Banco Central em um só lugar.</p>
     <div class="hero-actions">
       <a href="auth.html" class="btn-primary">Acessar as ferramentas →</a>
       <a href="#como-funciona" class="btn-ghost">Ver como funciona ↓</a>
@@ -250,9 +250,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="stat-item">
           <div>
             <div class="stat-label-sm">Sistemas de amortização</div>
-            <div class="stat-num">4</div>
+            <div class="stat-num">6</div>
           </div>
-          <div class="stat-desc">Price · SAC · SACRE · Hamburguês</div>
+          <div class="stat-desc">Price · SAC · SACRE · Hamburguês · Leasing · IPCA+</div>
         </div>
         <div class="stat-item">
           <div>
@@ -285,7 +285,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
           <div>
             <p style="margin-bottom:3px">📅 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Atualização monetária com múltiplos lançamentos</strong></p>
-            <p style="margin-bottom:0">Lance parcelas individualmente ou em série. Honorários, multa, juros e custas em campos separados. Índices IPCA-E, SELIC e INPC via API oficial do BCB.</p>
+            <p style="margin-bottom:0">Lance parcelas individualmente ou em série. Honorários, multa, juros e custas em campos separados. Índices IPCA-E, SELIC e INPC via API oficial do BCB. Suporte a Tribunais de Justiça, TRFs, TRTs e TST.</p>
+          </div>
+          <div>
+            <p style="margin-bottom:3px">📎 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Leitura automática de contratos e extratos em PDF</strong></p>
+            <p style="margin-bottom:0">Envie o documento e o sistema preenche os campos automaticamente — leitura direta de PDF digital ou OCR para escaneados, processados localmente no navegador, sem envio a servidores externos.</p>
           </div>
           <div>
             <p style="margin-bottom:3px">🔒 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Conformidade e rastreabilidade total</strong></p>
@@ -338,9 +342,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="auth.html" class="feat-card featured reveal">
         <div class="feat-icon">📊</div>
         <h3 class="feat-name">Simulador de Taxa Real</h3>
-        <p class="feat-desc">Apure a taxa efetiva (TIR) de qualquer financiamento. Compare com a média BCB do período do contrato. Tabela de amortização completa e gráfico de evolução.</p>
+        <p class="feat-desc">Apure a taxa efetiva (TIR) de qualquer financiamento. Compare com a média BCB do período do contrato. Tabela de amortização completa, composição do valor financiado e gráfico de evolução.</p>
         <div class="feat-tags">
           <span class="feat-tag">Price · SAC · SACRE · Hamburguês</span>
+          <span class="feat-tag">Leasing · IPCA+</span>
           <span class="feat-tag">Gráfico</span>
           <span class="feat-tag">BCB comparativo</span>
           <span class="feat-tag">Export PDF</span>
@@ -370,6 +375,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <h3 class="feat-name">Apuração de Extrato</h3>
         <p class="feat-desc">Lance os pagamentos mês a mês conforme o extrato bancário e apure a taxa efetiva real aplicada em cada período. Identifique divergências entre a taxa contratada e a efetivamente cobrada.</p>
         <div class="feat-tags">
+          <span class="feat-tag">Leitura automática de PDF</span>
           <span class="feat-tag">Lançamento mensal</span>
           <span class="feat-tag">Taxa efetiva por período</span>
           <span class="feat-tag">Export Excel</span>
@@ -382,10 +388,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <div class="feat-icon">📅</div>
         <h3 class="feat-name">Atualização Monetária</h3>
-        <p class="feat-desc">Atualize valores individualmente ou em série. Honorários, multa, juros e custas em campos separados. IPCA-E, SELIC e INPC via API BCB. Resultado consolidado por tipo.</p>
+        <p class="feat-desc">Atualize valores individualmente ou em série. Honorários, multa, juros e custas em campos separados. IPCA-E, SELIC e INPC via API BCB. Suporte a TJs, TRFs, TRTs e TST. Resultado consolidado por tipo.</p>
         <div class="feat-tags">
+          <span class="feat-tag">Leitura automática de PDF</span>
           <span class="feat-tag">Múltiplos lançamentos</span>
           <span class="feat-tag">Honorários · Multa</span>
+          <span class="feat-tag">TRTs · TST</span>
           <span class="feat-tag">IPCA-E · SELIC · INPC</span>
         </div>
       </a>
@@ -442,9 +450,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <ul class="price-items">
           <li>Tudo do Standard</li>
+          <li>Leasing com VRG e financiamento IPCA+</li>
           <li>Apuração de Inadimplência com série histórica BCB mês a mês</li>
           <li>Apuração de Extrato bancário</li>
-          <li>Atualização Monetária com múltiplos lançamentos</li>
+          <li>Atualização Monetária com múltiplos lançamentos e TRTs/TST</li>
+          <li>Leitura automática de PDF (contratos e extratos)</li>
           <li>Carência com capitalização em dias</li>
           <li>Export Excel auditável linha a linha</li>
           <li>PDF completo com fontes citadas</li>
