@@ -1126,7 +1126,7 @@ async function login() {
 
   setLoading('btn-login', true);
   const avisoDemora = setTimeout(() => {
-    showAlert('alert-login', 'Conectando ao servidor — pode levar até 60 segundos na primeira tentativa do dia.', 'alert-info');
+    showAlert('alert-login', 'Conectando ao servidor, só um instante...', 'alert-info');
   }, 4000);
   try {
     const res = await api('/api/auth/login', {
