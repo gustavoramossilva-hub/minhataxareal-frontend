@@ -1679,16 +1679,67 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Tribunal</label>
-            <select id="atl-tribunal" style="width:100%">
-              <option value="tjmg">TJMG</option>
-              <option value="tjsp">TJSP</option>
-              <option value="tjrs">TJRS</option>
-              <option value="tjpr">TJPR</option>
-              <option value="trf1">TRF1</option>
-              <option value="trf3">TRF3</option>
-              <option value="stj">STJ</option>
+            <select id="atl-tribunal" style="width:100%" onchange="atlOnTribunalChange()">
+              <optgroup label="Tribunais de Justiça">
+                <option value="tjmg">TJMG</option>
+                <option value="tjsp">TJSP</option>
+                <option value="tjrs">TJRS</option>
+                <option value="tjpr">TJPR</option>
+                <option value="tjrj">TJRJ</option>
+                <option value="tjba">TJBA</option>
+                <option value="tjsc">TJSC</option>
+                <option value="tjgo">TJGO</option>
+                <option value="tjdf">TJDF (TJDFT)</option>
+                <option value="tjpe">TJPE</option>
+                <option value="tjce">TJCE</option>
+                <option value="tjes">TJES</option>
+                <option value="tjmt">TJMT</option>
+                <option value="tjms">TJMS</option>
+                <option value="tjpa">TJPA</option>
+              </optgroup>
+              <optgroup label="Tribunais Regionais Federais">
+                <option value="trf1">TRF1 (1ª Região)</option>
+                <option value="trf2">TRF2 (2ª Região)</option>
+                <option value="trf3">TRF3 (3ª Região)</option>
+                <option value="trf4">TRF4 (4ª Região)</option>
+                <option value="trf5">TRF5 (5ª Região)</option>
+                <option value="trf6">TRF6 (6ª Região)</option>
+              </optgroup>
+              <optgroup label="Tribunais Regionais do Trabalho">
+                <option value="trt1">TRT1 (RJ)</option>
+                <option value="trt2">TRT2 (SP - Capital)</option>
+                <option value="trt3">TRT3 (MG)</option>
+                <option value="trt4">TRT4 (RS)</option>
+                <option value="trt5">TRT5 (BA)</option>
+                <option value="trt6">TRT6 (PE)</option>
+                <option value="trt7">TRT7 (CE)</option>
+                <option value="trt8">TRT8 (PA/AP)</option>
+                <option value="trt9">TRT9 (PR)</option>
+                <option value="trt10">TRT10 (DF/TO)</option>
+                <option value="trt11">TRT11 (AM/RR)</option>
+                <option value="trt12">TRT12 (SC)</option>
+                <option value="trt13">TRT13 (PB)</option>
+                <option value="trt14">TRT14 (RO/AC)</option>
+                <option value="trt15">TRT15 (Campinas/SP)</option>
+                <option value="trt16">TRT16 (MA)</option>
+                <option value="trt17">TRT17 (ES)</option>
+                <option value="trt18">TRT18 (GO)</option>
+                <option value="trt19">TRT19 (AL)</option>
+                <option value="trt20">TRT20 (SE)</option>
+                <option value="trt21">TRT21 (RN)</option>
+                <option value="trt22">TRT22 (PI)</option>
+                <option value="trt23">TRT23 (MT)</option>
+                <option value="trt24">TRT24 (MS)</option>
+              </optgroup>
+              <optgroup label="Superiores">
+                <option value="stj">STJ</option>
+                <option value="tst">TST</option>
+              </optgroup>
               <option value="outro">Outro</option>
             </select>
+            <div class="nota-trabalhista" style="display:none;margin-top:8px;padding:8px 10px;font-size:11px;line-height:1.5;background:rgba(55,48,163,.15);border:1px solid #3730A3;color:#fff;border-radius:6px">
+              ℹ️ Créditos trabalhistas: juros de mora incidem desde o ajuizamento da ação (art. 883 da CLT). Correção monetária e juros seguem a tese fixada pelo STF/STJ (ADCs 58 e 59).
+            </div>
           </div>
         </div>
 
@@ -7394,7 +7445,7 @@ function atlAddLancamento(data = {}) {
   tr.innerHTML = `
     <td style="text-align:center;color:var(--text3);font-size:10px"></td>
     <td><input type="text" placeholder="Descrição" value="${data.desc||''}" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:11px;padding:2px 0;outline:none"/></td>
-    <td><div class="input-prefix-wrap" style="min-width:0"><input type="text" placeholder="0,00" value="${data.valor||''}" oninput="maskCurrency(this)" style="font-size:11px"/></div></td>
+    <td><div class="input-prefix-wrap" style="min-width:0"><input type="text" inputmode="decimal" placeholder="0,00" value="${data.valor||''}" oninput="maskCurrency(this)" style="font-size:11px"/></div></td>
     <td><input type="date" value="${data.data||''}" style="width:100%;font-size:11px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 4px"/></td>
     <td><select style="width:100%;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px">
       ${tipoOpts.map((v,i)=>`<option value="${v}"${(data.tipo||'principal')===v?' selected':''}>${tipoNm[i]}</option>`).join('')}
@@ -7414,6 +7465,19 @@ function atlRemLancamento(id) {
   const tr = document.getElementById(id);
   if (tr) tr.remove();
   atlRenumerar();
+}
+
+function atlOnTribunalChange() {
+  const valor = (document.getElementById('atl-tribunal')?.value || '').toLowerCase();
+  const nota = document.querySelector('.nota-trabalhista');
+  if (!nota) return;
+  if (valor.startsWith('trt') || valor === 'tst') {
+    nota.style.display = '';
+    const radioTrabalhista = document.querySelector('input[name="atl-natureza"][value="trabalhista"]');
+    if (radioTrabalhista) radioTrabalhista.checked = true;
+  } else {
+    nota.style.display = 'none';
+  }
 }
 
 function atlToggleEncargo(type) {
