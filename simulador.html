@@ -636,6 +636,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     header { padding: 16px 20px; }
     .left-panel, .right-panel { padding: 24px 20px; }
   }
+  /* Telas muito estreitas (≤340px): header quebra linha e os grids de duas
+     colunas do formulário empilham — inputs de data têm largura intrínseca
+     (~150px) que estourava +27px em 320px (auditoria) */
+  @media (max-width: 340px) {
+    #header-user-info { flex-wrap: wrap; font-size: 11px; gap: 6px; }
+    .carencia-datas-grid { grid-template-columns: 1fr !important; }
+    .left-panel [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+  }
   @media (max-width: 640px) {
     .left-panel, .right-panel { padding: 20px 16px; }
     .metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -939,7 +947,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
           <!-- Modo datas (padrão) -->
           <div id="carencia-modo-datas">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="form-group carencia-datas-grid">
               <div>
                 <label class="form-label">Data de liberação do crédito</label>
                 <span class="form-hint" style="display:block;margin-bottom:4px">data em que o valor foi creditado na conta</span>
@@ -1472,7 +1480,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <!-- Modo datas (padrão) -->
         <div id="inad2-carencia-modo-datas">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+          <div class="carencia-datas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
             <div>
               <label class="form-label">Data de liberação do crédito</label>
               <span class="form-hint" style="display:block;margin-bottom:4px">data do crédito na conta</span>
@@ -1933,6 +1941,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Área de resultados -->
     <div id="results-area" style="display:none">
+    <!-- Container do Simulador/Auditoria (Price, SAC, SACRE, Hamburguês, Leasing, IPCA+).
+         NUNCA sobrescrever #results-area inteiro: os elementos fixos abaixo
+         (#res-titulo, #metrics-grid, #table-wrap, #antec-result, #grafico-section)
+         pertencem a este container. O Extrato usa #results-extrato, isolado. -->
+    <div id="results-simulador">
 
       <div class="results-header animate-in">
         <div>
@@ -2027,6 +2040,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <strong>Aviso legal:</strong> Esta ferramenta realiza exclusivamente cálculos matemáticos de engenharia financeira com fins educativos e informativos. As taxas médias do Banco Central utilizadas como referência são atualizadas mensalmente (ref.: <span id="data-referencia">Mai/2026</span>). Os resultados <strong>não constituem assessoria jurídica, financeira ou consultoria</strong>. Para decisões contratuais, consulte um profissional habilitado.
         · <a href="termos.html" style="color:inherit;text-decoration:underline;text-underline-offset:2px">Termos de Uso e Privacidade</a>
       </div>
+
+    </div><!-- /results-simulador -->
+
+    <!-- Resultados da Apuração de Extrato — container isolado da aba Extrato -->
+    <div id="results-extrato" style="display:none"></div>
 
     </div><!-- /results-area -->
 
@@ -2406,9 +2424,34 @@ function limpar() {
 }
 
 function resetResultados() {
-  document.getElementById('empty-state').style.display = '';
-  document.getElementById('results-area').style.display = 'none';
-  document.getElementById('antec-result').classList.remove('show');
+  // Defensivo: verifica a existência de cada elemento antes de manipular —
+  // um elemento ausente não pode derrubar a troca de abas (bug da auditoria:
+  // TypeError aqui travava a aplicação inteira até o F5).
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = '';
+  const resArea = document.getElementById('results-area');
+  if (resArea) resArea.style.display = 'none';
+  const antec = document.getElementById('antec-result');
+  if (antec) antec.classList.remove('show');
+  // Containers por aba: oculta o do Extrato e restaura o do Simulador
+  const resExt = document.getElementById('results-extrato');
+  if (resExt) resExt.style.display = 'none';
+  const resSim = document.getElementById('results-simulador');
+  if (resSim) resSim.style.display = '';
+}
+
+// Exibe o painel de resultados no container do SIMULADOR (Price/SAC/SACRE/
+// Hamburguês/Leasing/IPCA+), ocultando o container isolado do Extrato.
+// Chamado na abertura de todas as funções de render do simulador.
+function mostrarResultadosSimulador() {
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = 'none';
+  const resArea = document.getElementById('results-area');
+  if (resArea) resArea.style.display = '';
+  const resExt = document.getElementById('results-extrato');
+  if (resExt) resExt.style.display = 'none';
+  const resSim = document.getElementById('results-simulador');
+  if (resSim) resSim.style.display = '';
 }
 
 // ════════════════════════════════════════════
@@ -3035,8 +3078,7 @@ function onEncargosChange() {
 //  RENDER
 // ════════════════════════════════════════════
 function renderResultados(taxaMes, pv, n, pmt, modalidade, sistema) {
-  document.getElementById('empty-state').style.display = 'none';
-  document.getElementById('results-area').style.display = '';
+  mostrarResultadosSimulador();
 
   const bacen = BACEN[modalidade];
   const taxaAnoUser = (Math.pow(1 + taxaMes, 12) - 1) * 100;
@@ -3373,8 +3415,7 @@ function renderTabela(tipo, btn) {
 //  RENDER LEASING
 // ════════════════════════════════════════════
 function renderResultadosLeasing(d, pv, n, i, vrg, modalidade) {
-  document.getElementById('empty-state').style.display = 'none';
-  document.getElementById('results-area').style.display = '';
+  mostrarResultadosSimulador();
 
   const bacen = BACEN[modalidade];
   const totalPago  = d.rows.reduce((s, r) => s + r.pmt, 0);
@@ -3457,8 +3498,7 @@ function renderResultadosLeasing(d, pv, n, i, vrg, modalidade) {
 //  RENDER IPCA+
 // ════════════════════════════════════════════
 function renderResultadosIPCAPlus(d, pv, n, iFixa, iIPCA, modalidade) {
-  document.getElementById('empty-state').style.display = 'none';
-  document.getElementById('results-area').style.display = '';
+  mostrarResultadosSimulador();
 
   const bacen     = BACEN[modalidade];
   const totalPago = d.rows.reduce((s, r) => s + r.pmt, 0);
@@ -5298,8 +5338,7 @@ function calcularHamburguês() {
 }
 
 function renderResultadosHamburguês(r) {
-  document.getElementById('empty-state').style.display  = 'none';
-  document.getElementById('results-area').style.display = '';
+  mostrarResultadosSimulador();
 
   document.getElementById('res-titulo').textContent     = 'Método Hamburguês — Juros s/ Saldo Devedor Diário';
   document.getElementById('res-subtitulo').textContent  =
@@ -5485,8 +5524,7 @@ function calcularSACRE() {
 }
 
 function renderResultadosSACRE(r) {
-  document.getElementById('empty-state').style.display  = 'none';
-  document.getElementById('results-area').style.display = '';
+  mostrarResultadosSimulador();
 
   document.getElementById('res-titulo').textContent    = 'SACRE — Sistema de Amortização Crescente';
   document.getElementById('res-subtitulo').textContent =
@@ -7471,13 +7509,21 @@ async function calcularExtrato() {
   const taxaBCBano = (Math.pow(1 + taxaBCBMedia / 100, 12) - 1) * 100;
   const difTotal = totalPago - totalBCB;
 
-  // Renderizar resultado na right-panel
+  // Renderizar no container ISOLADO do Extrato (#results-extrato) — nunca
+  // sobrescrever #results-area inteiro: os elementos fixos (#res-titulo,
+  // #metrics-grid, #table-wrap, #antec-result, #grafico-section) pertencem
+  // ao container do Simulador e eram destruídos aqui, quebrando a troca de
+  // abas até o F5 (bug da auditoria).
   const resArea = document.getElementById('results-area');
-  if (resArea) {
+  const resSim  = document.getElementById('results-simulador');
+  const resExt  = document.getElementById('results-extrato');
+  if (resArea && resExt) {
     resArea.style.display = '';
+    if (resSim) resSim.style.display = 'none';
+    resExt.style.display = '';
     const emptyEl = document.getElementById('empty-state');
     if (emptyEl) emptyEl.style.display = 'none';
-    resArea.innerHTML = `
+    resExt.innerHTML = `
       <div class="section-heading">Resultado da Apuração de Extrato</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
         <div class="metric-card"><div class="mc-label">Taxa média efetiva apurada</div><div class="mc-value accent">${fmtPct(taxaMediaEfetiva)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoEfetiva)} a.a.</div></div>

@@ -186,9 +186,20 @@ footer{padding:48px 0;border-top:1px solid var(--border)}
   .pricing-grid{grid-template-columns:1fr}
   .section-inner{padding:0 24px}
   .footer-inner{flex-direction:column;text-align:center}
+  .footer-links{flex-wrap:wrap;justify-content:center;row-gap:10px}
 }
 @media(max-width:900px) and (min-width:769px){
   .features-grid{grid-template-columns:1fr 1fr}
+}
+/* Pricing responsivo — !important vence o grid-template-columns inline (3 colunas)
+   do bloco de planos, que ignorava as media queries e estourava +202px em 320px */
+@media(max-width:900px){
+  .pricing-grid{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:640px){
+  .pricing-grid{grid-template-columns:1fr!important}
+  .pricing-grid>*{width:100%!important;max-width:100%!important;min-width:0!important}
+  .glow{width:100%!important;max-width:320px!important}
 }
 </style>
 </head>
@@ -295,6 +306,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <p style="margin-bottom:3px">🔒 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Conformidade e rastreabilidade total</strong></p>
             <p style="margin-bottom:0">Cada cálculo cita a série SGS utilizada, a competência do dado e a metodologia aplicada. Transparência para uso profissional sem surpresas.</p>
           </div>
+          <div>
+            <p style="margin-bottom:3px">🧮 <strong style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text)">Apuração de encargos embutidos</strong></p>
+            <p style="margin-bottom:0">Compare o valor financiado no contrato com o valor líquido efetivamente recebido. Identifique o impacto de IOF, seguro e tarifas na taxa efetiva real da operação.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -348,6 +363,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="feat-tag">Leasing · IPCA+</span>
           <span class="feat-tag">Gráfico</span>
           <span class="feat-tag">BCB comparativo</span>
+          <span class="feat-tag">Encargos embutidos (IOF/seguro/TAC)</span>
           <span class="feat-tag">Export PDF</span>
         </div>
       </a>
@@ -455,7 +471,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <li>Apuração de Extrato bancário</li>
           <li>Atualização Monetária com múltiplos lançamentos e TRTs/TST</li>
           <li>Leitura automática de PDF (contratos e extratos)</li>
-          <li>Carência com capitalização em dias</li>
+          <li>Apuração de encargos embutidos no principal (IOF, seguro, TAC/TEC)</li>
+          <li>Carência calculada por data de liberação e 1º vencimento</li>
           <li>Export Excel auditável linha a linha</li>
           <li>PDF completo com fontes citadas</li>
           <li>7 dias de garantia</li>
