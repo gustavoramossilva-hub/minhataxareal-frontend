@@ -795,6 +795,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 .upload-loading{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-top:10px;padding:8px;background:var(--surface);border-radius:var(--radius-sm)}
 .upload-sucesso{font-size:11px;color:#a3e635;background:rgba(163,230,53,.08);border:1px solid rgba(163,230,53,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
 .upload-erro{font-size:11px;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
+.upload-aviso{font-size:11px;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
 .separador-ou{font-size:10px;color:var(--text3);text-align:center;margin:0 0 14px;letter-spacing:.08em}
 .campo-ia-preenchido{border-color:rgba(163,230,53,.55)!important;background:rgba(163,230,53,.05)!important}
 @keyframes ia-spin{to{transform:rotate(360deg)}}
@@ -7997,7 +7998,6 @@ async function extrairTextoPDF(arquivo) {
   // Fallback OCR para PDFs escaneados / imagens
   try {
     const ab2 = await arquivo.arrayBuffer();
-    let canvas;
 
     if (arquivo.type && arquivo.type.startsWith('image/')) {
       // Imagem direta
@@ -8009,41 +8009,51 @@ async function extrairTextoPDF(arquivo) {
         i.onerror = rej;
         i.src = url;
       });
-      canvas = document.createElement('canvas');
+      const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       canvas.getContext('2d').drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
-    } else {
-      // PDF escaneado — renderizar primeira página
-      const pdf = await pdfjsLib.getDocument({ data: ab2 }).promise;
-      const pagina = await pdf.getPage(1);
-      const viewport = pagina.getViewport({ scale: 2.0 });
-      canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await pagina.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      const resultado = await Tesseract.recognize(canvas, 'por', {
+        logger: m => {
+          if (m.status === 'recognizing text') _atualizarProgressoOCR(Math.round(m.progress * 100));
+        }
+      });
+      return { texto: resultado.data.text, metodo: 'ocr' };
     }
 
-    const resultado = await Tesseract.recognize(canvas, 'por', {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          _atualizarProgressoOCR(Math.round(m.progress * 100));
+    // PDF escaneado — OCR página a página (todas as páginas, limitado a 10
+    // para não travar o navegador; antes só a página 1 era processada)
+    const pdf = await pdfjsLib.getDocument({ data: ab2 }).promise;
+    const maxPaginas = Math.min(pdf.numPages, 10);
+    let textoOCR = '';
+    for (let p = 1; p <= maxPaginas; p++) {
+      const pagina = await pdf.getPage(p);
+      const viewport = pagina.getViewport({ scale: 2.0 });
+      const cv = document.createElement('canvas');
+      cv.width = viewport.width;
+      cv.height = viewport.height;
+      await pagina.render({ canvasContext: cv.getContext('2d'), viewport }).promise;
+      const res = await Tesseract.recognize(cv, 'por', {
+        logger: m => {
+          if (m.status === 'recognizing text') _atualizarProgressoOCR(Math.round(m.progress * 100), p, maxPaginas);
         }
-      }
-    });
-    return { texto: resultado.data.text, metodo: 'ocr' };
+      });
+      textoOCR += res.data.text + '\n';
+    }
+    return { texto: textoOCR, metodo: 'ocr' };
 
   } catch(e) {
     throw new Error('Não foi possível extrair texto do arquivo. Verifique se é um PDF ou imagem válido.');
   }
 }
 
-function _atualizarProgressoOCR(pct) {
+function _atualizarProgressoOCR(pct, paginaAtual, totalPaginas) {
   const el = _ocrStatusId ? document.getElementById(_ocrStatusId) : null;
   if (el && el.style.display !== 'none') {
     el.className = 'upload-loading';
-    el.innerHTML = `<div class="ia-spinner"></div><span>Reconhecendo texto (OCR): ${pct}%...</span>`;
+    const pagInfo = (paginaAtual && totalPaginas > 1) ? `página ${paginaAtual}/${totalPaginas} · ` : '';
+    el.innerHTML = `<div class="ia-spinner"></div><span>Reconhecendo texto (OCR): ${pagInfo}${pct}%...</span>`;
   }
 }
 
@@ -8053,25 +8063,28 @@ function extrairDadosContrato(texto) {
   const T = t.toUpperCase();
   const dados = {};
 
-  // Valor financiado
+  // Valor financiado — separador [:.\s]+ aceita pontilhado-líder ("VALOR....R$")
   const rxValor = [
-    /VALOR\s+(?:FINANCIADO|DO\s+CR[EÉ]DITO|LIBERADO|L[IÍ]QUIDO)[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PRINCIPAL[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /MONTANTE[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /CR[EÉ]DITO\s+CONCEDIDO[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /VALOR\s+DO\s+EMPR[EÉ]STIMO[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /VALOR\s+(?:TOTAL\s+)?(?:FINANCIADO|DO\s+CR[EÉ]DITO|LIBERADO|L[IÍ]QUIDO)[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /VLR\.?\s+(?:TOTAL\s+)?FINANCIADO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PRINCIPAL[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /MONTANTE[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /CR[EÉ]DITO\s+CONCEDIDO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /VALOR\s+DO\s+EMPR[EÉ]STIMO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxValor) {
     const m = T.match(rx);
     if (m) { dados.valor_financiado = parseMoeda(m[1]); break; }
   }
 
-  // Taxa mensal
+  // Taxa mensal — REMUNERAT[OÓ]RIOS (a versão anterior tinha a classe [IÍ] na
+  // posição errada e nunca casava a grafia acentuada "REMUNERATÓRIOS")
   const rxMes = [
-    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?MENSAL[:\s]+([\d,]+)\s*%/i,
-    /JUROS\s+(?:REMUNERATOR[IÍ]OS\s+)?MENSAIS?[:\s]+([\d,]+)\s*%/i,
+    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?MENSAL[:.\s]+([\d,]+)\s*%/i,
+    /TAXA\s+MENSAL\s+DE\s+JUROS[:.\s]+([\d,]+)\s*%?/i,
+    /JUROS\s+(?:REMUNERAT[OÓ]RIOS\s+)?MENSAIS?[:.\s]+([\d,]+)\s*%/i,
     /([\d,]+)\s*%\s*(?:A\.M\.|AO\s+M[EÊ]S|A\.?\s*M\.?)\b/i,
-    /TAXA\s+MENSAL[:\s]+([\d,]+)/i,
+    /TAXA\s+MENSAL[:.\s]+([\d,]+)/i,
   ];
   for (const rx of rxMes) {
     const m = T.match(rx);
@@ -8080,9 +8093,9 @@ function extrairDadosContrato(texto) {
 
   // Taxa anual
   const rxAno = [
-    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?ANUAL[:\s]+([\d,]+)\s*%/i,
+    /TAXA\s+(?:DE\s+JUROS\s+)?(?:NOMINAL\s+)?ANUAL[:.\s]+([\d,]+)\s*%/i,
     /([\d,]+)\s*%\s*(?:A\.A\.|AO\s+ANO|A\.?\s*A\.?)\b/i,
-    /TAXA\s+ANUAL[:\s]+([\d,]+)/i,
+    /TAXA\s+ANUAL[:.\s]+([\d,]+)/i,
   ];
   for (const rx of rxAno) {
     const m = T.match(rx);
@@ -8092,9 +8105,9 @@ function extrairDadosContrato(texto) {
   // Número de parcelas
   const rxParc = [
     /(\d+)\s*(?:PARCELAS?|PRESTA[CÇ][OÕ]ES?)\s+(?:DE|MENSAIS?)/i,
-    /PRAZO[:\s]+(\d+)\s*(?:MESES?|PARCELAS?)/i,
-    /N[UÚ]MERO\s+DE\s+PARCELAS?[:\s]+(\d+)/i,
-    /QUANTIDADE\s+DE\s+PARCELAS?[:\s]+(\d+)/i,
+    /PRAZO[:.\s]+(\d+)\s*(?:MESES?|PARCELAS?)/i,
+    /N[UÚ]MERO\s+DE\s+PARCELAS?[:.\s]+(\d+)/i,
+    /QUANTIDADE\s+DE\s+PARCELAS?[:.\s]+(\d+)/i,
     /EM\s+(\d+)\s+(?:PARCELAS?|PRESTA[CÇ][OÕ]ES?)/i,
   ];
   for (const rx of rxParc) {
@@ -8104,9 +8117,9 @@ function extrairDadosContrato(texto) {
 
   // Valor da parcela
   const rxPmt = [
-    /(?:VALOR\s+DA\s+)?PARCELA[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PRESTA[CÇ][AÃ]O[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PMT[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /(?:VALOR\s+DA\s+)?PARCELA[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PRESTA[CÇ][AÃ]O[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PMT[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxPmt) {
     const m = T.match(rx);
@@ -8158,8 +8171,8 @@ function extrairDadosContrato(texto) {
 
   // IOF
   const rxIOF = [
-    /\bIOF\b[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /IMPOSTO\s+(?:SOBRE\s+)?OPERA[CÇ][OÕ]ES[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /\bIOF\b[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /IMPOSTO\s+(?:SOBRE\s+)?OPERA[CÇ][OÕ]ES[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxIOF) {
     const m = T.match(rx);
@@ -8168,8 +8181,8 @@ function extrairDadosContrato(texto) {
 
   // Seguro
   const rxSeg = [
-    /SEGURO\s+(?:PRESTAMISTA|DE\s+VIDA|RESIDENCIAL)?[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PR[EÊ]MIO\s+(?:DE\s+SEGURO)?[:\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /SEGURO\s+(?:PRESTAMISTA|DE\s+VIDA|RESIDENCIAL)?[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /PR[EÊ]MIO\s+(?:DE\s+SEGURO)?[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxSeg) {
     const m = T.match(rx);
@@ -8178,8 +8191,8 @@ function extrairDadosContrato(texto) {
 
   // CET mensal
   const rxCET = [
-    /CET\s+MENSAL[:\s]+([\d,]+)\s*%/i,
-    /CUSTO\s+EFETIVO\s+TOTAL\s+MENSAL[:\s]+([\d,]+)/i,
+    /CET\s+MENSAL[:.\s]+([\d,]+)\s*%/i,
+    /CUSTO\s+EFETIVO\s+TOTAL\s+MENSAL[:.\s]+([\d,]+)/i,
   ];
   for (const rx of rxCET) {
     const m = T.match(rx);
@@ -8200,17 +8213,19 @@ function extrairDadosContrato(texto) {
   return dados;
 }
 
-// ─── EXTRAÇÃO DE LINHAS DE EXTRATO ───────────────────────
+// ─── EXTRAÇÃO DE LINHAS DE EXTRATO (formato carnê MM/AAAA) ───────────────
 function extrairLinhasExtrato(texto) {
   const linhas = [];
-  // Padrão: MM/AAAA seguido de valor
-  const rx = /(\d{2}\/\d{4})\s+([\d.]+,\d{2})/g;
+  // Padrão: MM/AAAA seguido de valor. O grupo inicial impede casar o miolo de
+  // uma data completa (ex.: "15/01/2024 1.610,50" NÃO pode virar competência
+  // "01/2024" — falso positivo confirmado em auditoria).
+  const rx = /(^|[^\d/])(\d{2}\/\d{4})\s+([\d.]+,\d{2})/g;
   let m;
   while ((m = rx.exec(texto)) !== null) {
-    const v = parseMoeda(m[2]);
+    const v = parseMoeda(m[3]);
     if (v > 0) {
       linhas.push({
-        mes_ano: m[1],
+        mes_ano: m[2],
         valor_pago: v,
         situacao: 'pago',
       });
@@ -8219,16 +8234,298 @@ function extrairLinhasExtrato(texto) {
   return linhas;
 }
 
+// ═════════════════════════════════════════════════════════
+//  EXTRATO DE CONTA CORRENTE — LEITURA ROBUSTA POR BANCO
+//  O texto vem do PDF.js com os itens unidos por espaço (sem quebra de linha
+//  confiável) — toda a detecção usa âncoras de data + valor monetário.
+// ═════════════════════════════════════════════════════════
+
+// Decide se o documento é CONTRATO ou EXTRATO DE CONTA CORRENTE
+// antes de escolher o fluxo de extração.
+function detectarTipoDocumento(texto) {
+  const t = (texto || '').toUpperCase().replace(/\s+/g, ' ');
+
+  const sinaisContaCorrente = [
+    'SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL',
+    'TARIFA BANCÁRIA', 'TARIFA BANCARIA', 'CESTA',
+    'MANUTENÇÃO DE CONTA', 'MANUTENCAO DE CONTA',
+    'EXTRATO DE CONTA', 'CONTA CORRENTE',
+    'TOTAL DISPONÍVEL', 'LANÇAMENTOS', 'LANCAMENTOS',
+    'HISTÓRICO DE MOVIMENTAÇÃO', 'MOVIMENTAÇÕES',
+    'AGÊNCIA', 'AGENCIA', 'Nº DA CONTA', 'DOCTO'
+  ];
+  const sinaisContrato = [
+    'VALOR FINANCIADO', 'TAXA DE JUROS', 'TABELA PRICE',
+    'SISTEMA SAC', 'PRAZO', 'PARCELAS', 'CET', 'CCB',
+    'CÉDULA DE CRÉDITO', 'CEDULA DE CREDITO',
+    'CONTRATANTE', 'CONTRATADA', 'CLÁUSULA'
+  ];
+
+  const pontosConta    = sinaisContaCorrente.filter(s => t.includes(s)).length;
+  const pontosContrato = sinaisContrato.filter(s => t.includes(s)).length;
+
+  if (pontosConta >= 2 && pontosConta > pontosContrato) return 'conta_corrente';
+  if (pontosContrato >= 2) return 'contrato';
+  if (pontosConta > 0) return 'conta_corrente';
+  return 'desconhecido';
+}
+
+// Parse de valor monetário com sinal — 3 formatos de negativo:
+// "-123,45" | "123,45-" (comum em extratos) | "(123,45)"
+function parseMoedaComSinal(str) {
+  if (!str) return null;
+  let negativo = false;
+  let limpo = str.trim();
+  if (limpo.startsWith('(') && limpo.endsWith(')')) {
+    negativo = true;
+    limpo = limpo.slice(1, -1);
+  } else if (limpo.endsWith('-')) {
+    negativo = true;
+    limpo = limpo.slice(0, -1);
+  } else if (limpo.startsWith('-')) {
+    negativo = true;
+    limpo = limpo.slice(1);
+  }
+  const valorNum = parseMoeda(limpo);
+  if (valorNum === null) return null;
+  return { valor: negativo ? -valorNum : valorNum, negativo };
+}
+
+// Classifica a natureza do lançamento pela descrição
+function classificarLancamento(descricao) {
+  const d = (descricao || '').toUpperCase();
+
+  if (d.includes('JUROS') || d.includes('JURO ') ||
+      d.includes('J.MORA') || d.includes('J MORA') || d.includes('ROTATIVO'))
+    return 'juros';
+
+  if (d.includes('MULTA'))
+    return 'multa';
+
+  if (d.includes('TARIFA') || d.includes('CESTA') ||
+      d.includes('ANUIDADE') || d.includes('MANUTEN') ||
+      d.includes('PACOTE DE SERVI') || d.includes('TAXA DE MANUTEN'))
+    return 'tarifa';
+
+  if (d.includes('IOF'))
+    return 'iof';
+
+  if (d.includes('SEGURO'))
+    return 'seguro';
+
+  if (d.includes('ENCARGO') || d.includes('COBRAN') ||
+      d.includes('COMISSAO DE PERMANENCIA') ||
+      d.includes('COMISSÃO DE PERMANÊNCIA') || d.includes('MORA'))
+    return 'encargo';
+
+  if (d.includes('TED') || d.includes('PIX') ||
+      d.includes('DOC ') || d.includes('TRANSFER'))
+    return 'transferencia';
+
+  if (d.includes('PAGAMENTO') || d.includes('PGTO') || d.includes('PAGTO') ||
+      d.includes('PREST') || d.includes('PARC '))
+    return 'pagamento';
+
+  if (d.includes('DEPÓSITO') || d.includes('DEPOSITO') ||
+      d.includes('CRÉDITO SALÁRIO') || d.includes('CREDITO SALARIO') ||
+      d.includes('CREDITO') || d.includes('CRÉDITO'))
+    return 'credito';
+
+  return 'outro';
+}
+
+function isEncargoBancario(descricao) {
+  const d = (descricao || '').toUpperCase();
+  return ['JUROS', 'MULTA', 'TARIFA', 'IOF', 'ENCARGO',
+    'CESTA', 'ANUIDADE', 'SEGURO', 'MORA', 'COBRAN',
+    'COMISSAO', 'COMISSÃO'].some(k => d.includes(k));
+}
+
+function determinarDebitoCreditoPorTipo(tipo, descricao) {
+  if (tipo === 'credito') return false;
+  const d = (descricao || '').toUpperCase();
+  if (d.includes('RECEBID') || d.includes('DEPÓSITO') ||
+      d.includes('DEPOSITO')) return false;
+  return true; // débito por padrão
+}
+
+function deduplicarLancamentos(lista) {
+  const vistos = new Set();
+  return lista.filter(l => {
+    const chave = `${l.data}|${l.descricao}|${l.valor}`;
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
+// Extrai lançamentos de extrato de conta corrente nos layouts reais dos
+// principais bancos. Três passos, do mais específico ao mais permissivo:
+//   1. data completa DD/MM/AA(AA)  (Bradesco, BB, Santander, Caixa, Inter)
+//   2. DD/MM sem ano               (Itaú — ano inferido do período do extrato)
+//   3. "15 JAN [2024]"             (Nubank e extratos de app)
+function extrairExtratoConta(texto) {
+  const resultado = {
+    banco: null,
+    layout: null,
+    periodo: { inicio: null, fim: null },
+    lancamentos: [],
+    resumoPorMes: {}
+  };
+  const t = texto || '';
+  const tUpper = t.toUpperCase();
+
+  // ── Identificar banco e layout ──
+  const bancosLayout = [
+    { nome: 'Bradesco',        chave: 'BRADESCO',             layout: 'data_desc_dcto_credito_debito_saldo' },
+    { nome: 'Itaú',            chave: 'ITA[UÚ]',              layout: 'data_historico_valor_saldo' },
+    { nome: 'Banco do Brasil', chave: 'BANCO DO BRASIL',      layout: 'data_dcto_historico_valor_saldo' },
+    { nome: 'Santander',       chave: 'SANTANDER',            layout: 'data_descricao_documento_valor_saldo' },
+    { nome: 'Caixa',           chave: 'CAIXA ECON[OÔ]MICA',   layout: 'data_historico_valor_saldo' },
+    { nome: 'Nubank',          chave: 'NUBANK|NU PAGAMENTOS', layout: 'data_descricao_valor' },
+    { nome: 'Inter',           chave: 'BANCO INTER',          layout: 'data_descricao_valor_saldo' }
+  ];
+  for (const b of bancosLayout) {
+    if (new RegExp(b.chave, 'i').test(tUpper)) {
+      resultado.banco = b.nome;
+      resultado.layout = b.layout;
+      break;
+    }
+  }
+
+  // ── Período do extrato ──
+  const regexPeriodo = [
+    /ENTRE\s+(\d{2}\/\d{2}\/\d{4})\s+(?:E|A|AT[EÉ])\s+(\d{2}\/\d{2}\/\d{4})/i,
+    /PER[IÍ]ODO[:\s]+(\d{2}\/\d{2}\/\d{4})\s+(?:A|AT[EÉ])\s+(\d{2}\/\d{2}\/\d{4})/i,
+    /DE\s+(\d{2}\/\d{2}\/\d{4})\s+(?:A|AT[EÉ])\s+(\d{2}\/\d{2}\/\d{4})/i
+  ];
+  for (const rx of regexPeriodo) {
+    const m0 = t.match(rx);
+    if (m0) { resultado.periodo.inicio = m0[1]; resultado.periodo.fim = m0[2]; break; }
+  }
+  // Ano de referência p/ layouts sem ano na data (Itaú DD/MM, Nubank "15 JAN")
+  const anoRef = (resultado.periodo.fim || resultado.periodo.inicio || '').split('/')[2]
+    || String(new Date().getFullYear());
+
+  // ── Blocos da regex genérica ──
+  // Valor: prefixo "R$" opcional; negativos "-123,45" | "123,45-" | "(123,45)"
+  const VALOR = '(?:R\\$\\s*)?([\\-(]?[\\d.]+,\\d{2}[)\\-]?)';
+  // Descrição: não pode começar nem atravessar outra data (senão duas linhas
+  // se fundem num lançamento só — tempered match)
+  const DESC = '((?!\\d{2}\\/\\d{2})[A-Za-zÀ-ÿ0-9](?:(?!\\d{2}\\/\\d{2})[A-Za-zÀ-ÿ0-9\\s./*&-]){1,60}?)';
+
+  const registrar = (dataStr, descricao, valor1Str, dcMarker, valor2Str) => {
+    let data = dataStr;
+    const pd = data.split('/');
+    if (pd.length === 3 && pd[2].length === 2) {
+      pd[2] = (parseInt(pd[2]) > 50 ? '19' : '20') + pd[2];
+      data = pd.join('/');
+    }
+    if (!validarDataStr(data)) return;
+    const v1 = parseMoedaComSinal(valor1Str);
+    const v2 = valor2Str ? parseMoedaComSinal(valor2Str) : null;
+    if (!v1 || Math.abs(v1.valor) <= 0) return;
+    if (Math.abs(v1.valor) > 5000000) return; // filtro de falso positivo (valor absurdo)
+    const descricaoLimpa = (descricao || '').trim().replace(/\s+/g, ' ');
+    if (descricaoLimpa.length < 2) return;
+    if (!/[A-Za-zÀ-ÿ]/.test(descricaoLimpa)) return;       // descrição só numérica
+    if (/^SALDO\b/i.test(descricaoLimpa)) return;           // linhas de saldo do dia
+
+    const partes = data.split('/');
+    const mesAno = partes[1] + '/' + partes[2];
+    const tipo = classificarLancamento(descricaoLimpa);
+    // Débito/crédito: marcador explícito D/C (BB) > sinal do valor > heurística
+    const isDebito = dcMarker
+      ? dcMarker.toUpperCase() === 'D'
+      : (v1.negativo || determinarDebitoCreditoPorTipo(tipo, descricaoLimpa));
+
+    resultado.lancamentos.push({
+      data,
+      mesAno,
+      descricao: descricaoLimpa,
+      valor: Math.abs(v1.valor),
+      saldo: v2 ? v2.valor : null,
+      tipo,
+      isDebito,
+      isEncargo: isEncargoBancario(descricaoLimpa)
+    });
+  };
+
+  // Passo 1 — data completa DD/MM/AA ou DD/MM/AAAA
+  // grupos: 1 data · 2 desc · 3 dcto · 4 valor · 5 marcador D/C · 6 saldo
+  const rxFull = new RegExp(
+    '(\\d{2}\\/\\d{2}\\/\\d{2,4})\\s+' + DESC + '\\s+(?:(\\d{3,10})\\s+)?' + VALOR +
+    '(?:\\s*([DdCc])(?![A-Za-zÀ-ÿ0-9]))?(?:\\s+' + VALOR + ')?', 'g');
+  let m;
+  while ((m = rxFull.exec(t)) !== null) registrar(m[1], m[2], m[4], m[5], m[6]);
+
+  // Passo 2 — DD/MM sem ano (ex.: Itaú) — ano inferido do período
+  if (resultado.lancamentos.length === 0) {
+    const rxSemAno = new RegExp(
+      '(\\d{2}\\/\\d{2})(?!\\/)\\s+' + DESC + '\\s+(?:(\\d{3,10})\\s+)?' + VALOR +
+      '(?:\\s+' + VALOR + ')?', 'g');
+    while ((m = rxSemAno.exec(t)) !== null) registrar(m[1] + '/' + anoRef, m[2], m[4], null, m[5]);
+  }
+
+  // Passo 3 — "15 JAN [2024]" (Nubank / extratos de app)
+  if (resultado.lancamentos.length === 0) {
+    const MESES3 = { JAN:'01', FEV:'02', MAR:'03', ABR:'04', MAI:'05', JUN:'06',
+                     JUL:'07', AGO:'08', SET:'09', OUT:'10', NOV:'11', DEZ:'12' };
+    const rxMesNome = new RegExp(
+      '(\\d{1,2})\\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Za-zÀ-ÿ]*\\.?\\s*(\\d{4})?\\s+' +
+      DESC + '\\s+' + VALOR, 'gi');
+    while ((m = rxMesNome.exec(t)) !== null) {
+      const dia = m[1].padStart(2, '0');
+      const mes = MESES3[m[2].toUpperCase()];
+      registrar(dia + '/' + mes + '/' + (m[3] || anoRef), m[4], m[5], null, null);
+    }
+  }
+
+  // Dedupe + resumo mensal (montado após o dedupe para não somar em dobro)
+  resultado.lancamentos = deduplicarLancamentos(resultado.lancamentos);
+  resultado.lancamentos.forEach(l => {
+    if (!resultado.resumoPorMes[l.mesAno]) {
+      resultado.resumoPorMes[l.mesAno] = {
+        mesAno: l.mesAno, totalDebitos: 0, totalCreditos: 0,
+        juros: 0, tarifas: 0, multas: 0, iof: 0,
+        seguro: 0, outros: 0, lancamentos: []
+      };
+    }
+    const mes = resultado.resumoPorMes[l.mesAno];
+    mes.lancamentos.push(l);
+    if (l.isDebito) {
+      mes.totalDebitos += l.valor;
+      switch (l.tipo) {
+        case 'juros':  mes.juros   += l.valor; break;
+        case 'tarifa': mes.tarifas += l.valor; break;
+        case 'multa':  mes.multas  += l.valor; break;
+        case 'iof':    mes.iof     += l.valor; break;
+        case 'seguro': mes.seguro  += l.valor; break;
+        default:       mes.outros  += l.valor;
+      }
+    } else {
+      mes.totalCreditos += l.valor;
+    }
+  });
+
+  return resultado;
+}
+
 // ─── EXTRAÇÃO PARA ATUALIZAÇÃO ───────────────────────────
 function extrairLancamentosAtualizacao(texto) {
   const T = texto.toUpperCase();
   const lancamentos = [];
 
+  // Janela máx. de 80 caracteres entre o valor e a data-base, sem atravessar
+  // quebra dupla de parágrafo — o ".*?" anterior atravessava texto não
+  // relacionado e podia parear a data de OUTRO item (falha da auditoria).
+  const GAP = '(?:(?!\\n\\n)[\\s\\S]){0,80}?';
+  const DATA_BASE = '(?:DATA\\s*BASE|BASE)[:.\\s]+(\\d{2}\\/\\d{2}\\/\\d{4})';
   const padroes = [
-    { rx: /PRINCIPAL[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'principal', desc: 'Principal' },
-    { rx: /HONOR[AÁ]RIOS[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'honorarios', desc: 'Honorários advocatícios' },
-    { rx: /MULTA[:\s]+R?\$?\s*([\d.]+,\d{2}).*?(?:DATA\s*BASE|BASE)[:\s]+(\d{2}\/\d{2}\/\d{4})/gi, tipo: 'multa', desc: 'Multa' },
-    { rx: /CUSTAS[:\s]+R?\$?\s*([\d.]+,\d{2})/gi, tipo: 'outros', desc: 'Custas processuais' },
+    { rx: new RegExp('PRINCIPAL[:.\\s]+R?\\$?\\s*([\\d.]+,\\d{2})' + GAP + DATA_BASE, 'gi'), tipo: 'principal', desc: 'Principal' },
+    { rx: new RegExp('HONOR[AÁ]RIOS[:.\\s]+R?\\$?\\s*([\\d.]+,\\d{2})' + GAP + DATA_BASE, 'gi'), tipo: 'honorarios', desc: 'Honorários advocatícios' },
+    { rx: new RegExp('MULTA[:.\\s]+R?\\$?\\s*([\\d.]+,\\d{2})' + GAP + DATA_BASE, 'gi'), tipo: 'multa', desc: 'Multa' },
+    { rx: /CUSTAS[:.\s]+R?\$?\s*([\d.]+,\d{2})/gi, tipo: 'outros', desc: 'Custas processuais' },
   ];
 
   for (const p of padroes) {
@@ -8347,6 +8644,98 @@ function preencherCamposExtrato(dados) {
   }
 }
 
+// ─── PREENCHIMENTO — EXTRATO DE CONTA CORRENTE ────────────
+// Preenche a tabela da aba Extrato com um resumo mensal do extrato de conta:
+// prioriza os débitos classificados como "pagamento" (parcelas); se o mês não
+// tiver pagamentos identificáveis, usa o total de débitos.
+function preencherExtratoConta(dadosConta) {
+  const tbody = document.getElementById('ext-tabela-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  _extRowId = 0;
+  const meses = Object.values(dadosConta.resumoPorMes).sort((a, b) => {
+    const [ma, aa] = a.mesAno.split('/');
+    const [mb, ab] = b.mesAno.split('/');
+    return (aa + ma).localeCompare(ab + mb);
+  });
+  meses.forEach(mres => {
+    const pagamentos = mres.lancamentos
+      .filter(l => l.isDebito && l.tipo === 'pagamento')
+      .reduce((s, l) => s + l.valor, 0);
+    const valorMes = pagamentos > 0 ? pagamentos : mres.totalDebitos;
+    extAddRow();
+    const id = _extRowId;
+    const mesEl  = document.getElementById('ext-mesano-' + id);
+    const pagoEl = document.getElementById('ext-pago-' + id);
+    if (mesEl) { mesEl.value = mres.mesAno; highlightCampoIA(mesEl); }
+    if (pagoEl && valorMes > 0) { pagoEl.value = _numToBRL(valorMes); highlightCampoIA(pagoEl); }
+  });
+}
+
+// Painel "Encargos identificados no extrato" — resumo mensal de juros,
+// tarifas, multas, IOF e seguros lidos do extrato de conta corrente.
+function exibirAnaliseEncargos(dadosConta) {
+  let box = document.getElementById('ext-analise-encargos');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ext-analise-encargos';
+    const anchor = document.getElementById('status-upload-extrato');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertAdjacentElement('afterend', box);
+    else { const form = document.getElementById('extrato-form'); if (form) form.prepend(box); else return; }
+  }
+  const meses = Object.values(dadosConta.resumoPorMes).sort((a, b) => {
+    const [ma, aa] = a.mesAno.split('/');
+    const [mb, ab] = b.mesAno.split('/');
+    return (aa + ma).localeCompare(ab + mb);
+  });
+  const tot = { juros: 0, tarifas: 0, multas: 0, iof: 0, seguro: 0, debitos: 0, creditos: 0 };
+  meses.forEach(mres => {
+    tot.juros += mres.juros; tot.tarifas += mres.tarifas; tot.multas += mres.multas;
+    tot.iof += mres.iof; tot.seguro += mres.seguro;
+    tot.debitos += mres.totalDebitos; tot.creditos += mres.totalCreditos;
+  });
+  const fmt = v => v > 0 ? _numToBRL(v) : '—';
+  box.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin:10px 0;font-size:11px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text);margin-bottom:8px">
+        Encargos identificados no extrato${dadosConta.banco ? ' · ' + dadosConta.banco : ''}
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:10.5px;font-family:'DM Mono',monospace">
+          <thead><tr style="color:var(--text3);text-align:right">
+            <th style="text-align:left;padding:3px 6px">Mês</th><th style="padding:3px 6px">Juros</th>
+            <th style="padding:3px 6px">Tarifas</th><th style="padding:3px 6px">Multas</th>
+            <th style="padding:3px 6px">IOF</th><th style="padding:3px 6px">Seguro</th>
+            <th style="padding:3px 6px">Débitos</th><th style="padding:3px 6px">Créditos</th>
+          </tr></thead>
+          <tbody>
+            ${meses.map(mres => `<tr style="text-align:right;color:var(--text2);border-top:1px solid var(--border)">
+              <td style="text-align:left;padding:3px 6px">${mres.mesAno}</td>
+              <td style="padding:3px 6px;color:${mres.juros > 0 ? 'var(--red,#ef4444)' : 'inherit'}">${fmt(mres.juros)}</td>
+              <td style="padding:3px 6px">${fmt(mres.tarifas)}</td>
+              <td style="padding:3px 6px">${fmt(mres.multas)}</td>
+              <td style="padding:3px 6px">${fmt(mres.iof)}</td>
+              <td style="padding:3px 6px">${fmt(mres.seguro)}</td>
+              <td style="padding:3px 6px">${fmt(mres.totalDebitos)}</td>
+              <td style="padding:3px 6px;color:var(--green,#22c55e)">${fmt(mres.totalCreditos)}</td>
+            </tr>`).join('')}
+            <tr style="text-align:right;font-weight:700;color:var(--text);border-top:2px solid var(--border2)">
+              <td style="text-align:left;padding:4px 6px">TOTAL</td>
+              <td style="padding:4px 6px">${fmt(tot.juros)}</td>
+              <td style="padding:4px 6px">${fmt(tot.tarifas)}</td>
+              <td style="padding:4px 6px">${fmt(tot.multas)}</td>
+              <td style="padding:4px 6px">${fmt(tot.iof)}</td>
+              <td style="padding:4px 6px">${fmt(tot.seguro)}</td>
+              <td style="padding:4px 6px">${fmt(tot.debitos)}</td>
+              <td style="padding:4px 6px">${fmt(tot.creditos)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">Valores lidos automaticamente do PDF — revise antes de usar em cálculo.</div>
+    </div>`;
+}
+
 // ─── PREENCHIMENTO — ATUALIZAÇÃO ─────────────────────────
 function preencherCamposAtualizacao(dados) {
   if (!dados.lancamentos || !dados.lancamentos.length) return;
@@ -8379,14 +8768,47 @@ document.addEventListener('DOMContentLoaded', function() {
       status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
       try {
         const resultado = await extrairTextoPDF(arquivo);
-        status.innerHTML = '<div class="ia-spinner"></div><span>Identificando dados do contrato...</span>';
-        const dc = extrairDadosContrato(resultado.texto);
-        const linhas = extrairLinhasExtrato(resultado.texto);
-        preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
-        const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
         const metodo = resultado.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)';
-        status.className = 'upload-sucesso';
-        status.innerHTML = `✅ ${total} campo(s) identificado(s) automaticamente${metodo}.<br><small>Campos destacados em verde — revise antes de calcular.</small>`;
+        const tipo = detectarTipoDocumento(resultado.texto);
+
+        if (tipo === 'conta_corrente') {
+          status.innerHTML = '<div class="ia-spinner"></div><span>Lendo lançamentos do extrato...</span>';
+          const dadosConta = extrairExtratoConta(resultado.texto);
+
+          if (dadosConta.lancamentos.length === 0) {
+            status.className = 'upload-aviso';
+            status.innerHTML = `⚠️ Extrato de conta corrente identificado, mas não foi possível ler os lançamentos automaticamente.<br><small>O layout pode ser incomum. Preencha manualmente abaixo.</small>`;
+          } else {
+            preencherExtratoConta(dadosConta);
+            exibirAnaliseEncargos(dadosConta);
+            const nMeses = Object.keys(dadosConta.resumoPorMes).length;
+            status.className = 'upload-sucesso';
+            status.innerHTML = `✅ Extrato de conta corrente ${dadosConta.banco ? '(' + dadosConta.banco + ') ' : ''}identificado${metodo}!<br>${dadosConta.lancamentos.length} lançamento(s) em ${nMeses} mês(es).<br><small>Encargos resumidos abaixo — revise os valores antes de calcular.</small>`;
+          }
+
+        } else if (tipo === 'contrato') {
+          status.innerHTML = '<div class="ia-spinner"></div><span>Identificando dados do contrato...</span>';
+          const dc = extrairDadosContrato(resultado.texto);
+          const linhas = extrairLinhasExtrato(resultado.texto);
+          preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+          const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
+          status.className = 'upload-sucesso';
+          status.innerHTML = `✅ Contrato identificado${metodo} — ${total} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`;
+
+        } else {
+          // Tipo desconhecido: tenta o fluxo de contrato como fallback
+          const dc = extrairDadosContrato(resultado.texto);
+          const linhas = extrairLinhasExtrato(resultado.texto);
+          const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
+          if (total > 0) {
+            preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+            status.className = 'upload-sucesso';
+            status.innerHTML = `✅ ${total} campo(s) identificado(s)${metodo}.<br><small>Revise antes de calcular.</small>`;
+          } else {
+            status.className = 'upload-aviso';
+            status.innerHTML = `⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos de financiamento (CCB) e extratos de conta corrente.<br><small>Preencha manualmente abaixo.</small>`;
+          }
+        }
       } catch(erro) {
         status.className = 'upload-erro';
         status.innerHTML = `❌ ${erro.message}<br><small>Preencha os campos manualmente abaixo.</small>`;
