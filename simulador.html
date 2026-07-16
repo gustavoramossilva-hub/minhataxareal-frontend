@@ -2620,29 +2620,38 @@ function calcularTIRBissecao(pv, n, pmt) {
   return (lo + hi) / 2;
 }
 
-// TIR específica para SAC (fluxo decrescente real)
-function calcularTIR_SAC(pv, n, pmtPrimeira) {
-  // No SAC a amortização é constante = pv/n
-  // pmt_k = pv/n + saldo_k * i  →  saldo_k = pv - (k-1)*pv/n
-  // VPL(i) = sum_k [ pmt_k / (1+i)^k ] - pv = 0
-  const amort = pv / n;
+// TIR de fluxo livre (bisseção) — usada pela apuração de extrato:
+// desembolso inicial = saldoInicial; entradas = pagamentos mensais reais;
+// o saldo devedor teórico remanescente encerra o fluxo no último mês apurado.
+// Retorna a taxa mensal em decimal, ou null se não houver raiz no intervalo.
+function calcularTIRFluxoExtrato(saldoInicial, pagamentos, saldoFinal) {
+  if (!(saldoInicial > 0) || !pagamentos.length) return null;
   const vpl = (r) => {
-    let s = 0, saldo = pv;
-    for (let k = 1; k <= n; k++) {
-      const pk = amort + saldo * r;
-      s += pk / Math.pow(1 + r, k);
-      saldo -= amort;
-    }
-    return s - pv;
+    let s = -saldoInicial;
+    for (let k = 1; k <= pagamentos.length; k++) s += (pagamentos[k - 1] || 0) / Math.pow(1 + r, k);
+    return s + (saldoFinal || 0) / Math.pow(1 + r, pagamentos.length);
   };
-  let lo = 1e-6, hi = 5.0;
-  if (vpl(lo) < 0) return null;
+  let lo = 1e-7, hi = 5.0;
+  if (vpl(lo) < 0 || vpl(hi) > 0) return null;
   for (let iter = 0; iter < 300; iter++) {
     const mid = (lo + hi) / 2;
-    if (Math.abs(hi - lo) < 1e-10) return mid;
+    if (hi - lo < 1e-10) return mid;
     vpl(mid) > 0 ? lo = mid : hi = mid;
   }
   return (lo + hi) / 2;
+}
+
+// TIR específica para SAC — fórmula fechada exata.
+// No SAC a amortização é constante (PV/n) e a 1ª parcela vale PV/n + PV·i.
+// Resolvendo para i:  i = (pmt1 − PV/n) / PV
+// pmtPrimeira = valor da PRIMEIRA parcela (no SAC as parcelas são decrescentes).
+// A implementação anterior era degenerada: construía o fluxo com a própria taxa
+// candidata e o descontava a essa mesma taxa — VPL ≡ 0 para qualquer r.
+function calcularTIR_SAC(pv, n, pmtPrimeira) {
+  if (!(pv > 0) || !(n > 0) || !(pmtPrimeira > 0)) return null;
+  const i = (pmtPrimeira - pv / n) / pv;
+  if (!isFinite(i) || i <= 0) return null; // parcela ≤ amortização pura: sem juros mensuráveis
+  return i;
 }
 
 // Tabela Price
@@ -2715,6 +2724,11 @@ function gerarTabelaSACRE(pv, i, n, tr, B) {
   const rows = [];
   let saldo = pv, prestacaoAtual = 0, blocoNum = 0;
   for (let m = 1; m <= n; m++) {
+    // Contrato já quitado em mês anterior — nada mais é devido
+    if (saldo <= 0) {
+      rows.push({ parc: m, pmt: 0, juros: 0, amort: 0, saldo: 0, trCorr: 0, quitado: true });
+      continue;
+    }
     const trCorr = saldo * tr;
     saldo += trCorr;
     const ehInicioBloco = ((m - 1) % B === 0);
@@ -2725,8 +2739,18 @@ function gerarTabelaSACRE(pv, i, n, tr, B) {
     }
     const juros = saldo * i;
     let amort = prestacaoAtual - juros;
-    if (m === n) { amort = saldo; saldo = 0; } else { saldo = Math.max(0, parseFloat((saldo - amort).toFixed(2))); }
-    rows.push({ parc: m, pmt: m === n ? amort + juros : prestacaoAtual, juros, amort, saldo, trCorr });
+    let pmt = prestacaoAtual;
+    // Trava: a amortização nunca excede o saldo devedor. Quando a prestação do
+    // bloco quitaria mais que o saldo (taxas altas + blocos longos), esta é a
+    // última parcela real — reduzida a saldo + juros do mês.
+    if (m === n || amort >= saldo - 0.005) {
+      amort = saldo;
+      pmt = amort + juros;
+      saldo = 0;
+    } else {
+      saldo = Math.max(0, parseFloat((saldo - amort).toFixed(2)));
+    }
+    rows.push({ parc: m, pmt, juros, amort, saldo, trCorr });
   }
   return rows;
 }
@@ -5404,6 +5428,12 @@ function calcularSACRE() {
   let qtdAmortNeg = 0;
 
   for (let m = 1; m <= n; m++) {
+    // Contrato já quitado em mês anterior — parcela marcada como quitada (R$ 0)
+    if (saldo <= 0) {
+      tabela.push({ m, bloco: blocoNum, ehInicioBloco: false, jurosMes: 0, amortMes: 0, prestacao: 0, trCorr: 0, saldo: 0, amortNeg: false, quitado: true });
+      continue;
+    }
+
     // 1. TR corrige saldo ANTES da amortização (Súmula 450/STJ)
     const trCorr = saldo * tr;
     saldo += trCorr;
@@ -5420,16 +5450,25 @@ function calcularSACRE() {
 
     // 3. Decompõe prestação
     const jurosMes = saldo * i;
-    const amortMes = prestacaoAtual - jurosMes;
+    let amortMes = prestacaoAtual - jurosMes;
+    let prestacaoMes = prestacaoAtual;
     const amortNeg = amortMes <= 0; // prestação < juros → amortização negativa
 
     if (amortNeg) qtdAmortNeg++;
 
-    saldo = Math.max(0, saldo - amortMes);
+    // Trava: a amortização nunca excede o saldo — se a prestação do bloco
+    // quitaria mais que o devido, esta é a última parcela real (ajustada)
+    if (m === n || amortMes >= saldo - 0.005) {
+      amortMes = saldo;
+      prestacaoMes = amortMes + jurosMes;
+      saldo = 0;
+    } else {
+      saldo = Math.max(0, saldo - amortMes);
+    }
     totalJuros += jurosMes;
     totalAmort += Math.max(0, amortMes);
 
-    tabela.push({ m, bloco: blocoNum, ehInicioBloco, jurosMes, amortMes, prestacao: prestacaoAtual, trCorr, saldo, amortNeg });
+    tabela.push({ m, bloco: blocoNum, ehInicioBloco, jurosMes, amortMes, prestacao: prestacaoMes, trCorr, saldo, amortNeg });
   }
 
   // Comparativo Price e SAC com mesmos parâmetros (sem TR para comparação pura)
@@ -5593,9 +5632,9 @@ function renderTabelaSacreMode(modo, btn) {
     const rowCls  = row.ehInicioBloco ? ' class="sacre-bloco-start"' : '';
     const amortCor = row.amortNeg ? 'color:var(--red)' : 'color:var(--green)';
     const negMark  = row.amortNeg ? ' ⚠' : '';
-    html += `<tr${rowCls}>
+    html += `<tr${rowCls}${row.quitado ? ' style="opacity:.45"' : ''}>
       <td>${row.m}</td>
-      <td style="color:var(--accent);font-size:10px;font-family:'DM Mono',monospace">${row.ehInicioBloco ? 'Bloco ' + row.bloco : ''}</td>
+      <td style="color:var(--accent);font-size:10px;font-family:'DM Mono',monospace">${row.ehInicioBloco ? 'Bloco ' + row.bloco : (row.quitado ? '✓ quitado' : '')}</td>
       <td class="td-highlight">${fmtBRL(row.prestacao)}</td>
       <td class="td-juros">${fmtBRL(row.jurosMes)}</td>
       <td style="${amortCor}">${fmtBRL(row.amortMes)}${negMark}</td>
@@ -7321,7 +7360,7 @@ function extRemRow(id) {
   if (tr) tr.remove();
 }
 
-function calcularExtrato() {
+async function calcularExtrato() {
   const alertEl = document.getElementById('alert-input');
   alertEl.classList.remove('show');
 
@@ -7358,30 +7397,77 @@ function calcularExtrato() {
 
   // Apuração período a período
   const bcenRef = BACEN[modalidade] || BACEN.pessoal;
+
+  // Taxa BCB da COMPETÊNCIA HISTÓRICA de cada mês do extrato (série primária
+  // 254xx — % a.m.), com walk-back de até 8 meses (mesma tolerância de
+  // defasagem usada nas demais rotinas). Fallback final: taxa corrente.
+  const chavesMes = rows.map(r => {
+    const p = (r.mesano || '').trim().split('/');
+    return (p.length === 2 && p[0] && p[1] && p[1].length === 4)
+      ? p[1] + '-' + p[0].padStart(2, '0') : null;
+  });
+  let mapaBCB = {};
+  try {
+    const validas = chavesMes.filter(Boolean).sort();
+    if (validas.length) {
+      const [aIni, mIni] = validas[0].split('-').map(Number);
+      const dIni = new Date(aIni, mIni - 1 - 8, 1); // 8 meses antes para o walk-back
+      const [aFim, mFim] = validas[validas.length - 1].split('-').map(Number);
+      const ultDia = new Date(aFim, mFim, 0).getDate();
+      const serieHist = await buscarSerieHistorica(
+        SGS_CODIGOS[modalidade] || SGS_CODIGOS.pessoal,
+        '01/' + String(dIni.getMonth() + 1).padStart(2, '0') + '/' + dIni.getFullYear(),
+        ultDia + '/' + String(mFim).padStart(2, '0') + '/' + aFim
+      );
+      mapaBCB = serieParaMap(serieHist);
+    }
+  } catch (_) { /* offline → fallback taxa corrente abaixo */ }
+  const taxaBCBDoMes = (key) => {
+    if (key) {
+      let [a, m] = key.split('-').map(Number);
+      for (let k = 0; k < 8; k++) {
+        const v = mapaBCB[a + '-' + String(m).padStart(2, '0')];
+        if (v != null && !isNaN(v)) return v;
+        m--; if (m < 1) { m = 12; a--; }
+      }
+    }
+    return bcenRef.taxaMes;
+  };
+
   let totalPago = 0, totalTeorico = 0, totalBCB = 0;
   let detalhes = [];
 
   rows.forEach((r, i) => {
     const teorico = tabTeorica[i] || {};
     const pmtTeorico = teorico.pmt || 0;
-    const jurosTeorico = teorico.juros || 0;
-    const saldo = teorico.saldo || 0;
-    const taxaEfetiva = saldo > 0 ? (r.pago - (teorico.amort || 0)) / saldo * 100 : taxaNom;
-    const taxaBCB = bcenRef.taxaMes;
+    // Saldo no INÍCIO do mês = saldo ao final do mês anterior (1ª parcela → principal).
+    // A taxa implícita do mês é juros/saldo_inicial — usar o saldo pós-amortização
+    // superestimava a taxa mesmo em contratos pagos exatamente como pactuado.
+    const saldoInicio = i === 0 ? valor : (tabTeorica[i - 1]?.saldo || 0);
+    const saldoFim = teorico.saldo || 0;
+    const taxaEfetiva = saldoInicio > 0 ? (r.pago - (teorico.amort || 0)) / saldoInicio * 100 : taxaNom;
+    const taxaBCB = taxaBCBDoMes(chavesMes[i]);
     const difTaxas = taxaEfetiva - taxaBCB;
 
     totalPago += r.pago || 0;
     totalTeorico += pmtTeorico;
-    totalBCB += saldo > 0 ? (saldo * taxaBCB / 100) + (teorico.amort || 0) : pmtTeorico;
+    totalBCB += saldoInicio > 0 ? (saldoInicio * taxaBCB / 100) + (teorico.amort || 0) : pmtTeorico;
 
-    detalhes.push({ mesano: r.mes || r.mesano, sit: r.sit, pago: r.pago, pmtTeorico, saldo, taxaEfetiva: isNaN(taxaEfetiva) ? taxaNom : taxaEfetiva, taxaBCB, difTaxas });
+    detalhes.push({ mesano: r.mesano, sit: r.sit, pago: r.pago, pmtTeorico, saldo: saldoFim, taxaEfetiva: isNaN(taxaEfetiva) ? taxaNom : taxaEfetiva, taxaBCB, difTaxas });
   });
 
-  // Taxa média efetiva (TIR aproximada via média ponderada)
-  const taxaMediaEfetiva = detalhes.length ? detalhes.reduce((s, d) => s + d.taxaEfetiva, 0) / detalhes.length : taxaNom;
+  // Taxa média efetiva do período — TIR do fluxo de caixa real:
+  // [-principal, pag1, pag2, ..., pagK + saldo teórico remanescente].
+  // Fallback (fluxo sem raiz, ex.: nenhum pagamento): média simples das taxas mensais.
+  const saldoFinalTeorico = tabTeorica[Math.min(rows.length, tabTeorica.length) - 1]?.saldo || 0;
+  const tirPeriodo = calcularTIRFluxoExtrato(valor, detalhes.map(d => d.pago || 0), saldoFinalTeorico);
+  const taxaMediaEfetiva = tirPeriodo != null
+    ? tirPeriodo * 100
+    : (detalhes.length ? detalhes.reduce((s, d) => s + d.taxaEfetiva, 0) / detalhes.length : taxaNom);
+  const taxaBCBMedia = detalhes.length ? detalhes.reduce((s, d) => s + d.taxaBCB, 0) / detalhes.length : bcenRef.taxaMes;
   const taxaAnoEfetiva = (Math.pow(1 + taxaMediaEfetiva / 100, 12) - 1) * 100;
   const taxaAnoNom = (Math.pow(1 + iTaxaNom, 12) - 1) * 100;
-  const taxaBCBano = (Math.pow(1 + bcenRef.taxaMes / 100, 12) - 1) * 100;
+  const taxaBCBano = (Math.pow(1 + taxaBCBMedia / 100, 12) - 1) * 100;
   const difTotal = totalPago - totalBCB;
 
   // Renderizar resultado na right-panel
@@ -7395,7 +7481,7 @@ function calcularExtrato() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
         <div class="metric-card"><div class="mc-label">Taxa média efetiva apurada</div><div class="mc-value accent">${fmtPct(taxaMediaEfetiva)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoEfetiva)} a.a.</div></div>
         <div class="metric-card"><div class="mc-label">Taxa nominal contratada</div><div class="mc-value">${fmtPct(taxaNom)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoNom)} a.a.</div></div>
-        <div class="metric-card"><div class="mc-label">Taxa média BCB (${bcenRef.nome})</div><div class="mc-value">${fmtPct(bcenRef.taxaMes)} a.m.</div><div class="mc-sub">${fmtPct(taxaBCBano)} a.a.</div></div>
+        <div class="metric-card"><div class="mc-label">Taxa média BCB do período (${bcenRef.nome})</div><div class="mc-value">${fmtPct(taxaBCBMedia)} a.m.</div><div class="mc-sub">${fmtPct(taxaBCBano)} a.a. · competências históricas</div></div>
         <div class="metric-card"><div class="mc-label">Total pago vs. referência BCB</div><div class="mc-value ${difTotal > 0 ? 'danger' : 'ok'}">${difTotal >= 0 ? '+' : ''}${fmtBRL(difTotal)}</div><div class="mc-sub">total pago: ${fmtBRL(totalPago)}</div></div>
       </div>
       <div class="section-heading" style="margin-top:20px">Detalhamento por Período</div>
@@ -7428,7 +7514,7 @@ function calcularExtrato() {
 // ════════════════════════════════════════════
 const EC113_DATA  = new Date('2021-12-08');
 const FAZENDA_EC  = new Date('2021-05-05');
-const SGS_IPCA_E  = 13522;
+const SGS_IPCA_E  = 10764; // IPCA-E VARIAÇÃO MENSAL (%). Atenção: a série 13522 é o ACUMULADO EM 12 MESES e não pode ser composta mês a mês (fallback mensal alternativo: 7478 / IPCA-15)
 const SGS_SELIC_M = 4390;
 const SGS_INPC_M  = 188;
 
@@ -7526,13 +7612,43 @@ function atlGerarSerie() {
   });
 }
 
-function _atlResolverIndice(dtBase, indiceSelect) {
-  if (indiceSelect === 'ipca_selic') return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'SELIC', serie:SGS_SELIC_M }];
-  if (indiceSelect === 'inpc_1pct') return [{ nome:'INPC', serie:SGS_INPC_M }, { nome:'1% a.m.', serie:null, fixo:1.0 }];
-  if (indiceSelect === 'ipca_6aa')  return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'6% a.a.', serie:null, fixo:(Math.pow(1.06,1/12)-1)*100 }];
-  // auto
-  if (dtBase >= EC113_DATA) return [{ nome:'IPCA-E', serie:SGS_IPCA_E }, { nome:'SELIC', serie:SGS_SELIC_M }];
-  return [{ nome:'INPC', serie:SGS_INPC_M }, { nome:'1% a.m.', serie:null, fixo:1.0 }];
+// Resolve o regime de atualização POR MÊS de competência (EC 113/2021, art. 3º):
+//   · meses a partir de dez/2021 (vigência 08/12/2021): SELIC EXCLUSIVA — a SELIC já
+//     embute correção monetária + juros de mora; somar IPCA-E à SELIC duplicaria a correção.
+//   · meses até nov/2021: IPCA-E mensal (SGS 10764) + juros de mora (1% a.m.;
+//     Fazenda Pública: 6% a.a. equivalente mensal).
+// Granularidade mensal: o mês de dez/2021 é tratado integralmente como SELIC.
+// Opções manuais 'inpc_1pct' e 'ipca_6aa' permanecem escolhas explícitas do usuário
+// aplicadas ao período inteiro.
+function _atlResolverRegime(dataBaseISO, indiceSelect, natureza) {
+  const IPCAE = { nome: 'IPCA-E', serie: SGS_IPCA_E };
+  const SELIC = { nome: 'SELIC',  serie: SGS_SELIC_M };
+  const INPC  = { nome: 'INPC',   serie: SGS_INPC_M };
+  const ZERO  = { nome: '—', serie: null, fixo: 0 };
+  const jurosPre = natureza === 'fazenda'
+    ? { nome: '6% a.a.', serie: null, fixo: (Math.pow(1.06, 1/12) - 1) * 100 }
+    : { nome: '1% a.m.', serie: null, fixo: 1.0 };
+
+  if (indiceSelect === 'inpc_1pct') return {
+    nomeCorr: 'INPC', nomeJur: '1% a.m.', series: [SGS_INPC_M],
+    porMes: () => ({ corr: INPC, jur: { nome: '1% a.m.', serie: null, fixo: 1.0 } }),
+  };
+  if (indiceSelect === 'ipca_6aa') return {
+    nomeCorr: 'IPCA-E', nomeJur: '6% a.a.', series: [SGS_IPCA_E],
+    porMes: () => ({ corr: IPCAE, jur: { nome: '6% a.a.', serie: null, fixo: (Math.pow(1.06, 1/12) - 1) * 100 } }),
+  };
+
+  // 'auto' e 'ipca_selic' — regra EC 113/2021 com transição por competência
+  const dtBase = new Date(dataBaseISO + 'T12:00:00');
+  const baseAposEC = dtBase >= EC113_DATA;
+  return {
+    nomeCorr: baseAposEC ? 'SELIC (EC 113)' : 'IPCA-E → SELIC (EC 113)',
+    nomeJur:  baseAposEC ? 'embutido na SELIC' : jurosPre.nome + ' → SELIC',
+    series:   baseAposEC ? [SGS_SELIC_M] : [SGS_IPCA_E, SGS_SELIC_M],
+    porMes: (mKey) => mKey >= '2021-12'
+      ? { corr: ZERO, jur: SELIC }      // SELIC única (correção + juros)
+      : { corr: IPCAE, jur: jurosPre },
+  };
 }
 
 async function calcularAtualizacao() {
@@ -7575,11 +7691,10 @@ async function calcularAtualizacao() {
     const dataFimBCB = mesesFull[mesesFull.length-1].dataFimBCB;
 
     // Descobrir quais séries precisam ser buscadas
+    const natureza = document.querySelector('input[name="atl-natureza"]:checked')?.value || 'civel';
     const seriesNeeded = new Set();
     lancamentos.forEach(l => {
-      const [ic, ij] = _atlResolverIndice(new Date(l.data + 'T12:00:00'), indiceSelect);
-      if (ic.serie) seriesNeeded.add(ic.serie);
-      if (ij.serie) seriesNeeded.add(ij.serie);
+      _atlResolverRegime(l.data, indiceSelect, natureza).series.forEach(s => seriesNeeded.add(s));
     });
     const seriesData = {};
     await Promise.all([...seriesNeeded].map(async s => {
@@ -7590,14 +7705,15 @@ async function calcularAtualizacao() {
     const fmtMA = k => { const p = k.split('-'); return mesesNomes[parseInt(p[1])-1]+'/'+p[0]; };
 
     const resultados = lancamentos.map((l, idx) => {
-      const dtBase = new Date(l.data + 'T12:00:00');
-      const [ic, ij] = _atlResolverIndice(dtBase, indiceSelect);
+      const regime = _atlResolverRegime(l.data, indiceSelect, natureza);
       const meses = getMeses(l.data.slice(0,7), mesMax);
       let saldo = l.valor, totalCorr = 0, totalJur = 0;
       const detalhes = [];
       meses.forEach(m => {
-        const fCorr = ic.serie ? (parseFloat(seriesData[ic.serie]?.[m.key] ?? 0) / 100) : 0;
-        const fJur  = ij.fixo != null ? (ij.fixo / 100) : (ij.serie ? (parseFloat(seriesData[ij.serie]?.[m.key] ?? 0) / 100) : 0);
+        const { corr, jur } = regime.porMes(m.key);
+        // fatores MENSAIS (variação % no mês ÷ 100); IPCA-E mensal pode ser negativo (deflação)
+        const fCorr = corr.fixo != null ? (corr.fixo / 100) : (corr.serie ? (parseFloat(seriesData[corr.serie]?.[m.key] ?? 0) / 100) : 0);
+        const fJur  = jur.fixo  != null ? (jur.fixo  / 100) : (jur.serie  ? (parseFloat(seriesData[jur.serie]?.[m.key]  ?? 0) / 100) : 0);
         const corrMes = saldo * fCorr; saldo += corrMes;
         const jurMes  = saldo * fJur;  saldo += jurMes;
         totalCorr += corrMes; totalJur += jurMes;
@@ -7605,7 +7721,7 @@ async function calcularAtualizacao() {
       });
       return { num: idx+1, desc: l.desc, valor: l.valor, data: l.data, tipo: l.tipo,
                totalCorr, totalJur, total: l.valor + totalCorr + totalJur,
-               indiceCorr: ic.nome, indiceJuros: ij.nome, detalhes };
+               indiceCorr: regime.nomeCorr, indiceJuros: regime.nomeJur, detalhes };
     });
 
     // Encargos adicionais
@@ -7701,7 +7817,8 @@ async function calcularAtualizacao() {
       </div>
       <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px;line-height:1.6">
         Atualização calculada com base nos índices oficiais divulgados pelo Banco Central do Brasil:<br>
-        &nbsp;· IPCA-E: BCB/SGS série 13522 &nbsp;· SELIC: BCB/SGS série 4390 &nbsp;· INPC: BCB/SGS série 188<br><br>
+        &nbsp;· IPCA-E: BCB/SGS série 10764 (variação mensal) &nbsp;· SELIC: BCB/SGS série 4390 &nbsp;· INPC: BCB/SGS série 188<br>
+        &nbsp;· Competências a partir de dez/2021: SELIC exclusiva (EC 113/2021 — índice único de correção e juros)<br><br>
         Os valores têm caráter informativo e educacional. Recomenda-se revisão por profissional habilitado.
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -7793,7 +7910,7 @@ async function atlExportarPDF(dados) {
   y += 6;
   if (y + 8 > MARGEM_INF) { doc.addPage(); y = 20; }
   doc.setFontSize(7); doc.setTextColor(110,110,110);
-  doc.text('Fontes BCB/SGS: 13522 (IPCA-E) · 4390 (SELIC) · 188 (INPC) · Caráter informativo e educacional.', lm, y);
+  doc.text('Fontes BCB/SGS: 10764 (IPCA-E mensal) · 4390 (SELIC) · 188 (INPC) · Pós-EC 113/2021: SELIC exclusiva · Caráter informativo e educacional.', lm, y);
 
   // Rodapé em todas as páginas
   const totalPgs = doc.internal.getNumberOfPages();
