@@ -8054,6 +8054,26 @@ async function atlExportarExcel(dados) {
 
 let _ocrStatusId = null;
 
+// Reconstrói o texto de uma página na ORDEM VISUAL (linha a linha), não na
+// ordem do stream do PDF. PDFs de tabela (ex.: Ficha Gráfica SISBR) gravam os
+// itens coluna a coluna — o join na ordem do stream embaralha rótulo/valor e
+// separa as colunas do ledger, quebrando todos os parsers de regex.
+// Técnica: agrupa itens pela coordenada Y (tolerância ~3pt), ordena cada
+// linha por X e as linhas de cima para baixo (no PDF, Y cresce para cima).
+function _montarTextoPorLinhas(items) {
+  const linhas = new Map();
+  for (const it of items) {
+    if (!it.str || !it.str.trim() || !it.transform) continue;
+    const yBucket = Math.round(it.transform[5] / 3);
+    if (!linhas.has(yBucket)) linhas.set(yBucket, []);
+    linhas.get(yBucket).push({ x: it.transform[4], s: it.str });
+  }
+  return [...linhas.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([, frags]) => frags.sort((a, b) => a.x - b.x).map(f => f.s).join(' '))
+    .join('\n');
+}
+
 async function extrairTextoPDF(arquivo) {
   const arrayBuffer = await arquivo.arrayBuffer();
 
@@ -8064,7 +8084,7 @@ async function extrairTextoPDF(arquivo) {
     for (let i = 1; i <= pdf.numPages; i++) {
       const pagina = await pdf.getPage(i);
       const conteudo = await pagina.getTextContent();
-      textoCompleto += conteudo.items.map(item => item.str).join(' ') + '\n';
+      textoCompleto += _montarTextoPorLinhas(conteudo.items) + '\n';
     }
     if (textoCompleto.trim().length > 100) {
       return { texto: textoCompleto, metodo: 'digital' };
@@ -9526,17 +9546,47 @@ async function processarUploadDocumento(arquivo, aba) {
       status.innerHTML = '<div class="ia-spinner"></div><span>Reconstruindo o fluxo da ficha SISBR...</span>';
       const ficha = extrairFichaSisbr(resultado.texto);
       const apuracao = apurarTaxaEfetivaPorFluxo(ficha);
+      // Diagnóstico: o que foi extraído de fato, ANTES de qualquer mensagem
+      console.log('[SISBR] Prestes a exibir resultado. Dados extraídos:', JSON.stringify({
+        cabecalho: ficha.cabecalho,
+        totalLancamentos: ficha.ledger?.length || 'LEDGER UNDEFINED OU VAZIO',
+        periodos: apuracao.periodos.length
+      }));
+      console.log('[SISBR] Funções de preenchimento:', typeof preencherFichaSisbrExtrato, typeof renderFichaSisbrExtrato, typeof preencherFichaSisbrInadCampos);
+      // Mensagem de aviso honesta quando o parser não extraiu o essencial —
+      // a mensagem de sucesso NUNCA pode aparecer sem preenchimento real (bug
+      // confirmado por usuário: sucesso exibido com todos os campos vazios)
+      const avisoExtracaoFalhou = () => avisar('⚠️ O documento parece ser uma <strong>Ficha Gráfica SISBR</strong>, mas não foi possível extrair os dados automaticamente (layout incomum ou digitalização de baixa qualidade).<br><small>Preencha os campos manualmente — se possível, use o PDF digital original em vez de foto/escaneamento.</small>');
+
       if (aba === 'simulador') {
         const n = preencherFichaSisbrSimulador(ficha.cabecalho);
-        sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Ficha gráfica não tem parcela fixa — para a apuração completa por fluxo real, use a aba <strong>Extrato</strong>.</small>`);
+        if (n > 0) sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Ficha gráfica não tem parcela fixa — para a apuração completa por fluxo real, use a aba <strong>Extrato</strong>.</small>`);
+        else avisoExtracaoFalhou();
       } else if (aba === 'extrato') {
         preencherFichaSisbrExtrato(ficha, apuracao);
         await renderFichaSisbrExtrato(ficha, apuracao);
-        sucesso(`✅ Ficha SISBR ${ficha.cabecalho.cooperativa ? '(' + ficha.cabecalho.cooperativa + ') ' : ''}identificada${metodo}!<br>${ficha.ledger.length} lançamento(s) no ledger · ${apuracao.periodos.length} período(s) de liquidação.<br><small>Apuração por fluxo real no painel de resultados.</small>`);
+        // Trava de sanidade: confirmar no DOM que o preenchimento ACONTECEU
+        // (campo de valor com conteúdo e, havendo períodos, tabela com linhas)
+        const domValorOk = !!(document.getElementById('ext-valor')?.value);
+        const linhasPreenchidas = [...document.querySelectorAll('#ext-tabela-body tr')].filter(tr => {
+          const rid = tr.id.replace('ext-row-', '');
+          return (document.getElementById('ext-pago-' + rid)?.value || '') !== '';
+        }).length;
+        const domTabelaOk = apuracao.periodos.length === 0 || linhasPreenchidas >= apuracao.periodos.length;
+        console.log('[SISBR] Trava de sanidade (extrato):', JSON.stringify({ domValorOk, linhasPreenchidas, periodos: apuracao.periodos.length }));
+        if (ficha.ledger.length > 0 && ficha.cabecalho.valorOperacao != null && domValorOk && domTabelaOk) {
+          sucesso(`✅ Ficha SISBR ${ficha.cabecalho.cooperativa ? '(' + ficha.cabecalho.cooperativa + ') ' : ''}identificada${metodo}!<br>${ficha.ledger.length} lançamento(s) no ledger · ${apuracao.periodos.length} período(s) de liquidação.<br><small>Campos preenchidos e apuração por fluxo real no painel de resultados.</small>`);
+        } else {
+          avisoExtracaoFalhou();
+        }
       } else {
         const n = preencherFichaSisbrInadCampos(ficha.cabecalho);
         renderFichaSisbrInad(ficha, apuracao);
-        sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Juros remuneratórios × encargos moratórios separados no painel de resultados.</small>`);
+        if (n > 0 && ficha.ledger.length > 0) {
+          sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Juros remuneratórios × encargos moratórios separados no painel de resultados.</small>`);
+        } else {
+          avisoExtracaoFalhou();
+        }
       }
       return;
     }
