@@ -864,6 +864,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- MODO SIMULAR -->
     <div id="mode-simular">
+      <!-- ══ UPLOAD PDF IA (Premium) ══ -->
+      <div class="upload-ia-box" id="upload-simulador-box">
+        <div class="upload-ia-header">
+          <span>📄</span>
+          <span>Preencher automaticamente</span>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <p class="upload-ia-desc">💡 Envie o contrato de financiamento ou CCB — os campos serão preenchidos automaticamente.</p>
+        <input type="file" id="input-pdf-simulador" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+        <button class="btn-upload-ia" type="button" onclick="document.getElementById('input-pdf-simulador').click()">📎 Selecionar contrato (PDF ou imagem)</button>
+        <div id="status-upload-simulador" style="display:none"></div>
+        <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+      </div>
+      <div class="separador-ou">── ou preencha manualmente ──</div>
+
       <div class="form-group">
         <label class="form-label">Modalidade de crédito <span class="form-hint">Bacen</span></label>
         <select id="modalidade" onchange="updateBacenRef()">
@@ -1384,6 +1399,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- ══ MODO INADIMPLÊNCIA ══ -->
     <div id="mode-inadimplencia" style="display:none">
+
+      <!-- ══ UPLOAD PDF IA (Premium) ══ -->
+      <div class="upload-ia-box" id="upload-inadimplencia-box">
+        <div class="upload-ia-header">
+          <span>📄</span>
+          <span>Preencher automaticamente</span>
+          <span class="badge-premium">Premium</span>
+        </div>
+        <p class="upload-ia-desc">💡 Envie a ficha da operação (SISBR/Sicoob), extrato do financiamento ou contrato — o sistema identifica os períodos de inadimplência e encargos.</p>
+        <input type="file" id="input-pdf-inadimplencia" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+        <button class="btn-upload-ia" type="button" onclick="document.getElementById('input-pdf-inadimplencia').click()">📎 Selecionar documento (PDF ou imagem)</button>
+        <div id="status-upload-inadimplencia" style="display:none"></div>
+        <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+      </div>
+      <div class="separador-ou">── ou preencha manualmente ──</div>
 
       <p class="panel-title" style="margin-bottom:14px">Dados do Contrato Original <span class="form-hint">opcional</span></p>
 
@@ -8291,6 +8321,19 @@ function extrairLinhasExtrato(texto) {
 function detectarTipoDocumento(texto) {
   const t = (texto || '').toUpperCase().replace(/\s+/g, ' ');
 
+  // Ficha Gráfica SISBR (Sicoob) — PRIORIDADE sobre conta_corrente e contrato:
+  // a ficha contém sinais dos outros dois tipos (datas, valores, "cooperativa").
+  // Cada marcador conta 1 ponto se qualquer variante (com/sem acento) aparecer.
+  const sinaisSisbr = [
+    ['SISBR'],
+    ['FICHA GRÁFICA DA OPERAÇÃO', 'FICHA GRAFICA DA OPERACAO'],
+    ['APROPRIAÇÃO DE JUROS', 'APROPRIACAO DE JUROS'],
+    ['LIQUIDAÇÃO NA OPERAÇÃO', 'LIQUIDACAO NA OPERACAO'],
+    ['INDICADOR DE CÁLCULO', 'INDICADOR DE CALCULO'],
+  ];
+  const pontosSisbr = sinaisSisbr.filter(vars => vars.some(s => t.includes(s))).length;
+  if (pontosSisbr >= 2) return 'ficha_sisbr';
+
   const sinaisContaCorrente = [
     'SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL',
     'TARIFA BANCÁRIA', 'TARIFA BANCARIA', 'CESTA',
@@ -8557,6 +8600,303 @@ function extrairExtratoConta(texto) {
   return resultado;
 }
 
+// ═════════════════════════════════════════════════════════
+//  FICHA GRÁFICA SISBR (SICOOB) — parser + apuração por fluxo real
+//  Documento sem valor de parcela fixa: cabeçalho estruturado + livro-razão
+//  (ledger) de lançamentos dia a dia. A taxa efetiva é apurada por XIRR
+//  (TIR com datas irregulares) sobre o fluxo real de liberações/liquidações.
+// ═════════════════════════════════════════════════════════
+
+// Modalidade BACEN (código do cabeçalho SISBR) → modalidade/série SGS do app
+const MODALIDADE_BACEN_SERIE = {
+  '216': 'capital',      // capital de giro
+  '210': 'capital',
+  '218': 'capital',
+  '401': 'pessoal',      // crédito pessoal
+  '402': 'consignado',
+  '404': 'veiculo',
+  '901': 'habitacional',
+  '1301': 'cartao'       // honra avais/cartão
+};
+
+function classificarHistoricoSisbr(historico) {
+  const h = (historico || '').toUpperCase();
+  if (h.includes('LIBERAÇÃO') || h.includes('LIBERACAO'))
+    return 'liberacao';
+  if (h.includes('LIQUIDAÇÃO') || h.includes('LIQUIDACAO'))
+    return 'pagamento';
+  if (h.includes('APROPRIAÇÃO DE JUROS') || h.includes('APROPRIACAO DE JUROS'))
+    return 'juros';
+  if (h.includes('ENCARGOS POR ATRASO') || h.includes('RRF'))
+    return 'encargo_atraso';
+  if (h.includes('APROPRIAÇÃO DE ENCARGOS') || h.includes('APROPRIACAO DE ENCARGOS'))
+    return 'encargo';
+  if (h.includes('MULTA'))
+    return 'multa';
+  if (h.includes('IOF'))
+    return 'iof';
+  return 'outro';
+}
+
+function extrairFichaSisbr(texto) {
+  const t = texto || '';
+  const dados = {
+    tipo: 'ficha_sisbr',
+    cabecalho: {},
+    ledger: [],
+    periodos: []
+  };
+  const c = dados.cabecalho;
+
+  // Padrões do cabeçalho SISBR (rótulo : valor) — formato real confirmado
+  const capturas = [
+    ['cooperativa', /Cooperativa\s*:\s*([A-ZÀ-Ú0-9\s\-\.]+?)(?:\s{2,}|Índice|Indice)/i],
+    ['cliente', /Cliente\s*:\s*([\d]+\s*-\s*[A-ZÀ-Ú0-9\s\-\.]+?)(?:\s{2,}|Índice|Indice)/i],
+    ['modalidade', /Modalidade\s*:\s*([\d]+\s*-\s*[A-ZÀ-Ú\s\*\-\.]+?)(?:\s{2,}|RRF)/i],
+    ['contrato', /Contrato\s*:\s*([\d\-]+)/i],
+    ['valorOperacao', /Valor\s+Opera[çc][ãa]o\s*:\s*([\d.,]+)/i],
+    ['parcelas', /Parcelas\s*:\s*(\d+)/i],
+    ['taxaJuros', /Taxa\s+Juros\s*:\s*([\d.,]+)\s*%\s*a\.?m/i],
+    ['dataOperacao', /Data\s+Opera[çc][ãa]o\s*:\s*(\d{2}\/\d{2}\/\d{4})/i],
+    ['prazoDias', /Prazo\s*:\s*(\d+)\s*dias/i],
+    ['taxaMulta', /Taxa\s+Multa\s*:\s*([\d.,]+)\s*%/i],
+    ['dataVenc1Parc', /Data\s+Venc\.?\s*1[ªa]\s*Parc\s*:\s*(\d{2}\/\d{2}\/\d{4})/i],
+    ['taxaMora', /Taxa\s+Mora\s*:\s*([\d.,]+)\s*%\s*a\.?m/i],
+    ['indicadorCalculo', /Indicador\s+de\s+C[áa]lculo\s*:\s*([\d]+\s*-\s*[A-Z]+)/i],
+    ['dataVencimento', /Data\s+Vencimento\s*:\s*(\d{2}\/\d{2}\/\d{4})/i],
+    ['jurosInad', /Juros\s+INAD\s*:\s*([\d.,]+)/i],
+    ['saldoContabil', /Saldo\s+cont[áa]bil\s*:\s*([\d.,]+)/i],
+    ['valorIOF', /Valor\s+IOF\s*:\s*([\d.,]+)/i],
+    ['cetMensal', /Custo\s+Efetivo\s+Total\s*:\s*([\d.,]+)\s*%\s*a\.?m/i],
+    ['cetAnual', /Custo\s+Efetivo\s+Total\s*:.*?\|\s*([\d.,]+)\s*%\s*a\.?a/i],
+    ['modalidadeBacen', /Modalidade\s+BACEN\s*:\s*(\d+)/i]
+  ];
+
+  for (const [campo, regex] of capturas) {
+    const m0 = t.match(regex);
+    if (m0) {
+      const valor = m0[1].trim();
+      if (/valor|taxa|saldo|cet|iof|juros/i.test(campo)) {
+        c[campo] = parseMoeda(valor);              // monetários e percentuais
+      } else if (campo === 'parcelas' || campo === 'prazoDias') {
+        c[campo] = parseInt(valor, 10);            // inteiros
+      } else {
+        c[campo] = valor;
+      }
+    }
+  }
+
+  // Sistema de amortização pelo Indicador de Cálculo SISBR:
+  // 03-SACD = SAC com juros por dias corridos · 05-PGTU = pagamento único
+  if (c.indicadorCalculo) {
+    if (c.indicadorCalculo.includes('SACD')) {
+      c.sistemaAmortizacao = 'sac_dias_corridos';
+    } else if (c.indicadorCalculo.includes('PGTU')) {
+      c.sistemaAmortizacao = 'pagamento_unico';
+    } else if (c.indicadorCalculo.includes('PRIC')) {
+      c.sistemaAmortizacao = 'price';
+    }
+  }
+  // Modalidade do comparativo BCB a partir do código BACEN
+  if (c.modalidadeBacen && MODALIDADE_BACEN_SERIE[c.modalidadeBacen]) {
+    c.modalidadeApp = MODALIDADE_BACEN_SERIE[c.modalidadeBacen];
+  }
+
+  // Ledger: Dt.Lanc  Dt.Ref  Histórico  Débito  Crédito  Saldo  D/C
+  const regexLedger = new RegExp(
+    '(\\d{2}\\/\\d{2}\\/\\d{4})\\s+' +                        // Dt.Lanc
+    '(\\d{2}\\/\\d{2}\\/\\d{4})\\s+' +                        // Dt.Ref
+    '([A-ZÀ-Ú][A-ZÀ-Ú\\s\\-\\(\\)ÇÃÕÉÊÍÓÔÚ]+?)\\s+' +         // Histórico
+    '([\\d.,]+)\\s+' +                                         // Débito
+    '([\\d.,]+)\\s+' +                                         // Crédito
+    '([\\d.,]+)\\s+' +                                         // Saldo
+    '([DC])(?![A-Za-zÀ-ÿ0-9])',                                // D/C
+    'g'
+  );
+
+  let m;
+  while ((m = regexLedger.exec(t)) !== null) {
+    const historico = m[3].trim().replace(/\s+/g, ' ');
+    const debito = parseMoeda(m[4]) || 0;
+    const credito = parseMoeda(m[5]) || 0;
+    dados.ledger.push({
+      dataLancamento: m[1],
+      dataReferencia: m[2],
+      historico,
+      debito,
+      credito,
+      saldo: parseMoeda(m[6]) || 0,
+      dc: m[7],
+      categoria: classificarHistoricoSisbr(historico),
+      // aliases p/ interoperar com as demais rotinas do app
+      data: m[1],
+      descricao: historico,
+      valor: debito || credito
+    });
+  }
+
+  // Dedupe com chave COMPLETA (páginas de PDF repetem trechos): usar só
+  // data|descrição|valor removeria liquidações parciais idênticas legítimas
+  // no mesmo dia — o saldo distingue.
+  const vistos = new Set();
+  dados.ledger = dados.ledger.filter(l => {
+    const k = [l.dataLancamento, l.dataReferencia, l.historico, l.debito, l.credito, l.saldo].join('|');
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+
+  return dados;
+}
+
+function parseDataBR(str) {
+  const [d, m, a] = (str || '').split('/');
+  return new Date(`${a}-${m}-${d}T12:00:00`);
+}
+
+// XIRR — TIR anualizada de fluxo com datas irregulares.
+// Newton-Raphson com fallback de bisseção (padrão do restante do app).
+function calcularXIRR(eventos) {
+  if (!eventos || eventos.length < 2) return null;
+  const evs = [...eventos].sort((a, b) => a.data - b.data);
+  if (!evs.some(e => e.valor < 0) || !evs.some(e => e.valor > 0)) return null;
+  const d0 = evs[0].data;
+  const anos = e => (e.data - d0) / (365.25 * 86400000);
+  const vplEm = r => evs.reduce((s, e) => s + e.valor / Math.pow(1 + r, anos(e)), 0);
+
+  let taxa = 0.15; // chute inicial anual
+  for (let iter = 0; iter < 100; iter++) {
+    let vpl = 0, dvpl = 0;
+    for (const e of evs) {
+      const tt = anos(e);
+      const f = Math.pow(1 + taxa, tt);
+      vpl += e.valor / f;
+      dvpl -= tt * e.valor / (f * (1 + taxa));
+    }
+    if (Math.abs(dvpl) < 1e-12) break;
+    const novaTaxa = taxa - vpl / dvpl;
+    if (!isFinite(novaTaxa)) break;
+    if (Math.abs(novaTaxa - taxa) < 1e-9) return novaTaxa;
+    taxa = Math.max(-0.99, novaTaxa);
+  }
+  // Fallback: bisseção — sempre converge quando há troca de sinal do VPL
+  let lo = -0.95, hi = 10.0;
+  if (vplEm(lo) < 0 || vplEm(hi) > 0) return isFinite(taxa) ? taxa : null;
+  for (let i = 0; i < 300; i++) {
+    const mid = (lo + hi) / 2;
+    if (hi - lo < 1e-10) return mid;
+    vplEm(mid) > 0 ? lo = mid : hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// Apuração da taxa efetiva por FLUXO REAL — funciona sem valor de parcela.
+// Liberação = saída; cada liquidação = entrada; saldo em aberto encerra o
+// fluxo como recebível na data do último lançamento.
+function apurarTaxaEfetivaPorFluxo(dadosFicha) {
+  const ledger = dadosFicha.ledger || [];
+  const resultado = {
+    fluxoCaixa: [],
+    periodos: [],
+    taxaEfetivaTIR: null,
+    taxaEfetivaMensal: null,
+    totalJurosApropriados: 0,
+    totalEncargosAtraso: 0,
+    totalPago: 0,
+    valorLiberado: 0,
+    saldoEmAberto: 0
+  };
+  if (!ledger.length) return resultado;
+
+  const eventos = [];
+  for (const l of ledger) {
+    if (l.categoria === 'liberacao') {
+      resultado.valorLiberado += l.debito;
+      eventos.push({ data: parseDataBR(l.dataReferencia), valor: -l.debito });
+    }
+    if (l.categoria === 'pagamento') {
+      resultado.totalPago += l.credito;
+      eventos.push({ data: parseDataBR(l.dataLancamento), valor: l.credito });
+    }
+    if (l.categoria === 'juros') {
+      resultado.totalJurosApropriados += l.debito;
+    }
+    if (l.categoria === 'encargo_atraso' || l.categoria === 'encargo') {
+      resultado.totalEncargosAtraso += l.debito;
+    }
+  }
+
+  // Saldo remanescente em aberto entra como recebível final
+  const ultimoSaldo = ledger[ledger.length - 1]?.saldo;
+  if (ultimoSaldo > 0.01) {
+    resultado.saldoEmAberto = ultimoSaldo;
+    eventos.push({
+      data: parseDataBR(ledger[ledger.length - 1].dataLancamento),
+      valor: ultimoSaldo
+    });
+  }
+  resultado.fluxoCaixa = eventos;
+
+  // XIRR anual → taxa mensal equivalente
+  resultado.taxaEfetivaTIR = calcularXIRR(eventos);
+  if (resultado.taxaEfetivaTIR != null && isFinite(resultado.taxaEfetivaTIR)) {
+    resultado.taxaEfetivaMensal = Math.pow(1 + resultado.taxaEfetivaTIR, 1 / 12) - 1;
+  }
+
+  // Períodos entre liquidações — taxa efetiva por dias corridos reais:
+  // taxaPeriodo = (juros+encargos)/saldoInicial · mensal equiv = (1+t)^(30/dias)−1
+  let saldoInicioPeriodo = null;
+  let jurosPeriodo = 0;
+  let encargosPeriodo = 0;
+  let dataInicioPeriodo = null;
+
+  for (const l of ledger) {
+    if (l.categoria === 'liberacao') {
+      saldoInicioPeriodo = l.saldo;
+      dataInicioPeriodo = parseDataBR(l.dataReferencia);
+      continue;
+    }
+    if (l.categoria === 'juros') jurosPeriodo += l.debito;
+    if (l.categoria === 'encargo_atraso' || l.categoria === 'encargo') encargosPeriodo += l.debito;
+
+    if (l.categoria === 'pagamento') {
+      if (dataInicioPeriodo == null) { // liquidação antes de qualquer liberação — ignora período
+        saldoInicioPeriodo = l.saldo;
+        dataInicioPeriodo = parseDataBR(l.dataLancamento);
+        jurosPeriodo = 0; encargosPeriodo = 0;
+        continue;
+      }
+      const dataFim = parseDataBR(l.dataLancamento);
+      const dias = Math.round((dataFim - dataInicioPeriodo) / 86400000);
+      const taxaPeriodo = saldoInicioPeriodo > 0
+        ? (jurosPeriodo + encargosPeriodo) / saldoInicioPeriodo
+        : 0;
+      const taxaMensalEquiv = dias > 0
+        ? Math.pow(1 + taxaPeriodo, 30 / dias) - 1
+        : 0;
+
+      resultado.periodos.push({
+        inicio: dataInicioPeriodo,
+        fim: dataFim,
+        dias,
+        saldoInicial: saldoInicioPeriodo,
+        juros: jurosPeriodo,
+        encargos: encargosPeriodo,
+        pagamento: l.credito,
+        saldoFinal: l.saldo,
+        taxaEfetivaMensal: taxaMensalEquiv
+      });
+
+      saldoInicioPeriodo = l.saldo;
+      dataInicioPeriodo = dataFim;
+      jurosPeriodo = 0;
+      encargosPeriodo = 0;
+    }
+  }
+
+  return resultado;
+}
+
 // ─── EXTRAÇÃO PARA ATUALIZAÇÃO ───────────────────────────
 function extrairLancamentosAtualizacao(texto) {
   const T = texto.toUpperCase();
@@ -8720,12 +9060,15 @@ function preencherExtratoConta(dadosConta) {
 
 // Painel "Encargos identificados no extrato" — resumo mensal de juros,
 // tarifas, multas, IOF e seguros lidos do extrato de conta corrente.
-function exibirAnaliseEncargos(dadosConta) {
-  let box = document.getElementById('ext-analise-encargos');
+function exibirAnaliseEncargos(dadosConta, anchorId) {
+  // anchorId permite reutilizar o painel em outras abas (ex.: Inadimplência)
+  const aid = anchorId || 'status-upload-extrato';
+  const boxId = aid === 'status-upload-extrato' ? 'ext-analise-encargos' : aid + '-analise-encargos';
+  let box = document.getElementById(boxId);
   if (!box) {
     box = document.createElement('div');
-    box.id = 'ext-analise-encargos';
-    const anchor = document.getElementById('status-upload-extrato');
+    box.id = boxId;
+    const anchor = document.getElementById(aid);
     if (anchor && anchor.parentNode) anchor.parentNode.insertAdjacentElement('afterend', box);
     else { const form = document.getElementById('extrato-form'); if (form) form.prepend(box); else return; }
   }
@@ -8782,6 +9125,286 @@ function exibirAnaliseEncargos(dadosConta) {
     </div>`;
 }
 
+// ─── PREENCHIMENTO — SIMULADOR (contrato / ficha SISBR) ──
+function _setCampoIA(id, val, fmt) {
+  const el = document.getElementById(id);
+  if (!el || val == null || val === '') return false;
+  el.value = fmt ? fmt(val) : val;
+  highlightCampoIA(el);
+  return true;
+}
+
+function preencherCamposSimulador(dc) {
+  let n = 0;
+  if (_setCampoIA('valor-liquido', dc.valor_financiado, _numToBRL)) n++;
+  if (_setCampoIA('num-parcelas', dc.num_parcelas)) n++;
+  if (_setCampoIA('valor-parcela', dc.valor_parcela, _numToBRL)) n++;
+  if (dc.sistema_amortizacao && ['price', 'sac', 'sacre'].includes(dc.sistema_amortizacao)) {
+    const el = document.getElementById('sistema-amort');
+    if (el) { el.value = dc.sistema_amortizacao; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
+  }
+  const dtContrato = _ddmmToISO(dc.data_assinatura || dc.data_liberacao || '');
+  if (dtContrato && _setCampoIA('data-contrato', dtContrato)) {
+    document.getElementById('data-contrato').dispatchEvent(new Event('change'));
+    n++;
+  }
+  if (_setCampoIA('data-liberacao', _ddmmToISO(dc.data_liberacao || ''))) n++;
+  if (_setCampoIA('data-primeiro-vencimento', _ddmmToISO(dc.data_primeiro_vencimento || ''))) n++;
+  if (typeof onCarenciaChange === 'function') onCarenciaChange();
+  if (_setCampoIA('iof-declarado', dc.iof, _numToBRL)) n++;
+  if (_setCampoIA('seguro-prestamista', dc.seguro_prestamista, _numToBRL)) n++;
+  if (typeof onEncargosChange === 'function') onEncargosChange();
+  return n;
+}
+
+function preencherFichaSisbrSimulador(c) {
+  let n = 0;
+  if (_setCampoIA('valor-liquido', c.valorOperacao, _numToBRL)) n++;
+  if (_setCampoIA('num-parcelas', c.parcelas)) n++;
+  if (c.modalidadeApp) {
+    const el = document.getElementById('modalidade');
+    if (el) { el.value = c.modalidadeApp; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
+  }
+  const dtOp = _ddmmToISO(c.dataOperacao || '');
+  if (dtOp && _setCampoIA('data-contrato', dtOp)) {
+    document.getElementById('data-contrato').dispatchEvent(new Event('change'));
+    n++;
+  }
+  if (_setCampoIA('data-liberacao', dtOp)) n++;
+  if (_setCampoIA('data-primeiro-vencimento', _ddmmToISO(c.dataVenc1Parc || ''))) n++;
+  if (typeof onCarenciaChange === 'function') onCarenciaChange();
+  if (_setCampoIA('iof-declarado', c.valorIOF, _numToBRL)) n++;
+  return n;
+}
+
+// ─── PREENCHIMENTO — INADIMPLÊNCIA (contrato / ficha SISBR) ──
+function preencherCamposInadContrato(dc) {
+  let n = 0;
+  if (_setCampoIA('inad2-valor', dc.valor_financiado, _numToBRL)) n++;
+  if (_setCampoIA('inad2-parcelas', dc.num_parcelas)) n++;
+  if (_setCampoIA('inad2-parcela-val', dc.valor_parcela, _numToBRL)) n++;
+  if (dc.sistema_amortizacao && ['price', 'sac', 'sacre'].includes(dc.sistema_amortizacao)) {
+    const el = document.getElementById('inad2-sistema');
+    if (el) { el.value = dc.sistema_amortizacao; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
+  }
+  if (_setCampoIA('inad2-data-liberacao', _ddmmToISO(dc.data_liberacao || ''))) n++;
+  if (_setCampoIA('inad2-data-inicio', _ddmmToISO(dc.data_primeiro_vencimento || ''))) n++;
+  if (typeof onInad2CarenciaChange === 'function') onInad2CarenciaChange();
+  if (typeof atualizarIndicadorContrato === 'function') atualizarIndicadorContrato();
+  return n;
+}
+
+function preencherFichaSisbrInadCampos(c) {
+  let n = 0;
+  if (_setCampoIA('inad2-valor', c.valorOperacao, _numToBRL)) n++;
+  if (_setCampoIA('inad2-parcelas', c.parcelas)) n++;
+  if (c.sistemaAmortizacao === 'sac_dias_corridos') {
+    const el = document.getElementById('inad2-sistema');
+    if (el) { el.value = 'sac'; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
+  }
+  if (_setCampoIA('inad2-data-liberacao', _ddmmToISO(c.dataOperacao || ''))) n++;
+  if (_setCampoIA('inad2-data-inicio', _ddmmToISO(c.dataVenc1Parc || ''))) n++;
+  if (typeof onInad2CarenciaChange === 'function') onInad2CarenciaChange();
+  if (typeof atualizarIndicadorContrato === 'function') atualizarIndicadorContrato();
+  return n;
+}
+
+// ─── FICHA SISBR — EXTRATO: campos + tabela + painel ─────
+function _sisbrSistemaLabel(c) {
+  return c.sistemaAmortizacao === 'sac_dias_corridos' ? 'SAC (dias corridos)'
+    : c.sistemaAmortizacao === 'pagamento_unico' ? 'Pagamento único'
+    : c.sistemaAmortizacao === 'price' ? 'Price'
+    : (c.indicadorCalculo || '—');
+}
+
+function preencherFichaSisbrExtrato(dadosFicha, apuracao) {
+  const c = dadosFicha.cabecalho;
+  _setCampoIA('ext-valor', c.valorOperacao, _numToBRL);
+  _setCampoIA('ext-taxa-nominal', c.taxaJuros != null ? c.taxaJuros.toFixed(2) : null);
+  _setCampoIA('ext-parcelas', c.parcelas);
+  if (c.sistemaAmortizacao) {
+    const el = document.getElementById('ext-sistema');
+    if (el) { el.value = c.sistemaAmortizacao === 'price' ? 'price' : 'sac'; highlightCampoIA(el); }
+  }
+  if (c.modalidadeApp) {
+    const el = document.getElementById('ext-modalidade');
+    if (el) { el.value = c.modalidadeApp; el.dispatchEvent(new Event('change')); highlightCampoIA(el); }
+  }
+  _setCampoIA('ext-data-inicio', _ddmmToISO(c.dataOperacao || ''));
+
+  // Tabela: uma linha por período de liquidação (mês/ano do pagamento)
+  if (apuracao.periodos.length) {
+    const tbody = document.getElementById('ext-tabela-body');
+    if (tbody) { tbody.innerHTML = ''; _extRowId = 0; }
+    apuracao.periodos.forEach(p => {
+      extAddRow();
+      const id = _extRowId;
+      const mes = String(p.fim.getMonth() + 1).padStart(2, '0') + '/' + p.fim.getFullYear();
+      const mesEl = document.getElementById('ext-mesano-' + id);
+      const pagoEl = document.getElementById('ext-pago-' + id);
+      if (mesEl) { mesEl.value = mes; highlightCampoIA(mesEl); }
+      if (pagoEl && p.pagamento > 0) { pagoEl.value = _numToBRL(p.pagamento); highlightCampoIA(pagoEl); }
+    });
+  }
+}
+
+// Painel de resultado da ficha SISBR no container isolado do Extrato.
+// Busca a taxa média BCB da COMPETÊNCIA da operação (série da modalidade).
+async function renderFichaSisbrExtrato(dadosFicha, apuracao) {
+  const resArea = document.getElementById('results-area');
+  const resSim  = document.getElementById('results-simulador');
+  const resExt  = document.getElementById('results-extrato');
+  if (!resArea || !resExt) return;
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = 'none';
+  resArea.style.display = '';
+  if (resSim) resSim.style.display = 'none';
+  resExt.style.display = '';
+
+  const c = dadosFicha.cabecalho;
+  const tirMensal = apuracao.taxaEfetivaMensal != null ? apuracao.taxaEfetivaMensal * 100 : null;
+  const fmtData = d => d instanceof Date ? d.toLocaleDateString('pt-BR') : (d || '—');
+
+  const linhasPeriodos = apuracao.periodos.map((p, i) => `<tr>
+    <td>${i + 1}</td>
+    <td>${fmtData(p.inicio)}</td>
+    <td>${fmtData(p.fim)}</td>
+    <td style="text-align:right">${p.dias}</td>
+    <td style="text-align:right">${fmtBRL(p.saldoInicial)}</td>
+    <td style="text-align:right;color:var(--red,#ef4444)">${fmtBRL(p.juros)}</td>
+    <td style="text-align:right;color:var(--amber,#f59e0b)">${p.encargos > 0 ? fmtBRL(p.encargos) : '—'}</td>
+    <td style="text-align:right">${fmtBRL(p.pagamento)}</td>
+    <td style="text-align:right;color:var(--accent)">${fmtPct(p.taxaEfetivaMensal * 100)}</td>
+  </tr>`).join('');
+
+  resExt.innerHTML = `
+    <div class="section-heading">Ficha Gráfica SISBR — Apuração por Fluxo Real</div>
+    <div style="background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--accent);margin-bottom:10px">FICHA SISBR IDENTIFICADA</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;font-family:'DM Mono',monospace">
+        ${c.cooperativa ? 'Cooperativa: <span style="color:var(--text)">' + c.cooperativa + '</span><br>' : ''}
+        Contrato: <span style="color:var(--text)">${c.contrato || '—'}</span>
+        &nbsp;·&nbsp; Sistema: <span style="color:var(--text)">${_sisbrSistemaLabel(c)}</span>
+        ${c.modalidadeBacen ? '&nbsp;·&nbsp; Modalidade BACEN: <span style="color:var(--text)">' + c.modalidadeBacen + '</span>' : ''}
+      </div>
+    </div>
+    <div class="metrics-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="mc-label">Taxa contratada</div><div class="mc-value">${c.taxaJuros != null ? fmtPct(c.taxaJuros) : '—'} a.m.</div><div class="mc-sub">cabeçalho da ficha</div></div>
+      <div class="metric-card"><div class="mc-label">CET declarado</div><div class="mc-value">${c.cetMensal != null ? fmtPct(c.cetMensal) : '—'} a.m.</div><div class="mc-sub">${c.cetAnual != null ? fmtPct(c.cetAnual) + ' a.a.' : ''}</div></div>
+      <div class="metric-card highlight"><div class="mc-label">Taxa efetiva apurada (XIRR)</div><div class="mc-value accent">${tirMensal != null ? fmtPct(tirMensal) : 'n/d'} a.m.</div><div class="mc-sub">TIR do fluxo real por datas</div></div>
+      <div class="metric-card"><div class="mc-label">Taxa média BCB</div><div class="mc-value" id="sisbr-bcb-taxa">buscando…</div><div class="mc-sub" id="sisbr-bcb-sub">competência da operação</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;font-size:12px;font-family:'DM Mono',monospace">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Valor liberado</div><strong>${fmtBRL(apuracao.valorLiberado)}</strong></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total pago</div><strong>${fmtBRL(apuracao.totalPago)}</strong></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Juros apropriados</div><strong style="color:var(--red,#ef4444)">${fmtBRL(apuracao.totalJurosApropriados)}</strong></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Encargos de atraso</div><strong style="color:var(--amber,#f59e0b)">${fmtBRL(apuracao.totalEncargosAtraso)}</strong></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saldo em aberto</div><strong>${fmtBRL(apuracao.saldoEmAberto)}</strong></div>
+    </div>
+    ${apuracao.periodos.length ? `
+    <div class="section-heading" style="font-size:11px">Apuração período a período (dias corridos reais)</div>
+    <div style="overflow-x:auto">
+      <table class="amort-table" style="width:100%;font-size:10.5px">
+        <thead><tr><th>#</th><th>Início</th><th>Fim</th><th>Dias</th><th>Saldo inicial</th><th>Juros</th><th>Encargos</th><th>Pagamento</th><th>Taxa ef. mensal</th></tr></thead>
+        <tbody>${linhasPeriodos}</tbody>
+      </table>
+    </div>` : '<div class="disclaimer">Nenhum período de liquidação identificado no ledger.</div>'}
+    <div class="disclaimer" style="margin-top:14px">
+      Apuração reconstruída do livro-razão da Ficha Gráfica (SISBR 2.0). Taxa efetiva calculada por XIRR — TIR com datas irregulares — sobre liberações, liquidações e saldo em aberto. Valores de caráter informativo; revise antes de uso profissional. · <a href="termos.html" style="color:inherit;text-decoration:underline">Termos de Uso</a>
+    </div>`;
+
+  // Comparativo BCB assíncrono — série da modalidade na competência da operação
+  const mod = c.modalidadeApp;
+  const elTaxa = () => document.getElementById('sisbr-bcb-taxa');
+  const elSub  = () => document.getElementById('sisbr-bcb-sub');
+  if (mod && c.dataOperacao && typeof buscarTaxaPorData === 'function') {
+    try {
+      const r = await buscarTaxaPorData(SGS_CODIGOS[mod], parseDataBR(c.dataOperacao), SGS_SERIES_FALLBACK[mod]);
+      if (r && elTaxa()) {
+        elTaxa().textContent = fmtPct(r.taxaMes) + ' a.m.';
+        if (elSub()) elSub().textContent = (BACEN[mod]?.nome || mod) + ' · ' + r.competencia + (r.usouAnterior ? ' (defasada)' : '');
+        return;
+      }
+    } catch (_) {}
+  }
+  if (elTaxa()) {
+    const fb = BACEN[mod || 'capital'];
+    elTaxa().textContent = fb ? fmtPct(fb.taxaMes) + ' a.m.' : 'n/d';
+    if (elSub()) elSub().textContent = fb ? (fb.nome + ' · competência atual') : 'modalidade não mapeada';
+  }
+}
+
+// ─── FICHA SISBR — INADIMPLÊNCIA: períodos de atraso + juros × encargos ──
+function _sisbrPeriodosInadimplencia(ledger) {
+  const grupos = [];
+  let atual = null;
+  for (const l of ledger) {
+    if (l.categoria === 'encargo_atraso') {
+      if (!atual) atual = { inicio: l.dataLancamento, fim: l.dataLancamento, total: 0, lancs: 0, encerradoPor: null };
+      atual.fim = l.dataLancamento;
+      atual.total += l.debito;
+      atual.lancs++;
+    } else if (l.categoria === 'pagamento' && atual) {
+      atual.encerradoPor = l.dataLancamento;
+      grupos.push(atual);
+      atual = null;
+    }
+  }
+  if (atual) grupos.push(atual);
+  return grupos;
+}
+
+function renderFichaSisbrInad(dadosFicha, apuracao) {
+  const area = document.getElementById('inad-results-area');
+  if (!area) return;
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = 'none';
+  const resArea = document.getElementById('results-area');
+  if (resArea) resArea.style.display = 'none';
+  area.style.display = '';
+  window._inadState = window._inadState || {};
+  window._inadState.sisbr = true;
+
+  const c = dadosFicha.cabecalho;
+  const grupos = _sisbrPeriodosInadimplencia(dadosFicha.ledger);
+  const multas = dadosFicha.ledger.filter(l => l.categoria === 'multa').reduce((s, l) => s + l.debito, 0);
+  const totalMoratorios = apuracao.totalEncargosAtraso + multas;
+
+  area.innerHTML = `
+    <div class="section-heading">Ficha SISBR — Análise de Inadimplência</div>
+    <div style="background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text2);line-height:1.8">
+      ${c.cooperativa ? 'Cooperativa: <span style="color:var(--text)">' + c.cooperativa + '</span> · ' : ''}
+      Contrato: <span style="color:var(--text)">${c.contrato || '—'}</span> ·
+      Sistema: <span style="color:var(--text)">${_sisbrSistemaLabel(c)}</span> ·
+      Taxa: <span style="color:var(--text)">${c.taxaJuros != null ? fmtPct(c.taxaJuros) + ' a.m.' : '—'}</span>
+      ${c.taxaMora != null ? ' · Mora: <span style="color:var(--text)">' + fmtPct(c.taxaMora) + ' a.m.</span>' : ''}
+      ${c.taxaMulta != null ? ' · Multa: <span style="color:var(--text)">' + fmtPct(c.taxaMulta) + '</span>' : ''}
+    </div>
+    <div class="metrics-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="mc-label">Juros remuneratórios apropriados</div><div class="mc-value" style="font-size:18px;color:var(--red,#ef4444)">${fmtBRL(apuracao.totalJurosApropriados)}</div><div class="mc-sub">categoria "apropriação de juros"</div></div>
+      <div class="metric-card warn"><div class="mc-label">Encargos moratórios</div><div class="mc-value warn" style="font-size:18px">${fmtBRL(totalMoratorios)}</div><div class="mc-sub">atraso/RRF ${fmtBRL(apuracao.totalEncargosAtraso)}${multas > 0 ? ' + multas ' + fmtBRL(multas) : ''}</div></div>
+      <div class="metric-card"><div class="mc-label">Saldo em aberto</div><div class="mc-value" style="font-size:18px">${fmtBRL(apuracao.saldoEmAberto)}</div><div class="mc-sub">último saldo do ledger</div></div>
+      <div class="metric-card highlight"><div class="mc-label">Taxa efetiva do fluxo (XIRR)</div><div class="mc-value accent" style="font-size:18px">${apuracao.taxaEfetivaMensal != null ? fmtPct(apuracao.taxaEfetivaMensal * 100) : 'n/d'} a.m.</div><div class="mc-sub">fluxo real até a data de corte</div></div>
+    </div>
+    <div class="stj-badge-warn" style="margin-bottom:14px;font-size:11px;line-height:1.6">
+      <strong>Separação juros remuneratórios × encargos moratórios:</strong> os juros remuneratórios (${fmtBRL(apuracao.totalJurosApropriados)}) são apropriados sobre o saldo devedor; os encargos moratórios (${fmtBRL(totalMoratorios)}) incidem apenas nos períodos de atraso. Verifique se os encargos de atraso incidem sobre saldo que JÁ CONTÉM juros apropriados — indício de capitalização (juros sobre juros) a ser quesitado.
+    </div>
+    ${grupos.length ? `
+    <div class="section-heading" style="font-size:11px">Períodos de inadimplência detectados (lançamentos de encargo por atraso)</div>
+    <div style="overflow-x:auto;margin-bottom:14px">
+      <table class="amort-table" style="width:100%;font-size:10.5px">
+        <thead><tr><th>#</th><th>Início</th><th>Fim</th><th>Lançamentos</th><th>Encargos no período</th><th>Encerrado por pagamento em</th></tr></thead>
+        <tbody>${grupos.map((g, i) => `<tr>
+          <td>${i + 1}</td><td>${g.inicio}</td><td>${g.fim}</td>
+          <td style="text-align:right">${g.lancs}</td>
+          <td style="text-align:right;color:var(--amber,#f59e0b)">${fmtBRL(g.total)}</td>
+          <td>${g.encerradoPor || '<span style="color:var(--red,#ef4444)">em aberto</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : '<div class="disclaimer" style="margin-bottom:14px">Nenhum lançamento de encargo por atraso (RRF) identificado no ledger — sem períodos de inadimplência detectados.</div>'}
+    <div class="disclaimer">Análise reconstruída do livro-razão SISBR. Caráter informativo — revise antes de uso profissional.</div>`;
+}
+
 // ─── PREENCHIMENTO — ATUALIZAÇÃO ─────────────────────────
 function preencherCamposAtualizacao(dados) {
   if (!dados.lancamentos || !dados.lancamentos.length) return;
@@ -8798,94 +9421,148 @@ function preencherCamposAtualizacao(dados) {
   });
 }
 
-// ─── EVENT LISTENERS ─────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  const inputExtrato = document.getElementById('input-pdf-extrato');
-  const inputAtl = document.getElementById('input-pdf-atualizacao');
+// ─── UPLOAD UNIVERSAL — roteamento tipo de documento × aba ───────────────
+// | Tipo            | Simulador           | Extrato          | Inadimplência     | Atualização             |
+// | contrato        | preenche campos     | preenche campos  | preenche campos   | aviso: use o Simulador  |
+// | conta_corrente  | aviso: use Extrato  | análise encargos | análise encargos  | aviso                   |
+// | ficha_sisbr     | preenche cabeçalho  | fluxo completo   | fluxo + encargos  | aviso                   |
+// | desconhecido    | tenta contrato      | tenta contrato   | aviso             | tenta lançamentos       |
+// Obs.: na Atualização os lançamentos (valor + data-base) são tentados PRIMEIRO
+// para qualquer tipo — sentenças judiciais costumam conter palavras de contrato
+// ("CONTRATANTE", "CLÁUSULA") e seriam bloqueadas pelo aviso; isso preserva o
+// comportamento anterior da aba.
+async function processarUploadDocumento(arquivo, aba) {
+  const statusIds = {
+    simulador: 'status-upload-simulador',
+    extrato: 'status-upload-extrato',
+    inadimplencia: 'status-upload-inadimplencia',
+    atualizacao: 'status-upload-atualizacao'
+  };
+  const status = document.getElementById(statusIds[aba]);
+  if (!arquivo || !status) return;
+  _ocrStatusId = statusIds[aba];
+  status.style.display = '';
 
-  if (inputExtrato) {
-    inputExtrato.addEventListener('change', async function(e) {
-      const arquivo = e.target.files[0];
-      if (!arquivo) return;
-      _ocrStatusId = 'status-upload-extrato';
-      const status = document.getElementById('status-upload-extrato');
-      status.style.display = '';
-      status.className = 'upload-loading';
-      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
-      try {
-        const resultado = await extrairTextoPDF(arquivo);
-        const metodo = resultado.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)';
-        const tipo = detectarTipoDocumento(resultado.texto);
-
-        if (tipo === 'conta_corrente') {
-          status.innerHTML = '<div class="ia-spinner"></div><span>Lendo lançamentos do extrato...</span>';
-          const dadosConta = extrairExtratoConta(resultado.texto);
-
-          if (dadosConta.lancamentos.length === 0) {
-            status.className = 'upload-aviso';
-            status.innerHTML = `⚠️ Extrato de conta corrente identificado, mas não foi possível ler os lançamentos automaticamente.<br><small>O layout pode ser incomum. Preencha manualmente abaixo.</small>`;
-          } else {
-            preencherExtratoConta(dadosConta);
-            exibirAnaliseEncargos(dadosConta);
-            const nMeses = Object.keys(dadosConta.resumoPorMes).length;
-            status.className = 'upload-sucesso';
-            status.innerHTML = `✅ Extrato de conta corrente ${dadosConta.banco ? '(' + dadosConta.banco + ') ' : ''}identificado${metodo}!<br>${dadosConta.lancamentos.length} lançamento(s) em ${nMeses} mês(es).<br><small>Encargos resumidos abaixo — revise os valores antes de calcular.</small>`;
-          }
-
-        } else if (tipo === 'contrato') {
-          status.innerHTML = '<div class="ia-spinner"></div><span>Identificando dados do contrato...</span>';
-          const dc = extrairDadosContrato(resultado.texto);
-          const linhas = extrairLinhasExtrato(resultado.texto);
-          preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
-          const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
-          status.className = 'upload-sucesso';
-          status.innerHTML = `✅ Contrato identificado${metodo} — ${total} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`;
-
-        } else {
-          // Tipo desconhecido: tenta o fluxo de contrato como fallback
-          const dc = extrairDadosContrato(resultado.texto);
-          const linhas = extrairLinhasExtrato(resultado.texto);
-          const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
-          if (total > 0) {
-            preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
-            status.className = 'upload-sucesso';
-            status.innerHTML = `✅ ${total} campo(s) identificado(s)${metodo}.<br><small>Revise antes de calcular.</small>`;
-          } else {
-            status.className = 'upload-aviso';
-            status.innerHTML = `⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos de financiamento (CCB) e extratos de conta corrente.<br><small>Preencha manualmente abaixo.</small>`;
-          }
-        }
-      } catch(erro) {
-        status.className = 'upload-erro';
-        status.innerHTML = `❌ ${erro.message}<br><small>Preencha os campos manualmente abaixo.</small>`;
-      }
-      e.target.value = '';
-    });
+  // Gate Premium — verificação central (defesa além do bloqueio visual).
+  // O processamento é 100% local (PDF.js/Tesseract) — não há endpoint de
+  // servidor envolvido na leitura; o tier é validado pelo backend no login.
+  if (window.userPremium !== true) {
+    status.className = 'upload-aviso';
+    status.innerHTML = '🔒 Upload com leitura automática disponível no plano <strong>Premium</strong>. <a href="https://pay.kiwify.com.br/1xAQ6ev" target="_blank" style="color:inherit;font-weight:700;text-decoration:underline">Fazer upgrade</a>';
+    return;
   }
 
-  if (inputAtl) {
-    inputAtl.addEventListener('change', async function(e) {
-      const arquivo = e.target.files[0];
-      if (!arquivo) return;
-      _ocrStatusId = 'status-upload-atualizacao';
-      const status = document.getElementById('status-upload-atualizacao');
-      status.style.display = '';
-      status.className = 'upload-loading';
-      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
-      try {
-        const resultado = await extrairTextoPDF(arquivo);
-        status.innerHTML = '<div class="ia-spinner"></div><span>Identificando valores e datas...</span>';
-        const lancs = extrairLancamentosAtualizacao(resultado.texto);
+  status.className = 'upload-loading';
+  status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
+  try {
+    const resultado = await extrairTextoPDF(arquivo);
+    const metodo = resultado.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)';
+    const tipo = detectarTipoDocumento(resultado.texto);
+    const avisar  = (msg) => { status.className = 'upload-aviso'; status.innerHTML = msg; };
+    const sucesso = (msg) => { status.className = 'upload-sucesso'; status.innerHTML = msg; };
+
+    // ── ATUALIZAÇÃO: lançamentos primeiro (comportamento preservado) ──
+    if (aba === 'atualizacao') {
+      status.innerHTML = '<div class="ia-spinner"></div><span>Identificando valores e datas...</span>';
+      const lancs = extrairLancamentosAtualizacao(resultado.texto);
+      if (lancs.length > 0) {
         preencherCamposAtualizacao({ lancamentos: lancs });
-        status.className = 'upload-sucesso';
-        status.innerHTML = `✅ ${lancs.length} lançamento(s) identificado(s).<br><small>Revise os valores antes de calcular.</small>`;
-      } catch(erro) {
-        status.className = 'upload-erro';
-        status.innerHTML = `❌ ${erro.message}<br><small>Adicione os lançamentos manualmente.</small>`;
+        sucesso(`✅ ${lancs.length} lançamento(s) identificado(s)${metodo}.<br><small>Revise os valores antes de calcular.</small>`);
+      } else if (tipo === 'contrato') {
+        avisar('⚠️ Este documento parece ser um <strong>contrato de financiamento</strong> — use a aba <strong>Simulador</strong> para analisá-lo.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>');
+      } else if (tipo === 'conta_corrente' || tipo === 'ficha_sisbr') {
+        avisar(`⚠️ Este documento parece ser ${tipo === 'ficha_sisbr' ? 'uma <strong>ficha de operação (SISBR)</strong>' : 'um <strong>extrato bancário</strong>'} — use a aba <strong>Extrato</strong>.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>`);
+      } else {
+        avisar('⚠️ Nenhum valor com data-base identificado.<br><small>Adicione os lançamentos manualmente.</small>');
       }
+      return;
+    }
+
+    // ── FICHA GRÁFICA SISBR (Sicoob) ──
+    if (tipo === 'ficha_sisbr') {
+      status.innerHTML = '<div class="ia-spinner"></div><span>Reconstruindo o fluxo da ficha SISBR...</span>';
+      const ficha = extrairFichaSisbr(resultado.texto);
+      const apuracao = apurarTaxaEfetivaPorFluxo(ficha);
+      if (aba === 'simulador') {
+        const n = preencherFichaSisbrSimulador(ficha.cabecalho);
+        sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Ficha gráfica não tem parcela fixa — para a apuração completa por fluxo real, use a aba <strong>Extrato</strong>.</small>`);
+      } else if (aba === 'extrato') {
+        preencherFichaSisbrExtrato(ficha, apuracao);
+        await renderFichaSisbrExtrato(ficha, apuracao);
+        sucesso(`✅ Ficha SISBR ${ficha.cabecalho.cooperativa ? '(' + ficha.cabecalho.cooperativa + ') ' : ''}identificada${metodo}!<br>${ficha.ledger.length} lançamento(s) no ledger · ${apuracao.periodos.length} período(s) de liquidação.<br><small>Apuração por fluxo real no painel de resultados.</small>`);
+      } else {
+        const n = preencherFichaSisbrInadCampos(ficha.cabecalho);
+        renderFichaSisbrInad(ficha, apuracao);
+        sucesso(`✅ Ficha SISBR identificada${metodo} — ${n} campo(s) preenchido(s).<br><small>Juros remuneratórios × encargos moratórios separados no painel de resultados.</small>`);
+      }
+      return;
+    }
+
+    // ── EXTRATO DE CONTA CORRENTE ──
+    if (tipo === 'conta_corrente') {
+      if (aba === 'simulador') {
+        avisar('⚠️ Este documento parece ser um <strong>extrato de conta corrente</strong> — use a aba <strong>Extrato</strong> para a análise de encargos.<br><small>Aqui, envie o contrato de financiamento ou CCB.</small>');
+        return;
+      }
+      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo lançamentos do extrato...</span>';
+      const dadosConta = extrairExtratoConta(resultado.texto);
+      if (dadosConta.lancamentos.length === 0) {
+        avisar('⚠️ Extrato de conta corrente identificado, mas não foi possível ler os lançamentos automaticamente.<br><small>O layout pode ser incomum. Preencha manualmente abaixo.</small>');
+        return;
+      }
+      const nMeses = Object.keys(dadosConta.resumoPorMes).length;
+      if (aba === 'extrato') {
+        preencherExtratoConta(dadosConta);
+        exibirAnaliseEncargos(dadosConta);
+        sucesso(`✅ Extrato de conta corrente ${dadosConta.banco ? '(' + dadosConta.banco + ') ' : ''}identificado${metodo}!<br>${dadosConta.lancamentos.length} lançamento(s) em ${nMeses} mês(es).<br><small>Encargos resumidos abaixo — revise os valores antes de calcular.</small>`);
+      } else {
+        exibirAnaliseEncargos(dadosConta, 'status-upload-inadimplencia');
+        sucesso(`✅ Extrato ${dadosConta.banco ? '(' + dadosConta.banco + ') ' : ''}identificado${metodo} — ${dadosConta.lancamentos.length} lançamento(s) em ${nMeses} mês(es); encargos resumidos abaixo.<br><small>Preencha os dados do contrato para reconstituir o fluxo teórico.</small>`);
+      }
+      return;
+    }
+
+    // ── CONTRATO (ou desconhecido — tenta contrato como fallback) ──
+    const dc = extrairDadosContrato(resultado.texto);
+    if (aba === 'simulador') {
+      const n = preencherCamposSimulador(dc);
+      if (n > 0) sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${n} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
+      else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
+    } else if (aba === 'extrato') {
+      const linhas = extrairLinhasExtrato(resultado.texto);
+      const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
+      if (total > 0) {
+        preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+        sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${total} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
+      } else {
+        avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
+      }
+    } else {
+      const n = preencherCamposInadContrato(dc);
+      if (tipo === 'contrato' && n > 0) sucesso(`✅ Contrato identificado${metodo} — ${n} campo(s) preenchido(s).<br><small>Complete as parcelas pagas/vencidas e calcule.</small>`);
+      else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> ficha da operação (SISBR), extrato do financiamento ou contrato.<br><small>Preencha manualmente abaixo.</small>');
+    }
+  } catch (erro) {
+    status.className = 'upload-erro';
+    status.innerHTML = `❌ ${erro.message}<br><small>Preencha os campos manualmente abaixo.</small>`;
+  }
+}
+
+// ─── EVENT LISTENERS — upload nas 4 abas ─────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  [['input-pdf-simulador', 'simulador'],
+   ['input-pdf-extrato', 'extrato'],
+   ['input-pdf-inadimplencia', 'inadimplencia'],
+   ['input-pdf-atualizacao', 'atualizacao']].forEach(([id, aba]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', async function(e) {
+      const arquivo = e.target.files[0];
+      if (!arquivo) return;
+      await processarUploadDocumento(arquivo, aba);
       e.target.value = '';
     });
-  }
+  });
 });
 </script>
 
