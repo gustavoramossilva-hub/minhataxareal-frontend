@@ -692,6 +692,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     }
     initCarenciaGate();
     initEncargosGate();
+    if (typeof initUploadGate === 'function') initUploadGate();
     initLaudoConfig();
     const nameEl = document.getElementById('user-header-name');
     if (nameEl) nameEl.textContent = me.name || '';
@@ -804,6 +805,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 .upload-sucesso{font-size:11px;color:#a3e635;background:rgba(163,230,53,.08);border:1px solid rgba(163,230,53,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
 .upload-erro{font-size:11px;color:#f87171;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
 .upload-aviso{font-size:11px;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px;line-height:1.5}
+.btn-upload-locked{opacity:.55;cursor:not-allowed;filter:grayscale(.35)}
 .separador-ou{font-size:10px;color:var(--text3);text-align:center;margin:0 0 14px;letter-spacing:.08em}
 .campo-ia-preenchido{border-color:rgba(163,230,53,.55)!important;background:rgba(163,230,53,.05)!important}
 @keyframes ia-spin{to{transform:rotate(360deg)}}
@@ -9431,6 +9433,47 @@ function preencherCamposAtualizacao(dados) {
 // para qualquer tipo — sentenças judiciais costumam conter palavras de contrato
 // ("CONTRATANTE", "CLÁUSULA") e seriam bloqueadas pelo aviso; isso preserva o
 // comportamento anterior da aba.
+// ─── GATE PREMIUM — botões de upload (Simulador e Inadimplência) ─────────
+// Extrato e Atualização já ficam atrás dos gates de aba existentes; o
+// Simulador é acessível ao plano Standard, então o botão precisa de bloqueio
+// próprio: usuário Standard vê o botão desabilitado (tooltip) e o clique NÃO
+// abre o seletor de arquivo — mostra o CTA de upgrade. A verificação central
+// de tier em processarUploadDocumento() cobre as 4 abas como defesa extra.
+// A leitura é 100% local (PDF.js/Tesseract) — nenhuma rota de servidor
+// participa do processamento; o tier é validado pelo backend na autenticação.
+function initUploadGate() {
+  const isPremium = window.userPremium === true;
+  [['upload-simulador-box', 'input-pdf-simulador', 'status-upload-simulador'],
+   ['upload-inadimplencia-box', 'input-pdf-inadimplencia', 'status-upload-inadimplencia']].forEach(([boxId, inputId, statusId]) => {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    const btn = box.querySelector('.btn-upload-ia');
+    const input = document.getElementById(inputId);
+    if (isPremium) {
+      if (input) input.removeAttribute('disabled');
+      if (btn) {
+        btn.classList.remove('btn-upload-locked');
+        btn.removeAttribute('title');
+        btn.onclick = () => { if (input) input.click(); };
+      }
+    } else {
+      if (input) input.setAttribute('disabled', 'disabled');
+      if (btn) {
+        btn.classList.add('btn-upload-locked');
+        btn.title = 'Upload com IA disponível no plano Premium';
+        btn.onclick = () => {
+          const st = document.getElementById(statusId);
+          if (st) {
+            st.style.display = '';
+            st.className = 'upload-aviso';
+            st.innerHTML = '🔒 Upload com IA disponível no plano <strong>Premium</strong>. <a href="https://pay.kiwify.com.br/1xAQ6ev" target="_blank" style="color:inherit;font-weight:700;text-decoration:underline">Fazer upgrade</a>';
+          }
+        };
+      }
+    }
+  });
+}
+
 async function processarUploadDocumento(arquivo, aba) {
   const statusIds = {
     simulador: 'status-upload-simulador',
@@ -9550,6 +9593,9 @@ async function processarUploadDocumento(arquivo, aba) {
 
 // ─── EVENT LISTENERS — upload nas 4 abas ─────────────────
 document.addEventListener('DOMContentLoaded', function() {
+  // Estado inicial do gate: bloqueado até o tier ser conhecido
+  // (aplicarDadosUsuario reaplica o gate assim que o usuário é carregado)
+  initUploadGate();
   [['input-pdf-simulador', 'simulador'],
    ['input-pdf-extrato', 'extrato'],
    ['input-pdf-inadimplencia', 'inadimplencia'],
