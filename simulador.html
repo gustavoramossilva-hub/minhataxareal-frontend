@@ -8297,16 +8297,55 @@ function extrairDadosContrato(texto) {
     if (m) { dados.cet_mensal = parseFloat(m[1].replace(',', '.')); break; }
   }
 
-  // Banco
-  const bancos = ['ITAÚ','BRADESCO','SANTANDER','BANCO DO BRASIL','CAIXA ECONÔMICA','NUBANK',
-    'INTER','C6 BANK','SAFRA','BTG','SICOOB','SICREDI','VOTORANTIM','HONDA BANK',
-    'VOLKSWAGEN FINANCEIRA','TOYOTA','PORTO SEGURO','CETELEM','BMFBOVESPA'];
-  for (const b of bancos) {
-    if (T.includes(b)) {
-      dados.nome_banco = b.charAt(0) + b.slice(1).toLowerCase();
-      break;
+  // Banco credor — palavra delimitada, nunca substring solto (teste de fogo:
+  // "intervenientes"/"Valor Interv.:" viravam "Inter"; "Caixa Econômica
+  // Federal" citada como órgão em cláusula de mandato virava credor; o
+  // cobrador terceirizado "Bradesco" de um demonstrativo virava o banco).
+  // Busca em 2 passos: primeiro na zona do credor (início do documento +
+  // janelas após rótulos "Credor(a)"/"Instituição Credora"/"Financiador"),
+  // depois no texto inteiro. Específicos antes de genéricos (ordem importa).
+  const bancos = [
+    { nome: 'Banco Itaú Consignado', rx: 'BANCO\\s+ITA[UÚ]\\s+CONSIGNADO' },
+    { nome: 'Itaú',                  rx: 'ITA[UÚ]' },
+    { nome: 'Bradesco',              rx: 'BRADESCO' },
+    { nome: 'Santander',             rx: 'SANTANDER' },
+    { nome: 'Banco do Brasil',       rx: 'BANCO\\s+DO\\s+BRASIL' },
+    { nome: 'Caixa Econômica',       rx: 'CAIXA\\s+ECON[OÔ]MICA' },
+    { nome: 'Nubank',                rx: 'NUBANK|NU\\s+PAGAMENTOS' },
+    { nome: 'Banco Inter',           rx: 'BANCO\\s+INTER' },
+    { nome: 'Banco C6 Consignado',   rx: '(?:BANCO\\s+)?C6\\s+CONSIGNADO' },
+    { nome: 'C6 Bank',               rx: 'C6\\s+BANK' },
+    { nome: 'Brazilian Mortgages',   rx: 'BRAZILIAN\\s+MORTGAGES' },
+    { nome: 'Banco Ficsa',           rx: '(?:BANCO\\s+)?FICSA' },
+    { nome: 'Safra',                 rx: 'BANCO\\s+SAFRA' },
+    { nome: 'BTG',                   rx: 'BTG' },
+    { nome: 'Sicoob',                rx: 'SICOOB' },
+    { nome: 'Sicredi',               rx: 'SICREDI' },
+    { nome: 'Votorantim',            rx: 'VOTORANTIM' },
+    { nome: 'Honda Bank',            rx: 'HONDA\\s+BANK' },
+    { nome: 'Volkswagen Financeira', rx: 'VOLKSWAGEN\\s+FINANCEIRA' },
+    { nome: 'Toyota',                rx: 'TOYOTA' },
+    { nome: 'Porto Seguro',          rx: 'PORTO\\s+SEGURO' },
+    { nome: 'Cetelem',               rx: 'CETELEM' },
+    { nome: 'Bmfbovespa',            rx: 'BMFBOVESPA' },
+  ];
+  // Delimitação sem lookbehind (compatibilidade Safari <16.4): início de
+  // string ou não-letra antes; lookahead de não-letra depois.
+  const _buscarBancoEm = (trecho) => {
+    for (const b of bancos) {
+      if (new RegExp('(?:^|[^A-ZÀ-Ú0-9])(?:' + b.rx + ')(?![A-ZÀ-Ú0-9])').test(trecho)) return b.nome;
     }
+    return null;
+  };
+  let zonaCredor = T.slice(0, 800);
+  const rxRotuloCredor = /INSTITUI[ÇC][ÃA]O\s+CREDORA|CREDORA?\s*(?:FIDUCI[ÁA]RIA)?\s*[:;]|FINANCIADORA?\s*[:;]/g;
+  let mCred, nJanelasCredor = 0;
+  while ((mCred = rxRotuloCredor.exec(T)) !== null && nJanelasCredor < 4) {
+    zonaCredor += ' ' + T.slice(mCred.index, mCred.index + 180);
+    nJanelasCredor++;
   }
+  const bancoAchado = _buscarBancoEm(zonaCredor) || _buscarBancoEm(T);
+  if (bancoAchado) dados.nome_banco = bancoAchado;
 
   return dados;
 }
@@ -9004,6 +9043,18 @@ function contarCamposPreenchidos(dados) {
   return count;
 }
 
+// "✅ sucesso" exige o conjunto mínimo que sustenta um cálculo: valor
+// financiado E (taxa OU parcelas). IOF/datas/banco sozinhos são coincidência
+// frequente em demonstrativos tabulares classificados erroneamente como
+// contrato (teste de fogo: 0 parcelas lidas e mensagem de sucesso na tela).
+function _contratoTemEssenciais(dc, linhasExtrato) {
+  const temValor = dc.valor_financiado != null;
+  const temTaxa = dc.taxa_nominal_mensal != null || dc.taxa_nominal_anual != null;
+  const temParcela = dc.valor_parcela != null || dc.num_parcelas != null ||
+    (Array.isArray(linhasExtrato) && linhasExtrato.length > 0);
+  return temValor && (temTaxa || temParcela);
+}
+
 // ─── PREENCHIMENTO — EXTRATO ──────────────────────────────
 function preencherCamposExtrato(dados) {
   const dc = dados.dados_contrato || {};
@@ -9161,6 +9212,12 @@ function preencherCamposSimulador(dc) {
   if (_setCampoIA('valor-liquido', dc.valor_financiado, _numToBRL)) n++;
   if (_setCampoIA('num-parcelas', dc.num_parcelas)) n++;
   if (_setCampoIA('valor-parcela', dc.valor_parcela, _numToBRL)) n++;
+  // Taxa nominal mensal extraída do contrato (teste de fogo item 3: era
+  // capturada e descartada). Só a mensal — o campo é % a.m. e converter a
+  // anual seria ambíguo (12% a.a. nominal = 1% a.m. linear; 73,47% a.a. do
+  // caso Ficsa é a mensal 4,6973 composta — a convenção varia por documento).
+  // +toFixed(4) preserva casas reais sem zeros à direita (campo type=number).
+  if (dc.taxa_nominal_mensal != null && _setCampoIA('taxa-nominal', +dc.taxa_nominal_mensal.toFixed(4))) n++;
   if (dc.sistema_amortizacao && ['price', 'sac', 'sacre'].includes(dc.sistema_amortizacao)) {
     const el = document.getElementById('sistema-amort');
     if (el) { el.value = dc.sistema_amortizacao; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
@@ -9616,23 +9673,32 @@ async function processarUploadDocumento(arquivo, aba) {
     }
 
     // ── CONTRATO (ou desconhecido — tenta contrato como fallback) ──
+    // Três desfechos: sucesso só com campos essenciais (valor + taxa/parcelas);
+    // contrato identificado sem essenciais ganha aviso próprio (preenchendo o
+    // que achou, para conferência); "tipo não identificado" só quando a
+    // detecção realmente não bateu em nenhum sinal.
     const dc = extrairDadosContrato(resultado.texto);
+    const avisoContratoIncompleto = (n) => avisar(`⚠️ Documento identificado como <strong>contrato</strong>, mas a leitura automática ficou incompleta — o essencial (valor financiado + taxa ou parcelas) não foi capturado${n > 0 ? `; ${n} campo(s) preenchido(s) para conferência` : ''}.<br><small>Confira o documento e complete os campos manualmente.</small>`);
     if (aba === 'simulador') {
       const n = preencherCamposSimulador(dc);
-      if (n > 0) sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${n} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
+      if (n > 0 && _contratoTemEssenciais(dc)) sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${n} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
+      else if (tipo === 'contrato') avisoContratoIncompleto(n);
       else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
     } else if (aba === 'extrato') {
       const linhas = extrairLinhasExtrato(resultado.texto);
       const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
-      if (total > 0) {
-        preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+      if (total > 0) preencherCamposExtrato({ dados_contrato: dc, extrato: linhas });
+      if (total > 0 && _contratoTemEssenciais(dc, linhas)) {
         sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${total} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
+      } else if (tipo === 'contrato') {
+        avisoContratoIncompleto(total);
       } else {
         avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
       }
     } else {
       const n = preencherCamposInadContrato(dc);
-      if (tipo === 'contrato' && n > 0) sucesso(`✅ Contrato identificado${metodo} — ${n} campo(s) preenchido(s).<br><small>Complete as parcelas pagas/vencidas e calcule.</small>`);
+      if (tipo === 'contrato' && n > 0 && _contratoTemEssenciais(dc)) sucesso(`✅ Contrato identificado${metodo} — ${n} campo(s) preenchido(s).<br><small>Complete as parcelas pagas/vencidas e calcule.</small>`);
+      else if (tipo === 'contrato') avisoContratoIncompleto(n);
       else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> ficha da operação (SISBR), extrato do financiamento ou contrato.<br><small>Preencha manualmente abaixo.</small>');
     }
   } catch (erro) {
