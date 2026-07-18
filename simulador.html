@@ -9240,6 +9240,9 @@ function preencherFichaSisbrSimulador(c) {
   let n = 0;
   if (_setCampoIA('valor-liquido', c.valorOperacao, _numToBRL)) n++;
   if (_setCampoIA('num-parcelas', c.parcelas)) n++;
+  // Taxa da ficha SISBR já vem em % a.m. — mesmo destino do item 3 do fluxo
+  // de contrato (era capturada e descartada; revalidação Sicoob expôs o gap)
+  if (c.taxaJuros != null && _setCampoIA('taxa-nominal', +c.taxaJuros.toFixed(4))) n++;
   if (c.modalidadeApp) {
     const el = document.getElementById('modalidade');
     if (el) { el.value = c.modalidadeApp; el.dispatchEvent(new Event('change')); highlightCampoIA(el); n++; }
