@@ -8395,6 +8395,25 @@ function detectarTipoDocumento(texto) {
   const pontosSisbr = sinaisSisbr.filter(vars => vars.some(s => t.includes(s))).length;
   if (pontosSisbr >= 2) return 'ficha_sisbr';
 
+  // Extrato de operação parcela a parcela (item 4). Fase 2 cobre o formato
+  // "Extrato de Pagamento" (consignado); Demonstrativo de Evolução e de
+  // Operações entram em fases seguintes com sinais próprios. Regra geral do
+  // item 4: o padrão TABULAR repetido (o bloco de rótulos das colunas se
+  // repete em toda página) pesa mais que palavra isolada — "CET"/"PRAZO"
+  // existem tanto em contrato quanto em extrato e não decidem sozinhos.
+  const sinaisExtratoPagamento = [
+    ['EXTRATO DE PAGAMENTO'],
+    ['SISTEMA DE EMPRÉSTIMOS', 'SISTEMA DE EMPRESTIMOS'],
+    ['CONTRATO CONSULTADO'],
+    ['CONTRATO APRESENTADO'],
+    ['DESCONTO EM FOLHA'],
+  ];
+  const pontosExtratoPag = sinaisExtratoPagamento.filter(vars => vars.some(s => t.includes(s))).length;
+  const blocosTabelaParcelas = (t.match(/DATA PAGAMENTO SALDO PARCELA VALOR PAGO/g) || []).length;
+  if (pontosExtratoPag >= 3 || (pontosExtratoPag >= 2 && blocosTabelaParcelas >= 3)) {
+    return 'extrato_operacao';
+  }
+
   const sinaisContaCorrente = [
     'SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL',
     'TARIFA BANCÁRIA', 'TARIFA BANCARIA', 'CESTA',
@@ -8658,6 +8677,254 @@ function extrairExtratoConta(texto) {
     }
   });
 
+  return resultado;
+}
+
+// ═════════════════════════════════════════════════════════
+//  EXTRATO DE OPERAÇÃO — parcela a parcela (item 4, fases 1+2)
+//  Fase 2: formato "Extrato de Pagamento" (consignado, ex.: Itaú Consignado).
+//  O arquivo pode conter VÁRIOS contratos encadeados por refinanciamento,
+//  cada um com bloco de cabeçalho repetido por página e série própria de
+//  parcelas em blocos de 2-3 linhas:
+//    nº da parcela (linha isolada)
+//    linha financeira: dt.pagamento + 11 colunas numéricas + lote
+//      (ou "Não efetuado" + valor, para parcela vencida sem baixa)
+//    linha de vencimento: dt.venc + origem + baixa + tipo de cessão + …
+//  Os lançamentos são agrupados por contrato (contrato_ref) — nunca numa
+//  lista única. Demonstrativo de Evolução (imobiliário) e Demonstrativo de
+//  Operações (veículo) reutilizarão este schema em fases seguintes.
+// ═════════════════════════════════════════════════════════
+
+function _eoNormalizarOrigem(texto) {
+  const t = (texto || '').replace(/\s+/g, ' ').trim();
+  if (/REFINANCIAMENTO/i.test(t)) return 'Refinanciamento';
+  if (/DESCONTO EM FOLHA/i.test(t)) {
+    if (/\bON\b/i.test(t)) return 'Desconto em Folha - On Line';
+    if (/APOIO/i.test(t)) return 'Desconto em Folha - Apoio';
+    return 'Desconto em Folha';
+  }
+  if (/SEM FINANCEIRO/i.test(t)) return 'Sem Financeiro';
+  if (/N[ÃA]O EFETUADO/i.test(t)) return 'Não efetuado';
+  return t || null;
+}
+
+function extrairExtratoOperacao(texto) {
+  const resultado = { tipo: 'extrato_operacao', formato: 'extrato_pagamento', contratos: [], avisos: [] };
+  const linhas = (texto || '').split('\n');
+  const RX_MOEDA = /^-?[\d.]+,\d{2}$/;
+  // Conversão local das colunas de linha: diferente do parseMoeda do app,
+  // preserva 0 ("Mora 0,00" é zero de verdade, não campo ausente)
+  const _eoNum = (s) => {
+    const v = parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+    return isNaN(v) ? null : v;
+  };
+
+  const contratosPorNumero = {};
+  const obterContrato = (numero) => {
+    if (!contratosPorNumero[numero]) {
+      contratosPorNumero[numero] = {
+        contrato: numero, contrato_consultado: null, status: null,
+        valor_financiado: null, valor_contrato: null, total_parcelas: null,
+        taxa_contrato: null, cet_aa: null, cet_am: null, valor_iof: null,
+        data_inicio: null, data_vencimento: null, data_encerramento: null,
+        refinanciados: [], lancamentos: [], totais_versao: null, resumo: null,
+      };
+      resultado.contratos.push(contratosPorNumero[numero]);
+    }
+    return contratosPorNumero[numero];
+  };
+
+  // Campos do cabeçalho de página. Cada página repete o bloco inteiro; os
+  // campos vêm ANTES da linha "Contrato Apresentado", então ficam pendentes
+  // até o dono do bloco ser conhecido (evita vazar p/ o contrato anterior na
+  // troca de seção — ex.: DT. Encerramento da seção 2 poluindo a seção 1).
+  const CAMPOS_CABECALHO = [
+    ['status',            /Status do Contrato:\s*([A-ZÀ-Ú][A-ZÀ-Ú ]*?)(?:\s{2,}|$)/, 'texto'],
+    ['valor_financiado',  /Valor Financiado:\s*([\d.,]+)/, 'moeda'],
+    ['valor_contrato',    /Valor do Contrato:\s*([\d.,]+)/, 'moeda'],
+    ['total_parcelas',    /Total de parcelas:\s*(\d+)/, 'int'],
+    ['taxa_contrato',     /Taxa contrato:\s*([\d.,]+)/, 'moeda'],
+    ['valor_iof',         /Valor IOF:\s*([\d.,]+)/, 'moeda'],
+    ['data_inicio',       /Data In[íi]cio:\s*(\d{2}\/\d{2}\/\d{4})/, 'texto'],
+    ['data_vencimento',   /DT\. Vencimento:\s*(\d{2}\/\d{2}\/\d{4})/, 'texto'],
+    ['data_encerramento', /DT\. Encerramento:\s*(\d{2}\/\d{2}\/\d{4})/, 'texto'],
+    ['contrato_consultado', /Contrato Consultado:\s*(\d+)/, 'texto'],
+  ];
+  const converter = (tipo, bruto) =>
+    tipo === 'moeda' ? parseMoeda(bruto) : tipo === 'int' ? parseInt(bruto, 10) : bruto.trim();
+
+  let contratoAtual = null;     // dono do bloco de página vigente
+  let cabecalhoPendente = {};   // campos vistos antes do "Contrato Apresentado"
+  let bloco = null;             // parcela em montagem { numero, estado }
+
+  const fecharBlocoIncompleto = (motivo) => {
+    if (bloco) resultado.avisos.push(`parcela ${bloco.numero} descartada (${motivo})`);
+    bloco = null;
+  };
+
+  for (const linhaBruta of linhas) {
+    const linha = linhaBruta.replace(/\s+$/, '');
+    if (!linha.trim()) continue;
+
+    // ── Início de bloco de página: dono desconhecido até o Contrato Apresentado
+    if (/Sistema de Empréstimos|Extrato de Pagamento|Agrupado por parcelas/.test(linha)) {
+      fecharBlocoIncompleto('interrompida por cabeçalho de página');
+      contratoAtual = null;
+      cabecalhoPendente = {};
+      continue;
+    }
+    // Rodapé/assinatura do PJe — ignorar
+    if (/Número do documento:|https?:\/\/|Assinado eletronicamente/.test(linha)) continue;
+
+    // ── Troca/definição do contrato do bloco
+    const mApresentado = linha.match(/Contrato Apresentado:\s*(\d+)/);
+    if (mApresentado) {
+      contratoAtual = obterContrato(mApresentado[1]);
+      for (const [campo, valor] of Object.entries(cabecalhoPendente)) {
+        if (contratoAtual[campo] == null) contratoAtual[campo] = valor;
+      }
+      cabecalhoPendente = {};
+      // "Contrato Consultado" costuma vir na mesma linha — segue no fluxo
+    }
+
+    // ── Campos de cabeçalho (linha pode conter mais de um)
+    let ehLinhaCabecalho = !!mApresentado;
+    for (const [campo, rx, tipoCampo] of CAMPOS_CABECALHO) {
+      const m = linha.match(rx);
+      if (!m) continue;
+      ehLinhaCabecalho = true;
+      const valor = converter(tipoCampo, m[1]);
+      if (valor == null || valor === '') continue;
+      if (contratoAtual) { if (contratoAtual[campo] == null) contratoAtual[campo] = valor; }
+      else if (cabecalhoPendente[campo] == null) cabecalhoPendente[campo] = valor;
+    }
+    const mCet = linha.match(/CET:\s*([\d.,]+)\s*a\.a\.\s*\/\s*([\d.,]+)\s*a\.m/);
+    if (mCet) {
+      ehLinhaCabecalho = true;
+      const alvo = contratoAtual || cabecalhoPendente;
+      if (alvo.cet_aa == null) alvo.cet_aa = parseMoeda(mCet[1]);
+      if (alvo.cet_am == null) alvo.cet_am = parseMoeda(mCet[2]);
+    }
+    const mRefin = linha.match(/Contrato\(s\) Refinanciado\(s\).*?:\s*([\d;\s]+)/);
+    if (mRefin && contratoAtual) {
+      ehLinhaCabecalho = true;
+      const lista = mRefin[1].split(';').map(s => s.trim()).filter(Boolean);
+      for (const c of lista) if (!contratoAtual.refinanciados.includes(c)) contratoAtual.refinanciados.push(c);
+    }
+    if (ehLinhaCabecalho) continue;
+
+    // ── Totais da seção
+    const mTotal = linha.match(/Total por vers[ãa]o do Contrato:\s*(.+)$/);
+    if (mTotal && contratoAtual) {
+      const nums = mTotal[1].trim().split(/\s+/).filter(tk => RX_MOEDA.test(tk)).map(_eoNum);
+      if (nums.length >= 2) contratoAtual.totais_versao = { soma_valor_parcelas: nums[0], total_pago: nums[nums.length - 1] };
+      fecharBlocoIncompleto('interrompida pela linha de totais');
+      continue;
+    }
+
+    // ── Blocos de parcela
+    const mNumero = linha.match(/^\s{0,10}(\d{1,3})$/);
+    if (mNumero && !bloco) {
+      bloco = { numero: parseInt(mNumero[1], 10), estado: 'aguarda_financeira' };
+      continue;
+    }
+
+    if (bloco && bloco.estado === 'aguarda_financeira') {
+      const mNaoEfetuado = linha.match(/^\s*N[ãa]o efetuado\s+([\d.,]+)\s*$/);
+      if (mNaoEfetuado) {
+        bloco.dados = {
+          numero_parcela: bloco.numero,
+          data_pagamento: null,
+          valor_parcela: _eoNum(mNaoEfetuado[1]),
+          valor_pago: null, mora: null, multa: null, iof_linha: null, desconto: null,
+          origem: 'Não efetuado', status: 'nao_pago',
+        };
+        bloco.estado = 'aguarda_vencimento';
+        continue;
+      }
+      const mFinanceira = linha.match(/^\s*(\d{2}\/\d{2}\/\d{4})\s+(.+)$/);
+      if (mFinanceira) {
+        const tokens = mFinanceira[2].trim().split(/\s+/);
+        const nums = [];
+        let iTok = 0;
+        while (iTok < tokens.length && RX_MOEDA.test(tokens[iTok])) { nums.push(_eoNum(tokens[iTok])); iTok++; }
+        if (nums.length < 3) { fecharBlocoIncompleto('linha financeira irreconhecível'); continue; }
+        // Colunas: Saldo Parcela · Valor Pago · Mora · Multa · IOF · Notificação ·
+        // Honorários · Custas · Outras Dsp. · Desconto · Total Pago (11)
+        const cheio = nums.length >= 11;
+        bloco.dados = {
+          numero_parcela: bloco.numero,
+          data_pagamento: mFinanceira[1],
+          valor_parcela: nums[0],
+          valor_pago: nums[nums.length - 1],
+          mora: cheio ? nums[2] : null,
+          multa: cheio ? nums[3] : null,
+          iof_linha: cheio ? nums[4] : null,
+          desconto: cheio ? nums[9] : null,
+          origem: null, status: 'pago',
+          lote: tokens.slice(iTok).join(' ') || null,
+        };
+        if (!cheio) resultado.avisos.push(`parcela ${bloco.numero}: linha financeira com ${nums.length} colunas (esperava 11)`);
+        bloco.estado = 'aguarda_vencimento';
+        continue;
+      }
+      fecharBlocoIncompleto('linha inesperada após o número');
+      continue;
+    }
+
+    if (bloco && bloco.estado === 'aguarda_vencimento') {
+      const mVenc = linha.match(/^\s*(\d{2}\/\d{2}\/\d{4})\s*(.*)$/);
+      if (mVenc) {
+        const resto = mVenc[2];
+        const d = bloco.dados;
+        d.data_vencimento = mVenc[1];
+        d.cedido = /cedido/i.test(resto) && !/n[ãa]o\s+cedido/i.test(resto);
+        // Origem: trecho entre o vencimento e a coluna de baixa ("Normal")
+        const mOrigem = resto.match(/^(.*?)\s+Normal\b/);
+        if (mOrigem && mOrigem[1].trim()) d.origem = _eoNormalizarOrigem(mOrigem[1]);
+        if (d.origem === 'Refinanciamento') d.status = 'refinanciado';
+        if (d.cedido) d.status = 'cedido';
+        d.taxa_aplicada = null;   // este formato não traz taxa por linha
+        d.saldo_devedor = null;   // nem saldo corrente por linha
+        if (contratoAtual) {
+          d.contrato_ref = contratoAtual.contrato;
+          contratoAtual.lancamentos.push(d);
+        } else {
+          resultado.avisos.push(`parcela ${d.numero_parcela} fora de qualquer contrato — descartada`);
+        }
+        bloco = null;
+        continue;
+      }
+      // Continuações de célula ("Line", "ENTO") não têm data — ignorar
+      if (/^\s*[A-Za-zÀ-ÿ-]{1,20}\s*$/.test(linha)) continue;
+      fecharBlocoIncompleto('linha de vencimento ausente');
+      continue;
+    }
+  }
+  fecharBlocoIncompleto('fim do documento');
+
+  // Resumo e validação de sequência por contrato
+  for (const c of resultado.contratos) {
+    const porStatus = { pago: 0, nao_pago: 0, refinanciado: 0, cedido: 0 };
+    const porOrigem = {};
+    const numeros = new Set();
+    let duplicadas = 0;
+    for (const l of c.lancamentos) {
+      porStatus[l.status] = (porStatus[l.status] || 0) + 1;
+      const o = l.origem || '—';
+      porOrigem[o] = (porOrigem[o] || 0) + 1;
+      if (numeros.has(l.numero_parcela)) duplicadas++;
+      numeros.add(l.numero_parcela);
+    }
+    c.resumo = { total: c.lancamentos.length, por_status: porStatus, por_origem: porOrigem };
+    if (duplicadas) resultado.avisos.push(`contrato ${c.contrato}: ${duplicadas} nº(s) de parcela duplicado(s)`);
+    if (c.total_parcelas != null && c.lancamentos.length !== c.total_parcelas) {
+      resultado.avisos.push(`contrato ${c.contrato}: ${c.lancamentos.length} lançamento(s) para ${c.total_parcelas} parcela(s) declaradas`);
+    }
+    for (let i = 1; i <= (c.total_parcelas || 0); i++) {
+      if (!numeros.has(i)) { resultado.avisos.push(`contrato ${c.contrato}: parcela ${i} ausente da série`); break; }
+    }
+  }
   return resultado;
 }
 
@@ -9593,8 +9860,11 @@ async function processarUploadDocumento(arquivo, aba) {
         sucesso(`✅ ${lancs.length} lançamento(s) identificado(s)${metodo}.<br><small>Revise os valores antes de calcular.</small>`);
       } else if (tipo === 'contrato') {
         avisar('⚠️ Este documento parece ser um <strong>contrato de financiamento</strong> — use a aba <strong>Simulador</strong> para analisá-lo.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>');
-      } else if (tipo === 'conta_corrente' || tipo === 'ficha_sisbr') {
-        avisar(`⚠️ Este documento parece ser ${tipo === 'ficha_sisbr' ? 'uma <strong>ficha de operação (SISBR)</strong>' : 'um <strong>extrato bancário</strong>'} — use a aba <strong>Extrato</strong>.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>`);
+      } else if (tipo === 'conta_corrente' || tipo === 'ficha_sisbr' || tipo === 'extrato_operacao') {
+        const rotuloDoc = tipo === 'ficha_sisbr' ? 'uma <strong>ficha de operação (SISBR)</strong>'
+          : tipo === 'extrato_operacao' ? 'um <strong>extrato de pagamento (parcela a parcela)</strong>'
+          : 'um <strong>extrato bancário</strong>';
+        avisar(`⚠️ Este documento parece ser ${rotuloDoc} — use a aba <strong>Extrato</strong>.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>`);
       } else {
         avisar('⚠️ Nenhum valor com data-base identificado.<br><small>Adicione os lançamentos manualmente.</small>');
       }
@@ -9647,6 +9917,55 @@ async function processarUploadDocumento(arquivo, aba) {
         } else {
           avisoExtracaoFalhou();
         }
+      }
+      return;
+    }
+
+    // ── EXTRATO DE OPERAÇÃO — parcela a parcela (item 4 fase 2) ──
+    // Sem painel dedicado ainda (decisão de produto pendente): a estrutura
+    // completa fica no console e em window.mtrExtratoOperacao para validação;
+    // os campos básicos do contrato ATIVO preenchem a aba corrente.
+    if (tipo === 'extrato_operacao') {
+      status.innerHTML = '<div class="ia-spinner"></div><span>Lendo as parcelas do extrato...</span>';
+      const eo = extrairExtratoOperacao(resultado.texto);
+      window.mtrExtratoOperacao = eo;
+      console.log('[EXTRATO-OP]', JSON.stringify({
+        formato: eo.formato,
+        contratos: eo.contratos.map(c => ({
+          contrato: c.contrato, status: c.status, valor_financiado: c.valor_financiado,
+          parcelas_declaradas: c.total_parcelas, taxa: c.taxa_contrato,
+          cet_aa: c.cet_aa, cet_am: c.cet_am, lancamentos: c.lancamentos.length, resumo: c.resumo,
+        })),
+        avisos: eo.avisos,
+      }, null, 2));
+      const ativo = eo.contratos.find(c => /ABERTO/i.test(c.status || '')) || eo.contratos[0];
+      const totalLanc = eo.contratos.reduce((s, c) => s + c.lancamentos.length, 0);
+      if (!ativo || totalLanc === 0) {
+        avisar('⚠️ Documento identificado como <strong>extrato de pagamento</strong>, mas as parcelas não puderam ser lidas automaticamente (layout fora do padrão conhecido).<br><small>Preencha os campos manualmente abaixo.</small>');
+        return;
+      }
+      const primeiraParc = ativo.lancamentos[0] || {};
+      const dcEo = {
+        valor_financiado: ativo.valor_financiado,
+        num_parcelas: ativo.total_parcelas,
+        taxa_nominal_mensal: ativo.taxa_contrato,
+        valor_parcela: primeiraParc.valor_parcela != null ? primeiraParc.valor_parcela : null,
+        iof: ativo.valor_iof,
+        data_liberacao: ativo.data_inicio,
+        data_primeiro_vencimento: primeiraParc.data_vencimento || null,
+      };
+      const cadeia = eo.contratos.length > 1 ? ` · cadeia de refinanciamento com ${eo.contratos.length} contratos no mesmo arquivo` : '';
+      const msgOkEo = `✅ Extrato de Pagamento identificado${metodo} — contrato ${ativo.contrato} (${(ativo.status || 'situação n/d').toLowerCase()}): ${ativo.lancamentos.length} parcela(s) lida(s)${cadeia}.<br><small>Campos do contrato ativo preenchidos — estrutura completa das parcelas no console (F12) para validação.</small>`;
+      const msgIncompletoEo = `⚠️ Extrato de pagamento identificado, mas o cabeçalho do contrato veio incompleto — confira os campos manualmente.<br><small>${totalLanc} parcela(s) lida(s); estrutura no console (F12).</small>`;
+      if (aba === 'simulador') {
+        const n = preencherCamposSimulador(dcEo);
+        if (n > 0 && _contratoTemEssenciais(dcEo)) sucesso(msgOkEo); else avisar(msgIncompletoEo);
+      } else if (aba === 'extrato') {
+        preencherCamposExtrato({ dados_contrato: dcEo, extrato: [] });
+        if (_contratoTemEssenciais(dcEo)) sucesso(msgOkEo); else avisar(msgIncompletoEo);
+      } else {
+        const n = preencherCamposInadContrato(dcEo);
+        if (n > 0 && _contratoTemEssenciais(dcEo)) sucesso(msgOkEo); else avisar(msgIncompletoEo);
       }
       return;
     }
