@@ -1324,7 +1324,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <div class="form-group">
           <label class="form-label">Modalidade <span class="form-hint">Bacen</span></label>
-          <select id="ext-modalidade" onchange="updateBacenRefAud()">
+          <select id="ext-modalidade" onchange="updateBacenRefAud();onModalidadeParcChange()">
             <option value="veiculo">Financiamento de Veículos</option>
             <option value="pessoal">Crédito Pessoal</option>
             <option value="habitacional">Crédito Habitacional</option>
@@ -1333,7 +1333,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <option value="consignadoINSS">Crédito Consignado (INSS)</option>
             <option value="cheque">Cheque Especial</option>
             <option value="cartao">Cartão de Crédito Rotativo</option>
+            <option value="parcelamento_direto">Parcelamento direto (incorporadora / loteadora / vendedor)</option>
           </select>
+          <div id="aviso-nao-bancario" style="display:none;margin-top:8px;background:var(--surface2);border-left:3px solid var(--amber,#f59e0b);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.6">
+            <strong style="color:var(--text)">ℹ️ Operação não bancária</strong><br>
+            O parcelamento direto pelo vendedor não constitui operação de crédito de instituição financeira.
+            As séries de taxas médias do Banco Central não são parâmetro técnico aplicável a esta modalidade.<br>
+            <span style="color:var(--text3)">Referências desta operação: índice de correção e taxa de juros pactuados em contrato.</span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -2183,7 +2190,7 @@ const SGS_SERIES_FALLBACK = {
 };
 
 // Códigos SGS dos índices de correção (módulo inadimplência)
-const SGS_INDICES = { ipca: 433, inpc: 188, selic: 4390, tr: 226 };
+const SGS_INDICES = { ipca: 433, inpc: 188, selic: 4390, tr: 226, igpm: 189 };
 
 // BACEN dinâmico — começa com fallback, preenchido pela API
 let BACEN = JSON.parse(JSON.stringify(BACEN_FALLBACK));
@@ -7467,7 +7474,10 @@ async function calcularExtrato() {
   }
 
   // Apuração período a período
-  const bcenRef = BACEN[modalidade] || BACEN.pessoal;
+  // Parcelamento direto (incorporadora/loteadora) = operação NÃO bancária:
+  // as séries de taxas médias do BCB não são parâmetro aplicável (Parte 6).
+  const semBCB = modalidade === 'parcelamento_direto';
+  const bcenRef = semBCB ? null : (BACEN[modalidade] || BACEN.pessoal);
 
   // Taxa BCB da COMPETÊNCIA HISTÓRICA de cada mês do extrato (série primária
   // 254xx — % a.m.), com walk-back de até 8 meses (mesma tolerância de
@@ -7480,7 +7490,7 @@ async function calcularExtrato() {
   let mapaBCB = {};
   try {
     const validas = chavesMes.filter(Boolean).sort();
-    if (validas.length) {
+    if (validas.length && !semBCB) {
       const [aIni, mIni] = validas[0].split('-').map(Number);
       const dIni = new Date(aIni, mIni - 1 - 8, 1); // 8 meses antes para o walk-back
       const [aFim, mFim] = validas[validas.length - 1].split('-').map(Number);
@@ -7494,6 +7504,7 @@ async function calcularExtrato() {
     }
   } catch (_) { /* offline → fallback taxa corrente abaixo */ }
   const taxaBCBDoMes = (key) => {
+    if (semBCB) return null;
     if (key) {
       let [a, m] = key.split('-').map(Number);
       for (let k = 0; k < 8; k++) {
@@ -7518,11 +7529,11 @@ async function calcularExtrato() {
     const saldoFim = teorico.saldo || 0;
     const taxaEfetiva = saldoInicio > 0 ? (r.pago - (teorico.amort || 0)) / saldoInicio * 100 : taxaNom;
     const taxaBCB = taxaBCBDoMes(chavesMes[i]);
-    const difTaxas = taxaEfetiva - taxaBCB;
+    const difTaxas = taxaBCB != null ? taxaEfetiva - taxaBCB : null;
 
     totalPago += r.pago || 0;
     totalTeorico += pmtTeorico;
-    totalBCB += saldoInicio > 0 ? (saldoInicio * taxaBCB / 100) + (teorico.amort || 0) : pmtTeorico;
+    if (!semBCB) totalBCB += saldoInicio > 0 ? (saldoInicio * taxaBCB / 100) + (teorico.amort || 0) : pmtTeorico;
 
     detalhes.push({ mesano: r.mesano, sit: r.sit, pago: r.pago, pmtTeorico, saldo: saldoFim, taxaEfetiva: isNaN(taxaEfetiva) ? taxaNom : taxaEfetiva, taxaBCB, difTaxas });
   });
@@ -7535,10 +7546,11 @@ async function calcularExtrato() {
   const taxaMediaEfetiva = tirPeriodo != null
     ? tirPeriodo * 100
     : (detalhes.length ? detalhes.reduce((s, d) => s + d.taxaEfetiva, 0) / detalhes.length : taxaNom);
-  const taxaBCBMedia = detalhes.length ? detalhes.reduce((s, d) => s + d.taxaBCB, 0) / detalhes.length : bcenRef.taxaMes;
+  const taxaBCBMedia = semBCB ? null
+    : (detalhes.length ? detalhes.reduce((s, d) => s + d.taxaBCB, 0) / detalhes.length : bcenRef.taxaMes);
   const taxaAnoEfetiva = (Math.pow(1 + taxaMediaEfetiva / 100, 12) - 1) * 100;
   const taxaAnoNom = (Math.pow(1 + iTaxaNom, 12) - 1) * 100;
-  const taxaBCBano = (Math.pow(1 + taxaBCBMedia / 100, 12) - 1) * 100;
+  const taxaBCBano = semBCB ? null : (Math.pow(1 + taxaBCBMedia / 100, 12) - 1) * 100;
   const difTotal = totalPago - totalBCB;
 
   // Renderizar no container ISOLADO do Extrato (#results-extrato) — nunca
@@ -7560,8 +7572,10 @@ async function calcularExtrato() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
         <div class="metric-card"><div class="mc-label">Taxa média efetiva apurada</div><div class="mc-value accent">${fmtPct(taxaMediaEfetiva)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoEfetiva)} a.a.</div></div>
         <div class="metric-card"><div class="mc-label">Taxa nominal contratada</div><div class="mc-value">${fmtPct(taxaNom)} a.m.</div><div class="mc-sub">${fmtPct(taxaAnoNom)} a.a.</div></div>
-        <div class="metric-card"><div class="mc-label">Taxa média BCB do período (${bcenRef.nome})</div><div class="mc-value">${fmtPct(taxaBCBMedia)} a.m.</div><div class="mc-sub">${fmtPct(taxaBCBano)} a.a. · competências históricas</div></div>
-        <div class="metric-card"><div class="mc-label">Total pago vs. referência BCB</div><div class="mc-value ${difTotal > 0 ? 'danger' : 'ok'}">${difTotal >= 0 ? '+' : ''}${fmtBRL(difTotal)}</div><div class="mc-sub">total pago: ${fmtBRL(totalPago)}</div></div>
+        ${semBCB ? `
+        <div class="metric-card" style="grid-column:span 2"><div class="mc-label">ℹ️ Operação não bancária</div><div class="mc-sub" style="margin-top:6px;line-height:1.6">O parcelamento direto pelo vendedor não constitui operação de crédito de instituição financeira. As séries de taxas médias do Banco Central não são parâmetro técnico aplicável a esta modalidade.<br><span style="color:var(--text3)">Referências: índice de correção e juros pactuados em contrato. Total pago: <strong>${fmtBRL(totalPago)}</strong></span></div></div>` : `
+        <div class="metric-card"><div class="mc-label">Taxa média BCB do período (${bcenRef ? bcenRef.nome : ''})</div><div class="mc-value">${fmtPct(taxaBCBMedia)} a.m.</div><div class="mc-sub">${fmtPct(taxaBCBano)} a.a. · competências históricas</div></div>
+        <div class="metric-card"><div class="mc-label">Total pago vs. referência BCB</div><div class="mc-value ${difTotal > 0 ? 'danger' : 'ok'}">${difTotal >= 0 ? '+' : ''}${fmtBRL(difTotal)}</div><div class="mc-sub">total pago: ${fmtBRL(totalPago)}</div></div>`}
       </div>
       <div class="section-heading" style="margin-top:20px">Detalhamento por Período</div>
       <div style="overflow-x:auto">
@@ -7577,8 +7591,8 @@ async function calcularExtrato() {
             <td style="text-align:right">${fmtBRL(d.pmtTeorico)}</td>
             <td style="text-align:right">${fmtBRL(d.saldo)}</td>
             <td style="text-align:right;color:var(--accent)">${fmtPct(d.taxaEfetiva)}</td>
-            <td style="text-align:right">${fmtPct(d.taxaBCB)}</td>
-            <td style="text-align:right;color:${d.difTaxas > 0.5 ? 'var(--red)' : 'var(--text2)'}">${d.difTaxas >= 0 ? '+' : ''}${fmtPct(d.difTaxas)}</td>
+            <td style="text-align:right">${d.taxaBCB != null ? fmtPct(d.taxaBCB) : '—'}</td>
+            <td style="text-align:right;color:${(d.difTaxas || 0) > 0.5 ? 'var(--red)' : 'var(--text2)'}">${d.difTaxas != null ? (d.difTaxas >= 0 ? '+' : '') + fmtPct(d.difTaxas) : '—'}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -8066,11 +8080,24 @@ function _montarTextoPorLinhas(items) {
     if (!it.str || !it.str.trim() || !it.transform) continue;
     const yBucket = Math.round(it.transform[5] / 3);
     if (!linhas.has(yBucket)) linhas.set(yBucket, []);
-    linhas.get(yBucket).push({ x: it.transform[4], s: it.str });
+    linhas.get(yBucket).push({ x: it.transform[4], w: it.width || 0, s: it.str });
   }
   return [...linhas.entries()]
     .sort((a, b) => b[0] - a[0])
-    .map(([, frags]) => frags.sort((a, b) => a.x - b.x).map(f => f.s).join(' '))
+    .map(([, frags]) => {
+      frags.sort((a, b) => a.x - b.x);
+      // Gap horizontal grande entre fragmentos (> ~6pt) = separador de COLUNA,
+      // codificado como espaço DUPLO — os tokenizadores de tabela (parcelamento)
+      // dividem por /\s{2,}/; os demais parsers usam \s+ e não são afetados.
+      let out = '';
+      let fimAnterior = null;
+      for (const f of frags) {
+        if (out === '') out = f.s;
+        else out += ((fimAnterior != null && f.x - fimAnterior > 6) ? '  ' : ' ') + f.s;
+        fimAnterior = f.x + f.w;
+      }
+      return out;
+    })
     .join('\n');
 }
 
@@ -8413,6 +8440,13 @@ function detectarTipoDocumento(texto) {
   if (pontosExtratoPag >= 3 || (pontosExtratoPag >= 2 && blocosTabelaParcelas >= 3)) {
     return 'extrato_operacao';
   }
+
+  // Tabela de parcelamento direto (incorporadora/loteadora) — detecção por
+  // ESTRUTURA (numeração N/M repetida com denominador consistente), não por
+  // marca de construtora. Usa o texto CRU (linhas preservadas). Vem DEPOIS de
+  // extrato_operacao, que também tem padrão de parcelas mas marcadores próprios.
+  const detParc = detectarTabelaParcelamento(texto || '');
+  if (detParc.ehTabelaParcelamento) return 'tabela_parcelamento';
 
   const sinaisContaCorrente = [
     'SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL',
@@ -9225,6 +9259,482 @@ function apurarTaxaEfetivaPorFluxo(dadosFicha) {
   return resultado;
 }
 
+// ═════════════════════════════════════════════════════════
+//  TABELA DE PARCELAMENTO DIRETO (incorporadora/loteadora)
+//  Parser GENÉRICO: reconhece o padrão semântico da tabela (não o layout de
+//  uma construtora específica), infere o significado das colunas pelo TIPO de
+//  dado + posição + rótulos, e o usuário confirma o mapeamento antes do uso.
+//  ATENÇÃO: venda parcelada direta NÃO é operação de instituição financeira —
+//  o comparativo com séries BCB fica desabilitado nesta modalidade.
+// ═════════════════════════════════════════════════════════
+
+// Padrão N/M de numeração de parcela com guardas de contexto: sem os guardas,
+// datas DD/MM/AA casariam ("22/11/16" → "22/11") e qualquer extrato bancário
+// seria detectado como tabela de parcelamento.
+const RX_PARCELA_NM_G = /(^|[^\/\d])(\d{1,3})\/(\d{2,3})(?![\/\d])/g;
+
+function detectarTabelaParcelamento(texto) {
+  const linhas = (texto || '').split('\n');
+
+  // Critério 1: padrão "N/M" repetido (1/180, 2/180, 47/240...)
+  const linhasComNM = [];
+  const denominadores = {};
+  for (const l of linhas) {
+    RX_PARCELA_NM_G.lastIndex = 0;
+    const m = RX_PARCELA_NM_G.exec(l);
+    if (m) {
+      linhasComNM.push(l);
+      denominadores[m[3]] = (denominadores[m[3]] || 0) + 1;
+    }
+  }
+
+  // Critério 2: linhas contendo data + valor monetário
+  const regexDataValor = /\d{2}\/\d{2}\/\d{2,4}.*?[\d.]+,\d{2}/;
+  const linhasDataValor = linhas.filter(l => regexDataValor.test(l));
+
+  // Critério 4: denominador consistente
+  const denominadorDominante = Object.entries(denominadores)
+    .sort((a, b) => b[1] - a[1])[0];
+  const domCount = denominadorDominante ? denominadorDominante[1] : 0;
+
+  // Critério 3: repetição estrutural. Exigimos SEMPRE o padrão N/M com
+  // denominador consistente — linhas data+valor sozinhas descreveriam
+  // qualquer extrato bancário longo (falso positivo com conta_corrente).
+  const temTabela = (linhasComNM.length >= 10 && domCount >= 8) ||
+    (linhasComNM.length >= 5 && domCount >= 4 && linhasDataValor.length >= 15);
+
+  return {
+    ehTabelaParcelamento: temTabela,
+    totalParcelasInferido: denominadorDominante ? parseInt(denominadorDominante[0], 10) : null,
+    linhasCandidatas: linhasComNM.length,
+    confianca: temTabela ? (linhasComNM.length >= 20 ? 'alta' : 'media') : 'baixa'
+  };
+}
+
+// Tokeniza uma linha de tabela: separador primário é espaço duplo/tab
+// (codificado por _montarTextoPorLinhas nos gaps de coluna). Fallback para
+// texto de OCR (espaços simples): divide tudo e re-agrupa tokens de TEXTO
+// consecutivos, preservando tokens de dado (N/M, data, moeda, flag, inteiro).
+function tokenizarLinhaParc(linha) {
+  const l = (linha || '').trim();
+  if (!l) return [];
+  const porGap = l.split(/\s{2,}|\t/).map(t => t.trim()).filter(Boolean);
+  if (porGap.length >= 4) return porGap;
+  // fallback: agrupamento por tipo
+  const ehDado = (t) =>
+    /^\d{1,3}\/\d{1,3}$/.test(t) || /^\d{2}\/\d{2}\/\d{2,4}$/.test(t) ||
+    /^R?\$?\s*-?[\d.]+,\d{2}-?$/.test(t) || /^[SNsn]$/.test(t) || /^\d{1,4}$/.test(t);
+  const brutos = l.split(/\s+/);
+  const tokens = [];
+  for (const t of brutos) {
+    if (!t) continue;
+    if (!ehDado(t) && tokens.length && !ehDado(tokens[tokens.length - 1])) {
+      tokens[tokens.length - 1] += ' ' + t;   // junta texto com texto
+    } else {
+      tokens.push(t);
+    }
+  }
+  return tokens;
+}
+
+function calcularMediaMonetaria(amostras) {
+  const vals = amostras.map(a => parseMoeda(a)).filter(v => v != null);
+  if (!vals.length) return 0;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+function verificarSequenciaCrescente(amostras) {
+  const nums = amostras.map(a => {
+    const m = /^(\d{1,3})\//.exec((a || '').trim());
+    return m ? parseInt(m[1], 10) : parseFloat(String(a).replace(',', '.'));
+  }).filter(v => !isNaN(v));
+  if (nums.length < 3) return false;
+  let cres = 0;
+  for (let i = 1; i < nums.length; i++) if (nums[i] >= nums[i - 1]) cres++;
+  return cres / (nums.length - 1) > 0.7;
+}
+
+function classificarTipoColuna(amostras) {
+  // Placeholders ("-", "—", ".") não definem tipo: uma coluna de data de
+  // pagamento com 2/3 de linhas em aberto ("-") continua sendo coluna de data.
+  const informativas = amostras.filter(a => {
+    const t = (a || '').trim();
+    return t && !/^[-—.]+$/.test(t);
+  });
+  const base = informativas.length >= 3 ? informativas : amostras;
+  const total = base.length;
+  if (!total) return 'vazio';
+  const contaSe = (fn) => base.filter(fn).length / total;
+
+  if (contaSe(a => /^\d{1,3}\/\d{1,3}$/.test((a || '').trim())) > 0.7) return 'parcela_num';
+  if (contaSe(a => /^\d{2}\/\d{2}\/\d{2,4}$/.test((a || '').trim())) > 0.7) return 'data';
+  if (contaSe(a => /^-?[\d.]+,\d{2}$/.test((a || '').trim().replace(/^R\$\s*/, ''))) > 0.7) return 'monetario';
+  if (contaSe(a => /^[SNsn]$/.test((a || '').trim())) > 0.7) return 'flag';
+  if (contaSe(a => /^\d{1,4}$/.test((a || '').trim())) > 0.7) return 'inteiro';
+
+  const unicos = new Set(amostras.map(a => (a || '').trim().toUpperCase()));
+  if (unicos.size <= 6 && total > 10) return 'categoria';
+  return 'texto';
+}
+
+function inferirColunas(linhasTabela) {
+  const tokensPorLinha = linhasTabela.map(l => tokenizarLinhaParc(l));
+
+  const contagens = {};
+  tokensPorLinha.forEach(t => { contagens[t.length] = (contagens[t.length] || 0) + 1; });
+  const entradas = Object.entries(contagens).sort((a, b) => b[1] - a[1]);
+  const numColunas = entradas.length ? parseInt(entradas[0][0], 10) : 0;
+
+  const tiposColuna = [];
+  for (let col = 0; col < numColunas; col++) {
+    const amostras = tokensPorLinha
+      .filter(t => t.length === numColunas)
+      .map(t => t[col])
+      .filter(v => v != null && v !== '');
+    tiposColuna.push({
+      indice: col,
+      tipo: classificarTipoColuna(amostras),
+      amostras: amostras.slice(0, 5),
+      todosZero: amostras.length > 0 && amostras.every(a => parseMoeda(a) === 0),
+      temVazios: amostras.length < tokensPorLinha.filter(t => t.length === numColunas).length,
+      mediaValor: calcularMediaMonetaria(amostras),
+      crescente: verificarSequenciaCrescente(amostras)
+    });
+  }
+  return { numColunas, tiposColuna, tokensPorLinha };
+}
+
+// Rótulos de cabeçalho → campo (REGRA 5) — aumentam a precisão quando o
+// cabeçalho da tabela é identificável; a posição do rótulo define a coluna.
+const ROTULOS_PARC = [
+  { chave: /VENC/i, campo: 'dataVencimento' },
+  { chave: /DT\.?\s*PGTO|DATA\s*PAG/i, campo: 'dataPagamento' },
+  { chave: /VALOR\s*PAGO|PAGO/i, campo: 'valorPago' },
+  { chave: /VALOR\s*(BX|PREV|ORIG|PARCELA)|^VALOR$/i, campo: 'valorPrevisto' },
+  { chave: /ENCARGO|JUROS|MORA|MULTA|ACRESC/i, campo: 'encargos' },
+  { chave: /PARCELA|PREST|N[ºo°]/i, campo: 'numeroParcela' },
+  { chave: /SALDO/i, campo: 'saldoDevedor' },
+  { chave: /CORRE[ÇC][ÃA]O|REAJUST/i, campo: 'correcao' },
+  { chave: /^BX$|BAIXA|SIT/i, campo: 'flagBaixa' },
+  { chave: /T[ÍI]TULO|TIPO/i, campo: 'tipoTitulo' },
+];
+
+function inferirSemantica(tiposColuna, cabecalhoTokens) {
+  const mapa = {};
+
+  // REGRA 1: coluna 'parcela_num' → número da parcela
+  const colParcela = tiposColuna.find(c => c.tipo === 'parcela_num');
+  if (colParcela) mapa.numeroParcela = colParcela.indice;
+
+  // REGRA 2: 1ª data = vencimento; 2ª = data de pagamento
+  const colsData = tiposColuna.filter(c => c.tipo === 'data');
+  if (colsData[0]) mapa.dataVencimento = colsData[0].indice;
+  if (colsData[1]) mapa.dataPagamento = colsData[1].indice;
+
+  // REGRA 3: monetárias por comportamento estatístico
+  const colsMonet = tiposColuna.filter(c => c.tipo === 'monetario');
+  const maxMedia = colsMonet.length ? Math.max(...colsMonet.map(x => x.mediaValor)) : 0;
+  const colEncargo = colsMonet.find(c => c.mediaValor > 0 && c.mediaValor < maxMedia * 0.15);
+  if (colEncargo) mapa.encargos = colEncargo.indice;
+  const restantes = colsMonet.filter(c => c.indice !== (colEncargo ? colEncargo.indice : -1));
+  if (restantes[0]) mapa.valorPrevisto = restantes[0].indice;
+  if (restantes[1]) mapa.valorPago = restantes[1].indice;
+
+  // REGRA 4: flag S/N → situação (baixa)
+  const colFlag = tiposColuna.find(c => c.tipo === 'flag');
+  if (colFlag) mapa.flagBaixa = colFlag.indice;
+
+  // REGRA 5: rótulos do cabeçalho refinam o mapa (posição do rótulo = coluna)
+  if (cabecalhoTokens && cabecalhoTokens.length) {
+    cabecalhoTokens.forEach((rotulo, i) => {
+      if (i >= tiposColuna.length) return;
+      for (const r of ROTULOS_PARC) {
+        if (r.chave.test(rotulo)) {
+          // não deixa o rótulo apontar campo de DADO para coluna de texto puro
+          const tipoCol = tiposColuna[i].tipo;
+          const campoMonet = ['valorPrevisto', 'valorPago', 'encargos', 'saldoDevedor', 'correcao'].includes(r.campo);
+          const campoData = ['dataVencimento', 'dataPagamento'].includes(r.campo);
+          if (campoMonet && tipoCol !== 'monetario') break;
+          if (campoData && tipoCol !== 'data') break;
+          // remove atribuição anterior do mesmo campo em outra coluna
+          for (const k of Object.keys(mapa)) if (mapa[k] === i && k !== r.campo) delete mapa[k];
+          mapa[r.campo] = i;
+          break;
+        }
+      }
+    });
+  }
+  return mapa;
+}
+
+// Normaliza data com ano de 2 dígitos: <= 50 → 20XX; > 50 → 19XX (5.1)
+function normalizarDataParc(str) {
+  const p = (str || '').trim().split('/');
+  if (p.length !== 3) return null;
+  let [d, m, a] = p;
+  if (a.length === 2) a = (parseInt(a, 10) <= 50 ? '20' : '19') + a;
+  const data = `${d}/${m}/${a}`;
+  return validarDataStr(data) ? data : null;
+}
+
+// Extrai os registros da tabela aplicando o mapa de colunas confirmado.
+function montarRegistrosParcelamento(analise, mapa, denominadorDominante) {
+  const registros = [];
+  const num = analise.numColunas;
+  for (const tokens of analise.tokensPorLinha) {
+    if (tokens.length !== num) continue;
+    const pega = (campo) => (mapa[campo] != null ? tokens[mapa[campo]] : null);
+    const nm = /^(\d{1,3})\/(\d{1,3})$/.exec((pega('numeroParcela') || '').trim());
+    const venc = normalizarDataParc(pega('dataVencimento'));
+    if (!venc) continue;                                  // sem vencimento não é linha de dados
+    const dtPgto = normalizarDataParc(pega('dataPagamento'));
+    const previsto = parseMoeda(pega('valorPrevisto'));
+    const pago = parseMoeda(pega('valorPago'));
+    const encargo = mapa.encargos != null ? (parseMoeda(pega('encargos')) || 0) : 0;
+    const flag = (pega('flagBaixa') || '').trim().toUpperCase();
+
+    // 5.4 — situação: flag N, ou pago vazio/zero sem data de pagamento → aberto
+    let situacao;
+    if (flag === 'S') situacao = 'pago';
+    else if (flag === 'N') situacao = 'aberto';
+    else situacao = ((pago || 0) > 0 || dtPgto) ? 'pago' : 'aberto';
+
+    registros.push({
+      numerador: nm ? parseInt(nm[1], 10) : null,
+      denominador: nm ? parseInt(nm[2], 10) : null,
+      // 5.3 — denominador diferente do dominante = título avulso (sinal/acordo)
+      tituloAvulso: !!(nm && denominadorDominante && parseInt(nm[2], 10) !== denominadorDominante),
+      vencimento: venc,
+      vencimentoDate: parseDataBR(venc),
+      dataPagamento: dtPgto,
+      valorPrevisto: previsto,
+      valorPago: situacao === 'pago' ? (pago || 0) : (pago || null),
+      encargos: encargo,
+      situacao,
+      tipoTitulo: mapa.tipoTitulo != null ? (pega('tipoTitulo') || '').trim() : null,
+      bruto: tokens.join(' | ')
+    });
+  }
+  // 5.2 — NUNCA assumir ordem: ordenar por data de vencimento
+  registros.sort((a, b) => a.vencimentoDate - b.vencimentoDate);
+  return registros;
+}
+
+// Somas do fluxo principal (exclui títulos avulsos) + validação com o
+// quadro-resumo do documento quando presente (5.5)
+function somarParcelamento(registros, hojeRef) {
+  const hoje = hojeRef || new Date();
+  const fluxo = registros.filter(r => !r.tituloAvulso);
+  const soma = (arr, f) => arr.reduce((s, r) => s + (f(r) || 0), 0);
+  const pagas = fluxo.filter(r => r.situacao === 'pago');
+  const abertas = fluxo.filter(r => r.situacao !== 'pago');
+  const vencidasNaoPagas = abertas.filter(r => r.vencimentoDate < hoje);
+  const aVencer = abertas.filter(r => r.vencimentoDate >= hoje);
+  return {
+    nFluxo: fluxo.length, nPagas: pagas.length,
+    nVencidasNaoPagas: vencidasNaoPagas.length, nAVencer: aVencer.length,
+    nAvulsos: registros.length - fluxo.length,
+    totalPrevisto: soma(fluxo, r => r.valorPrevisto),
+    totalPago: soma(pagas, r => r.valorPago),
+    totalEncargos: soma(fluxo, r => r.encargos),
+    totalAberto: soma(abertas, r => r.valorPrevisto),
+    totalVencidasNaoPagas: soma(vencidasNaoPagas, r => r.valorPrevisto),
+    totalAVencer: soma(aVencer, r => r.valorPrevisto),
+    vencidasNaoPagas, aVencer, pagas
+  };
+}
+
+function validarTotaisDocumento(texto, somas) {
+  // Procura linhas de total no documento e confere contra as somas apuradas
+  const linhas = (texto || '').split('\n').filter(l => /TOTA(L|IS)/i.test(l));
+  const valoresDoc = [];
+  for (const l of linhas) {
+    const ms = l.match(/[\d.]{1,12},\d{2}/g) || [];
+    ms.forEach(v => { const n = parseMoeda(v); if (n != null && n > 0) valoresDoc.push(n); });
+  }
+  if (!valoresDoc.length) return { status: 'sem_quadro', divergencias: [], conferidos: [] };
+  const alvos = [
+    ['totalPrevisto', somas.totalPrevisto], ['totalPago', somas.totalPago],
+    ['totalEncargos', somas.totalEncargos], ['totalAberto', somas.totalAberto],
+    ['totalVencidasNaoPagas', somas.totalVencidasNaoPagas], ['totalAVencer', somas.totalAVencer],
+  ];
+  const conferidos = [], divergencias = [];
+  for (const [nome, v] of alvos) {
+    if (!(v > 0)) continue;
+    let melhor = null;
+    for (const d of valoresDoc) {
+      const dif = Math.abs(d - v);
+      if (melhor == null || dif < melhor.dif) melhor = { doc: d, dif };
+    }
+    if (melhor && melhor.dif <= 1.0) conferidos.push({ nome, apurado: v, documento: melhor.doc, dif: melhor.dif });
+    else if (melhor && melhor.dif <= v * 0.02) divergencias.push({ nome, apurado: v, documento: melhor.doc, dif: melhor.dif });
+  }
+  return { status: divergencias.length ? 'divergente' : (conferidos.length ? 'ok' : 'sem_correspondencia'), conferidos, divergencias };
+}
+
+// Pipeline completo: detecção → linhas candidatas → cabeçalho → inferência
+function extrairTabelaParcelamento(texto) {
+  const det = detectarTabelaParcelamento(texto);
+  const linhas = (texto || '').split('\n');
+  // linhas candidatas: contêm N/M (guardado) OU data+valor
+  const ehCandidata = (l) => {
+    RX_PARCELA_NM_G.lastIndex = 0;
+    return RX_PARCELA_NM_G.test(l) || /\d{2}\/\d{2}\/\d{2,4}.*?[\d.]+,\d{2}/.test(l);
+  };
+  const idxCandidatas = [];
+  linhas.forEach((l, i) => { if (ehCandidata(l)) idxCandidatas.push(i); });
+  const linhasTabela = idxCandidatas.map(i => linhas[i]);
+
+  const analise = { ...inferirColunas(linhasTabela), det };
+
+  // Cabeçalho: linha imediatamente acima da 1ª candidata com ≥3 tokens de texto
+  let cabecalhoTokens = null;
+  if (idxCandidatas.length) {
+    for (let i = idxCandidatas[0] - 1; i >= Math.max(0, idxCandidatas[0] - 4); i--) {
+      const toks = tokenizarLinhaParc(linhas[i]);
+      if (toks.length >= 3 && toks.filter(t => /[A-Za-zÀ-ÿ]/.test(t)).length >= 3) {
+        cabecalhoTokens = toks;
+        break;
+      }
+    }
+  }
+  const mapa = inferirSemantica(analise.tiposColuna, cabecalhoTokens);
+  return { det, analise, cabecalhoTokens, mapa, texto };
+}
+
+// ── Assinatura de layout + persistência do mapeamento (Parte 4d/4e) ──
+function assinaturaLayoutParc(analise, cabecalhoTokens) {
+  const tipos = analise.tiposColuna.map(c => c.tipo).join(',');
+  const cab = (cabecalhoTokens || []).slice(0, 6).join('|').toUpperCase().replace(/\s+/g, '');
+  return analise.numColunas + '§' + tipos + '§' + cab;
+}
+
+function _lerMapasParc() {
+  try { return JSON.parse(localStorage.getItem('mtr_parc_mapas') || '{}'); } catch (_) { return {}; }
+}
+
+function salvarMapeamentoParc(assinatura, mapa, nome) {
+  try {
+    const todos = _lerMapasParc();
+    todos[assinatura] = { mapa, nome: nome || null, salvoEm: new Date().toISOString() };
+    localStorage.setItem('mtr_parc_mapas', JSON.stringify(todos));
+  } catch (_) {}
+}
+
+function buscarMapeamentoParc(assinatura) {
+  const todos = _lerMapasParc();
+  return todos[assinatura] || null;
+}
+
+// ── Motor 7.2 — recálculo com correção periódica ──
+// Modelo: a parcela contratual original é reajustada a cada ciclo pelo índice
+// acumulado do período anterior (com defasagem D meses); com taxa de juros
+// informada, o saldo é corrigido no ciclo e a parcela re-amortizada (Price)
+// sobre o prazo restante. indicesPorMes: map 'AAAA-MM' → variação % mensal.
+function gerarRecalculoParcelamento(params, indicesPorMes) {
+  const { valorTotal, nParcelas, parcelaOriginal, dataPrimeiroVenc,
+          taxaJurosMes = 0, periodicidadeMeses = 12, defasagemMeses = 1 } = params;
+  const j = (taxaJurosMes || 0) / 100;
+  const rows = [];
+  const d0 = parseDataBR(dataPrimeiroVenc);
+  if (!d0 || !(nParcelas > 0)) return { rows, fatorAcumulado: 1 };
+
+  const keyDe = (dt) => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+  const fatorCiclo = (dtCiclo) => {
+    // acumula o índice dos últimos periodicidadeMeses meses, com defasagem
+    let f = 1;
+    for (let k = 0; k < periodicidadeMeses; k++) {
+      const dt = new Date(dtCiclo);
+      dt.setMonth(dt.getMonth() - defasagemMeses - k);
+      const v = indicesPorMes ? indicesPorMes[keyDe(dt)] : null;
+      if (v != null && !isNaN(v)) f *= (1 + v / 100);
+    }
+    return f;
+  };
+
+  let parcelaAtual = parcelaOriginal;
+  let saldo = (valorTotal || 0) > 0 ? valorTotal : parcelaOriginal * nParcelas;
+  let fatorAcumulado = 1;
+  for (let m = 1; m <= nParcelas; m++) {
+    const dt = new Date(d0);
+    dt.setMonth(dt.getMonth() + (m - 1));
+    const inicioCiclo = (m - 1) % periodicidadeMeses === 0 && m > 1;
+    if (inicioCiclo) {
+      const f = fatorCiclo(dt);
+      fatorAcumulado *= f;
+      saldo *= f;
+      if (j > 0) {
+        const rest = nParcelas - (m - 1);
+        parcelaAtual = saldo * j * Math.pow(1 + j, rest) / (Math.pow(1 + j, rest) - 1);
+      } else {
+        parcelaAtual *= f;
+      }
+    }
+    const juros = j > 0 ? saldo * j : 0;
+    const amort = j > 0 ? Math.min(saldo, parcelaAtual - juros) : Math.min(saldo, parcelaAtual);
+    saldo = Math.max(0, saldo - amort);
+    rows.push({ m, data: dt, parcelaRecalculada: parcelaAtual, juros, saldo });
+  }
+  return { rows, fatorAcumulado };
+}
+
+// 7.3 — resíduo inflacionário por ciclo: parcelas nominais fixas × parcelas
+// corrigidas mês a mês pelo índice
+function calcularResiduoInflacionario(parcelaNominalPorCiclo, dataPrimeiroVenc, nParcelas, periodicidadeMeses, indicesPorMes, defasagemMeses) {
+  const d0 = parseDataBR(dataPrimeiroVenc);
+  if (!d0) return [];
+  const keyDe = (dt) => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+  const ciclos = [];
+  let parcela = parcelaNominalPorCiclo;
+  for (let ini = 0; ini < nParcelas; ini += periodicidadeMeses) {
+    const mesesCiclo = Math.min(periodicidadeMeses, nParcelas - ini);
+    let somaFixa = 0, somaCorrigida = 0, corrigida = parcela, fMes = 1;
+    for (let k = 0; k < mesesCiclo; k++) {
+      const dt = new Date(d0);
+      dt.setMonth(dt.getMonth() + ini + k);
+      somaFixa += parcela;
+      const ref = new Date(dt);
+      ref.setMonth(ref.getMonth() - (defasagemMeses || 1));
+      const v = indicesPorMes ? indicesPorMes[keyDe(ref)] : null;
+      if (k > 0 && v != null && !isNaN(v)) fMes *= (1 + v / 100);
+      somaCorrigida += parcela * fMes;
+    }
+    const dIni = new Date(d0); dIni.setMonth(dIni.getMonth() + ini);
+    const dFim = new Date(d0); dFim.setMonth(dFim.getMonth() + ini + mesesCiclo - 1);
+    ciclos.push({ ciclo: ciclos.length + 1, inicio: dIni, fim: dFim, somaFixa, somaCorrigida, residuo: somaCorrigida - somaFixa });
+    parcela = corrigida * fMes; // próximo ciclo parte da parcela corrigida
+  }
+  return ciclos;
+}
+
+// 7.4 — resumo (e recálculo opcional) dos encargos moratórios
+function resumirEncargosParc(registros, paramsMora) {
+  const comEncargo = registros.filter(r => !r.tituloAvulso && r.encargos > 0);
+  const total = comEncargo.reduce((s, r) => s + r.encargos, 0);
+  const resumo = {
+    totalCobrado: total,
+    nParcelasComEncargo: comEncargo.length,
+    mediaPorParcela: comEncargo.length ? total / comEncargo.length : 0,
+    recalculo: null
+  };
+  if (paramsMora && (paramsMora.jurosMoraAm > 0 || paramsMora.multaPct > 0)) {
+    let totalDevido = 0;
+    const linhas = [];
+    for (const r of comEncargo) {
+      if (!r.dataPagamento) continue;
+      const dias = Math.max(0, Math.round((parseDataBR(r.dataPagamento) - r.vencimentoDate) / 86400000));
+      const base = r.valorPrevisto || 0;
+      const multa = base * (paramsMora.multaPct || 0) / 100;
+      const juros = base * ((paramsMora.jurosMoraAm || 0) / 100) * (dias / 30);
+      const devido = multa + juros;
+      totalDevido += devido;
+      linhas.push({ parcela: r.numerador, dias, cobrado: r.encargos, devido, dif: r.encargos - devido });
+    }
+    resumo.recalculo = { totalDevido, totalCobrado: total, diferenca: total - totalDevido, linhas };
+  }
+  return resumo;
+}
+
 // ─── EXTRAÇÃO PARA ATUALIZAÇÃO ───────────────────────────
 function extrairLancamentosAtualizacao(texto) {
   const T = texto.toUpperCase();
@@ -9754,6 +10264,400 @@ function renderFichaSisbrInad(dadosFicha, apuracao) {
     <div class="disclaimer">Análise reconstruída do livro-razão SISBR. Caráter informativo — revise antes de uso profissional.</div>`;
 }
 
+// ═════════════════════════════════════════════════════════
+//  TABELA DE PARCELAMENTO — UI: mapeamento assistido + painéis
+// ═════════════════════════════════════════════════════════
+const CAMPOS_PARC = [
+  ['', 'Ignorar'],
+  ['numeroParcela', 'Nº da parcela'],
+  ['dataVencimento', 'Vencimento'],
+  ['dataPagamento', 'Data de pagamento'],
+  ['valorPrevisto', 'Valor previsto / original'],
+  ['valorPago', 'Valor pago'],
+  ['encargos', 'Encargos / juros de mora'],
+  ['multa', 'Multa'],
+  ['correcao', 'Correção monetária'],
+  ['saldoDevedor', 'Saldo devedor'],
+  ['flagBaixa', 'Situação (S/N ou texto)'],
+  ['tipoTitulo', 'Tipo de título'],
+];
+
+// Parte 6 — modalidade não bancária: desabilita o comparativo BCB
+function onModalidadeParcChange() {
+  const m = document.getElementById('ext-modalidade')?.value;
+  const aviso = document.getElementById('aviso-nao-bancario');
+  const tog = document.getElementById('toggle-bcb');
+  const naoBancaria = m === 'parcelamento_direto';
+  if (aviso) aviso.style.display = naoBancaria ? '' : 'none';
+  if (tog) {
+    if (naoBancaria) {
+      tog.checked = false;
+      tog.setAttribute('disabled', 'disabled');
+      if (typeof aplicarToggleBCB === 'function') aplicarToggleBCB(false);
+    } else {
+      tog.removeAttribute('disabled');
+    }
+  }
+}
+
+function abrirModalMapeamentoParc(ext, aba, metodo, statusId) {
+  window.__parcPendente = { ext, aba, metodo, statusId };
+  const modal = document.getElementById('parc-modal-mapa');
+  const body = document.getElementById('parc-modal-body');
+  const sub = document.getElementById('parc-modal-sub');
+  if (!modal || !body) return;
+  const a = ext.analise;
+  sub.textContent = `Detectamos ${a.tokensPorLinha.length} linhas e ${a.numColunas} colunas` +
+    (ext.det.totalParcelasInferido ? ` (fluxo de ${ext.det.totalParcelasInferido} parcelas)` : '') +
+    '. Confirme o significado de cada coluna:';
+  // mapa invertido: coluna → campo pré-selecionado
+  const porColuna = {};
+  Object.entries(ext.mapa).forEach(([campo, col]) => { porColuna[col] = campo; });
+  body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace">
+    <thead><tr style="color:var(--text3);text-align:left">
+      <th style="padding:4px 6px">Col.</th><th style="padding:4px 6px">Exemplos</th><th style="padding:4px 6px">Significado</th>
+    </tr></thead>
+    <tbody>${a.tiposColuna.map(c => `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:4px 6px;color:var(--text3)">${c.indice + 1}</td>
+      <td style="padding:4px 6px;color:var(--text2);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.amostras.slice(0, 3).join(', ') || '—'}</td>
+      <td style="padding:4px 6px">
+        <select id="parc-map-col-${c.indice}" style="width:100%;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px">
+          ${CAMPOS_PARC.map(([v, label]) => `<option value="${v}"${(porColuna[c.indice] || '') === v ? ' selected' : ''}>${label}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+  document.getElementById('parc-modal-erro').style.display = 'none';
+  const salvo = buscarMapeamentoParc(assinaturaLayoutParc(a, ext.cabecalhoTokens));
+  const nomeEl = document.getElementById('parc-modal-nome');
+  if (nomeEl) nomeEl.value = salvo?.nome || '';
+  modal.style.display = 'flex';
+}
+
+function fecharModalMapeamentoParc() {
+  const modal = document.getElementById('parc-modal-mapa');
+  if (modal) modal.style.display = 'none';
+  const p = window.__parcPendente;
+  if (p && p.statusId) {
+    const st = document.getElementById(p.statusId);
+    if (st && st.className === 'upload-loading') {
+      st.className = 'upload-aviso';
+      st.innerHTML = '⚠️ Mapeamento cancelado — os dados não foram aplicados.<br><small>Envie o documento novamente para reabrir a confirmação.</small>';
+    }
+  }
+  window.__parcPendente = null;
+}
+
+function confirmarMapeamentoParc() {
+  const p = window.__parcPendente;
+  if (!p) return;
+  const a = p.ext.analise;
+  const mapa = {};
+  for (const c of a.tiposColuna) {
+    const v = document.getElementById('parc-map-col-' + c.indice)?.value;
+    if (v) mapa[v] = c.indice;
+  }
+  // Validação (Parte 4c): Vencimento e Valor previsto são obrigatórios
+  const erroEl = document.getElementById('parc-modal-erro');
+  if (mapa.dataVencimento == null || mapa.valorPrevisto == null) {
+    if (erroEl) {
+      erroEl.style.display = '';
+      erroEl.innerHTML = '❌ Mapeie ao menos <strong>Vencimento</strong> e <strong>Valor previsto</strong> para prosseguir.';
+    }
+    return;
+  }
+  if (document.getElementById('parc-modal-lembrar')?.checked) {
+    const nome = document.getElementById('parc-modal-nome')?.value?.trim() || null;
+    salvarMapeamentoParc(assinaturaLayoutParc(a, p.ext.cabecalhoTokens), mapa, nome);
+  }
+  const modal = document.getElementById('parc-modal-mapa');
+  if (modal) modal.style.display = 'none';
+  const pend = window.__parcPendente;
+  window.__parcPendente = null;
+  aplicarParcelamento(pend.ext, mapa, pend.aba, { metodo: pend.metodo, statusId: pend.statusId, origem: 'confirmado' });
+}
+
+// Aplica o mapeamento: monta registros, somas, valida totais e roteia por aba
+function aplicarParcelamento(ext, mapa, aba, info) {
+  const status = info && info.statusId ? document.getElementById(info.statusId) : null;
+  const registros = montarRegistrosParcelamento(ext.analise, mapa, ext.det.totalParcelasInferido);
+  const somas = somarParcelamento(registros);
+  const validacao = validarTotaisDocumento(ext.texto, somas);
+  const dados = { ext, mapa, registros, somas, validacao };
+  window.__parcAtual = dados;
+
+  if (!registros.length) {
+    if (status) {
+      status.className = 'upload-aviso';
+      status.innerHTML = '⚠️ Tabela de parcelamento detectada, mas nenhuma linha pôde ser extraída com o mapeamento aplicado.<br><small>Reenvie o documento e revise o mapeamento das colunas.</small>';
+    }
+    return;
+  }
+
+  if (aba === 'inadimplencia') {
+    preencherParcInadCampos(dados);
+    renderParcInad(dados);
+  } else {
+    preencherParcExtrato(dados);
+    renderPainelParcelamento(dados);
+  }
+
+  if (status) {
+    // Trava de sanidade (5.5): sucesso só com DOM preenchido de fato
+    const domOk = aba === 'inadimplencia'
+      ? !!document.getElementById('inad2-valor')?.value
+      : (!!document.getElementById('ext-valor')?.value &&
+         document.querySelectorAll('#ext-tabela-body tr').length >= Math.min(somas.nPagas + somas.nVencidasNaoPagas, 1));
+    const origemTxt = info && info.mapaSalvo
+      ? ` Mapeamento "${info.mapaSalvo.nome || 'salvo'}" reconhecido automaticamente.`
+      : '';
+    if (domOk) {
+      const avisoDiverg = validacao.status === 'divergente'
+        ? `<br>⚠️ <strong>Divergência com o quadro de totais do documento</strong> (${validacao.divergencias.map(d => d.nome + ': dif ' + fmtBRL(d.dif)).join(' · ')}) — revise antes de usar.`
+        : '';
+      status.className = validacao.status === 'divergente' ? 'upload-aviso' : 'upload-sucesso';
+      status.innerHTML = `${validacao.status === 'divergente' ? '⚠️' : '✅'} Tabela de parcelamento aplicada${info?.metodo || ''} — ${somas.nFluxo} parcelas (${somas.nPagas} pagas · ${somas.nVencidasNaoPagas} vencidas · ${somas.nAVencer} a vencer)${somas.nAvulsos ? ' + ' + somas.nAvulsos + ' título(s) avulso(s)' : ''}.${origemTxt}${avisoDiverg}<br><small>Modalidade "Parcelamento direto" — comparativo BCB não se aplica (operação não bancária).</small>`;
+    } else {
+      status.className = 'upload-aviso';
+      status.innerHTML = '⚠️ O mapeamento foi aplicado mas os campos não foram preenchidos — revise o mapeamento das colunas.';
+    }
+  }
+}
+
+// Preenche a aba Extrato: campos do contrato + tabela (pagas e vencidas)
+function preencherParcExtrato(dados) {
+  const { somas, registros, ext } = dados;
+  const modEl = document.getElementById('ext-modalidade');
+  if (modEl) { modEl.value = 'parcelamento_direto'; highlightCampoIA(modEl); }
+  onModalidadeParcChange();
+  _setCampoIA('ext-valor', somas.totalPrevisto, _numToBRL);
+  _setCampoIA('ext-parcelas', ext.det.totalParcelasInferido);
+  const fluxo = registros.filter(r => !r.tituloAvulso);
+  if (fluxo[0]) _setCampoIA('ext-data-inicio', _ddmmToISO(fluxo[0].vencimento));
+
+  const tbody = document.getElementById('ext-tabela-body');
+  if (tbody) { tbody.innerHTML = ''; _extRowId = 0; }
+  const linhas = fluxo.filter(r => r.situacao === 'pago' || (somas.vencidasNaoPagas || []).includes(r));
+  linhas.forEach(r => {
+    extAddRow();
+    const id = _extRowId;
+    const mesEl = document.getElementById('ext-mesano-' + id);
+    const pagoEl = document.getElementById('ext-pago-' + id);
+    const sitEl = document.getElementById('ext-sit-' + id);
+    const [d, m, a] = r.vencimento.split('/');
+    if (mesEl) { mesEl.value = m + '/' + a; highlightCampoIA(mesEl); }
+    if (pagoEl && r.situacao === 'pago' && r.valorPago > 0) { pagoEl.value = _numToBRL(r.valorPago); highlightCampoIA(pagoEl); }
+    if (sitEl) { sitEl.value = r.situacao === 'pago' ? 'pago' : 'nao_pago'; highlightCampoIA(sitEl); }
+  });
+}
+
+function _fmtDataCurta(d) {
+  return d instanceof Date ? d.toLocaleDateString('pt-BR') : (d || '—');
+}
+
+// Painel principal no container isolado do Extrato
+function renderPainelParcelamento(dados) {
+  const resArea = document.getElementById('results-area');
+  const resSim = document.getElementById('results-simulador');
+  const resExt = document.getElementById('results-extrato');
+  if (!resArea || !resExt) return;
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = 'none';
+  resArea.style.display = '';
+  if (resSim) resSim.style.display = 'none';
+  resExt.style.display = '';
+
+  const { somas, registros, validacao, ext } = dados;
+  const avulsos = registros.filter(r => r.tituloAvulso);
+  const valHtml = validacao.status === 'ok'
+    ? `<span style="color:var(--green,#22c55e)">✓ ${validacao.conferidos.length} totais do documento conferidos (dif ≤ R$ 1,00)</span>`
+    : validacao.status === 'divergente'
+      ? `<span style="color:var(--amber,#f59e0b)">⚠ Divergência com o quadro do documento: ${validacao.divergencias.map(d => `${d.nome} (apurado ${fmtBRL(d.apurado)} × doc ${fmtBRL(d.documento)})`).join(' · ')}</span>`
+      : `<span style="color:var(--text3)">Documento sem quadro de totais identificável — somas apuradas das linhas.</span>`;
+
+  resExt.innerHTML = `
+    <div class="section-heading">Parcelamento Direto — Extrato Reconstituído</div>
+    <div style="background:var(--surface2);border-left:3px solid var(--amber,#f59e0b);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 14px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">
+      <strong style="color:var(--text)">ℹ️ Operação não bancária</strong> — o parcelamento direto pelo vendedor não constitui operação de crédito de instituição financeira; as séries de taxas médias do Banco Central não são parâmetro técnico aplicável. Referências: índice de correção e juros pactuados em contrato.
+    </div>
+    <div class="metrics-grid" style="margin-bottom:14px">
+      <div class="metric-card"><div class="mc-label">Total previsto (${somas.nFluxo} parcelas)</div><div class="mc-value" style="font-size:17px">${fmtBRL(somas.totalPrevisto)}</div><div class="mc-sub">fluxo principal, sem títulos avulsos</div></div>
+      <div class="metric-card"><div class="mc-label">Total pago (${somas.nPagas})</div><div class="mc-value" style="font-size:17px;color:var(--green,#22c55e)">${fmtBRL(somas.totalPago)}</div><div class="mc-sub">inclui encargos pagos</div></div>
+      <div class="metric-card warn"><div class="mc-label">Encargos cobrados</div><div class="mc-value warn" style="font-size:17px">${fmtBRL(somas.totalEncargos)}</div><div class="mc-sub">juros de mora / acréscimos</div></div>
+      <div class="metric-card highlight"><div class="mc-label">Em aberto</div><div class="mc-value accent" style="font-size:17px">${fmtBRL(somas.totalAberto)}</div><div class="mc-sub">${somas.nVencidasNaoPagas} vencida(s) ${fmtBRL(somas.totalVencidasNaoPagas)} · ${somas.nAVencer} a vencer ${fmtBRL(somas.totalAVencer)}</div></div>
+    </div>
+    <div style="font-size:11px;font-family:'DM Mono',monospace;margin-bottom:14px">${valHtml}</div>
+    ${avulsos.length ? `
+    <div class="section-heading" style="font-size:11px">Títulos avulsos (fora do fluxo principal)</div>
+    <div style="overflow-x:auto;margin-bottom:14px"><table class="amort-table" style="width:100%;font-size:10.5px">
+      <thead><tr><th>Título</th><th>Tipo</th><th>Venc.</th><th>Valor</th><th>Situação</th></tr></thead>
+      <tbody>${avulsos.map(a => `<tr><td>${a.numerador}/${a.denominador}</td><td>${a.tipoTitulo || '—'}</td><td>${a.vencimento}</td><td style="text-align:right">${fmtBRL(a.valorPrevisto || 0)}</td><td>${a.situacao}</td></tr>`).join('')}</tbody>
+    </table></div>` : ''}
+    <div class="section-heading" style="font-size:11px">Parcelas do fluxo (${somas.nFluxo}) — ordenadas por vencimento</div>
+    <div style="overflow-x:auto;max-height:340px;overflow-y:auto;margin-bottom:14px"><table class="amort-table" style="width:100%;font-size:10.5px">
+      <thead><tr><th>#</th><th>Venc.</th><th>Previsto</th><th>Pago</th><th>Encargo</th><th>Dt. pgto</th><th>Situação</th></tr></thead>
+      <tbody>${registros.filter(r => !r.tituloAvulso).map(r => `<tr>
+        <td>${r.numerador != null ? r.numerador + '/' + r.denominador : '—'}</td>
+        <td>${r.vencimento}</td>
+        <td style="text-align:right">${r.valorPrevisto != null ? fmtBRL(r.valorPrevisto) : '—'}</td>
+        <td style="text-align:right">${r.situacao === 'pago' ? fmtBRL(r.valorPago || 0) : '—'}</td>
+        <td style="text-align:right;color:${r.encargos > 0 ? 'var(--amber,#f59e0b)' : 'inherit'}">${r.encargos > 0 ? fmtBRL(r.encargos) : '—'}</td>
+        <td>${r.dataPagamento || '—'}</td>
+        <td style="color:${r.situacao === 'pago' ? 'var(--green,#22c55e)' : 'var(--red,#ef4444)'}">${r.situacao}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div class="section-heading" style="font-size:11px">Recalcular com correção periódica (7.2/7.3)</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;font-size:11px">
+        <div><label class="form-label">Índice</label>
+          <select id="parc-rc-indice" style="width:100%"><option value="igpm">IGP-M (SGS 189)</option><option value="ipca">IPCA (SGS 433)</option><option value="inpc">INPC (SGS 188)</option><option value="manual">Manual (% a.m. fixo)</option></select></div>
+        <div id="parc-rc-manual-wrap" style="display:none"><label class="form-label">% a.m. manual</label>
+          <input type="number" id="parc-rc-manual" step="0.01" placeholder="0,50" style="width:100%"/></div>
+        <div><label class="form-label">Periodicidade</label>
+          <select id="parc-rc-period" style="width:100%"><option value="12">Anual</option><option value="1">Mensal</option><option value="6">Semestral</option></select></div>
+        <div><label class="form-label">Defasagem (meses)</label>
+          <input type="number" id="parc-rc-defasagem" value="1" min="0" max="6" style="width:100%"/></div>
+        <div><label class="form-label">Juros <span class="form-hint">% a.m.</span></label>
+          <input type="number" id="parc-rc-juros" step="0.01" value="0" min="0" style="width:100%"/></div>
+      </div>
+      <button class="calc-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="executarRecalculoParc()">Recalcular e comparar</button>
+    </div>
+    <div id="parc-rc-resultado"></div>
+    <div class="disclaimer" style="margin-top:12px">
+      Extrato reconstituído por mapeamento de colunas confirmado pelo usuário. Valores de caráter informativo — revise antes de uso profissional. · <a href="termos.html" style="color:inherit;text-decoration:underline">Termos de Uso</a>
+    </div>`;
+  const selIdx = document.getElementById('parc-rc-indice');
+  if (selIdx) selIdx.onchange = () => {
+    document.getElementById('parc-rc-manual-wrap').style.display = selIdx.value === 'manual' ? '' : 'none';
+  };
+}
+
+// Motor 7.2/7.3/7.4 — executa com os parâmetros do painel e compara linha a linha
+async function executarRecalculoParc() {
+  const dados = window.__parcAtual;
+  const alvo = document.getElementById('parc-rc-resultado');
+  if (!dados || !alvo) return;
+  alvo.innerHTML = '<div class="upload-loading"><div class="ia-spinner"></div><span>Buscando índices e recalculando...</span></div>';
+  try {
+    const fluxo = dados.registros.filter(r => !r.tituloAvulso);
+    const n = dados.ext.det.totalParcelasInferido || fluxo.length;
+    const primeira = fluxo[0];
+    const indiceSel = document.getElementById('parc-rc-indice')?.value || 'igpm';
+    const period = parseInt(document.getElementById('parc-rc-period')?.value) || 12;
+    const defas = parseInt(document.getElementById('parc-rc-defasagem')?.value) || 1;
+    const juros = parseFloat(document.getElementById('parc-rc-juros')?.value) || 0;
+
+    let indicesPorMes = {};
+    if (indiceSel === 'manual') {
+      const v = parseFloat(document.getElementById('parc-rc-manual')?.value) || 0;
+      const d0 = primeira.vencimentoDate;
+      for (let k = -24; k < n + 24; k++) {
+        const dt = new Date(d0); dt.setMonth(dt.getMonth() + k);
+        indicesPorMes[dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0')] = v;
+      }
+    } else {
+      const serie = SGS_INDICES[indiceSel];
+      const dIni = new Date(primeira.vencimentoDate); dIni.setMonth(dIni.getMonth() - defas - period - 2);
+      const dFim = new Date(fluxo[fluxo.length - 1].vencimentoDate);
+      const fmtD = (d) => '01/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      const hist = await buscarSerieHistorica(serie, fmtD(dIni), new Date() < dFim ? '01/' + String(new Date().getMonth() + 1).padStart(2, '0') + '/' + new Date().getFullYear() : fmtD(dFim));
+      indicesPorMes = serieParaMap(hist);
+    }
+
+    const rec = gerarRecalculoParcelamento({
+      valorTotal: dados.somas.totalPrevisto, nParcelas: n,
+      parcelaOriginal: primeira.valorPrevisto, dataPrimeiroVenc: primeira.vencimento,
+      taxaJurosMes: juros, periodicidadeMeses: period, defasagemMeses: defas
+    }, indicesPorMes);
+
+    // comparação linha a linha (parcelas com nº conhecido e valor cobrado)
+    const porNum = {}; rec.rows.forEach(r => { porNum[r.m] = r; });
+    const comp = fluxo.filter(r => r.numerador != null && r.valorPrevisto != null).map(r => {
+      const rr = porNum[r.numerador];
+      const recV = rr ? rr.parcelaRecalculada : null;
+      return { num: r.numerador, venc: r.vencimento, cobrado: r.valorPrevisto, recalculado: recV,
+               dif: recV != null ? r.valorPrevisto - recV : null };
+    });
+    const totCobrado = comp.reduce((s, c) => s + c.cobrado, 0);
+    const totRecalc = comp.reduce((s, c) => s + (c.recalculado || 0), 0);
+    const residuos = calcularResiduoInflacionario(primeira.valorPrevisto, primeira.vencimento, n, period, indicesPorMes, defas);
+    const encResumo = resumirEncargosParc(dados.registros, null);
+
+    alvo.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;font-size:12px;font-family:'DM Mono',monospace">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total cobrado (previsto)</div><strong>${fmtBRL(totCobrado)}</strong></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total recalculado</div><strong>${fmtBRL(totRecalc)}</strong></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Diferença acumulada</div><strong style="color:${totCobrado - totRecalc > 0 ? 'var(--red,#ef4444)' : 'var(--green,#22c55e)'}">${fmtBRL(totCobrado - totRecalc)} (${totRecalc > 0 ? ((totCobrado / totRecalc - 1) * 100).toFixed(2) : '—'}%)</strong></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase">Encargos cobrados</div><strong>${fmtBRL(encResumo.totalCobrado)} (${encResumo.nParcelasComEncargo} parc.)</strong></div>
+      </div>
+      <div style="overflow-x:auto;max-height:280px;overflow-y:auto;margin-bottom:12px"><table class="amort-table" style="width:100%;font-size:10.5px">
+        <thead><tr><th>Parcela</th><th>Venc.</th><th>Cobrado</th><th>Recalculado</th><th>Dif. R$</th><th>Dif. %</th></tr></thead>
+        <tbody>${comp.map(c => `<tr>
+          <td>${c.num}</td><td>${c.venc}</td>
+          <td style="text-align:right">${fmtBRL(c.cobrado)}</td>
+          <td style="text-align:right">${c.recalculado != null ? fmtBRL(c.recalculado) : '—'}</td>
+          <td style="text-align:right;color:${(c.dif || 0) > 0.005 ? 'var(--red,#ef4444)' : 'inherit'}">${c.dif != null ? fmtBRL(c.dif) : '—'}</td>
+          <td style="text-align:right">${c.dif != null && c.recalculado > 0 ? ((c.cobrado / c.recalculado - 1) * 100).toFixed(2) + '%' : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="section-heading" style="font-size:11px">Resíduo inflacionário por ciclo (7.3)</div>
+      <div style="overflow-x:auto;max-height:220px;overflow-y:auto;margin-bottom:8px"><table class="amort-table" style="width:100%;font-size:10.5px">
+        <thead><tr><th>Ciclo</th><th>Período</th><th>Soma fixa</th><th>Soma corrigida</th><th>Resíduo</th></tr></thead>
+        <tbody>${residuos.map(c => `<tr>
+          <td>${c.ciclo}</td><td>${_fmtDataCurta(c.inicio)} – ${_fmtDataCurta(c.fim)}</td>
+          <td style="text-align:right">${fmtBRL(c.somaFixa)}</td>
+          <td style="text-align:right">${fmtBRL(c.somaCorrigida)}</td>
+          <td style="text-align:right;color:var(--amber,#f59e0b)">${fmtBRL(c.residuo)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="disclaimer">O resíduo inflacionário corresponde à diferença entre parcelas de valor nominal fixo e o valor que teriam se corrigidas mensalmente pelo índice pactuado. Sua exigibilidade e forma de cobrança são matéria de análise jurídica, não abrangida por este cálculo.</div>`;
+  } catch (e) {
+    alvo.innerHTML = `<div class="upload-erro">❌ Erro no recálculo: ${e.message}</div>`;
+  }
+}
+
+// Parte 8.2 — Inadimplência: linhas em aberto
+function preencherParcInadCampos(dados) {
+  const { somas, ext } = dados;
+  _setCampoIA('inad2-valor', somas.totalPrevisto, _numToBRL);
+  _setCampoIA('inad2-parcelas', ext.det.totalParcelasInferido);
+  if (typeof atualizarIndicadorContrato === 'function') atualizarIndicadorContrato();
+}
+
+function renderParcInad(dados) {
+  const area = document.getElementById('inad-results-area');
+  if (!area) return;
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.style.display = 'none';
+  const resArea = document.getElementById('results-area');
+  if (resArea) resArea.style.display = 'none';
+  area.style.display = '';
+  window._inadState = window._inadState || {};
+  window._inadState.parcelamento = true;
+
+  const { somas } = dados;
+  const pagasComEnc = dados.registros.filter(r => !r.tituloAvulso && r.encargos > 0 && r.dataPagamento);
+  const maiorAtraso = pagasComEnc.reduce((mx, r) => {
+    const dias = Math.round((parseDataBR(r.dataPagamento) - r.vencimentoDate) / 86400000);
+    return Math.max(mx, dias);
+  }, 0);
+  area.innerHTML = `
+    <div class="section-heading">Parcelamento Direto — Situação de Inadimplência</div>
+    <div class="metrics-grid" style="margin-bottom:14px">
+      <div class="metric-card highlight"><div class="mc-label">Vencidas não pagas</div><div class="mc-value accent" style="font-size:17px">${somas.nVencidasNaoPagas} (${fmtBRL(somas.totalVencidasNaoPagas)})</div><div class="mc-sub">na data de referência do extrato</div></div>
+      <div class="metric-card"><div class="mc-label">Total em aberto</div><div class="mc-value" style="font-size:17px">${fmtBRL(somas.totalAberto)}</div><div class="mc-sub">${somas.nAVencer} parcela(s) a vencer</div></div>
+      <div class="metric-card warn"><div class="mc-label">Encargos já cobrados</div><div class="mc-value warn" style="font-size:17px">${fmtBRL(somas.totalEncargos)}</div><div class="mc-sub">em parcelas pagas com atraso</div></div>
+      <div class="metric-card"><div class="mc-label">Maior atraso registrado</div><div class="mc-value" style="font-size:17px">${maiorAtraso > 0 ? maiorAtraso + ' dias' : '—'}</div><div class="mc-sub">entre vencimento e pagamento</div></div>
+    </div>
+    ${somas.vencidasNaoPagas.length ? `
+    <div class="section-heading" style="font-size:11px">Parcelas vencidas e não pagas</div>
+    <div style="overflow-x:auto;margin-bottom:12px"><table class="amort-table" style="width:100%;font-size:10.5px">
+      <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th></tr></thead>
+      <tbody>${somas.vencidasNaoPagas.map(r => `<tr><td>${r.numerador}/${r.denominador}</td><td>${r.vencimento}</td><td style="text-align:right">${fmtBRL(r.valorPrevisto || 0)}</td></tr>`).join('')}</tbody>
+    </table></div>` : '<div class="disclaimer" style="margin-bottom:12px">Nenhuma parcela vencida e não paga na data de referência do extrato.</div>'}
+    <div class="stj-badge-warn" style="font-size:11px;line-height:1.6">ℹ️ Operação não bancária — comparativo com séries BCB não aplicável. Encargos de mora conforme índice, juros e multa pactuados em contrato.</div>`;
+}
+
 // ─── PREENCHIMENTO — ATUALIZAÇÃO ─────────────────────────
 function preencherCamposAtualizacao(dados) {
   if (!dados.lancamentos || !dados.lancamentos.length) return;
@@ -9860,9 +10764,10 @@ async function processarUploadDocumento(arquivo, aba) {
         sucesso(`✅ ${lancs.length} lançamento(s) identificado(s)${metodo}.<br><small>Revise os valores antes de calcular.</small>`);
       } else if (tipo === 'contrato') {
         avisar('⚠️ Este documento parece ser um <strong>contrato de financiamento</strong> — use a aba <strong>Simulador</strong> para analisá-lo.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>');
-      } else if (tipo === 'conta_corrente' || tipo === 'ficha_sisbr' || tipo === 'extrato_operacao') {
+      } else if (tipo === 'conta_corrente' || tipo === 'ficha_sisbr' || tipo === 'extrato_operacao' || tipo === 'tabela_parcelamento') {
         const rotuloDoc = tipo === 'ficha_sisbr' ? 'uma <strong>ficha de operação (SISBR)</strong>'
           : tipo === 'extrato_operacao' ? 'um <strong>extrato de pagamento (parcela a parcela)</strong>'
+          : tipo === 'tabela_parcelamento' ? 'um <strong>extrato de parcelamento direto</strong>'
           : 'um <strong>extrato bancário</strong>';
         avisar(`⚠️ Este documento parece ser ${rotuloDoc} — use a aba <strong>Extrato</strong>.<br><small>Aqui, envie sentença ou planilha com valores e datas-base.</small>`);
       } else {
@@ -9917,6 +10822,34 @@ async function processarUploadDocumento(arquivo, aba) {
         } else {
           avisoExtracaoFalhou();
         }
+      }
+      return;
+    }
+
+    // ── TABELA DE PARCELAMENTO DIRETO (incorporadora/loteadora) ──
+    if (tipo === 'tabela_parcelamento') {
+      if (aba === 'simulador') {
+        avisar('⚠️ Este documento parece ser um <strong>extrato de parcelamento direto</strong> (incorporadora/loteadora) — use a aba <strong>Extrato</strong> para reconstituir o fluxo e apurar encargos.<br><small>Operação não bancária: o comparativo com séries BCB não se aplica.</small>');
+        return;
+      }
+      status.innerHTML = '<div class="ia-spinner"></div><span>Analisando a estrutura da tabela...</span>';
+      const extParc = extrairTabelaParcelamento(resultado.texto);
+      console.log('[PARC] Estrutura detectada:', JSON.stringify({
+        det: extParc.det,
+        numColunas: extParc.analise.numColunas,
+        tipos: extParc.analise.tiposColuna.map(c => c.tipo),
+        mapaInferido: extParc.mapa,
+        cabecalho: extParc.cabecalhoTokens
+      }));
+      const assinatura = assinaturaLayoutParc(extParc.analise, extParc.cabecalhoTokens);
+      const salvo = buscarMapeamentoParc(assinatura);
+      if (salvo) {
+        // Layout já confirmado antes: aplica direto, sem pedir confirmação
+        aplicarParcelamento(extParc, salvo.mapa, aba, { metodo, statusId: statusIds[aba], mapaSalvo: salvo });
+      } else {
+        status.className = 'upload-loading';
+        status.innerHTML = '<div class="ia-spinner"></div><span>Confirme o significado das colunas na janela aberta...</span>';
+        abrirModalMapeamentoParc(extParc, aba, metodo, statusIds[aba]);
       }
       return;
     }
@@ -10049,6 +10982,30 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+<!-- Modal — Mapeamento assistido de tabela de parcelamento -->
+<div id="parc-modal-mapa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:22px;max-width:640px;width:94%;max-height:92vh;overflow-y:auto">
+    <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">📋 Tabela de parcelamento identificada</p>
+    <p id="parc-modal-sub" style="font-size:11.5px;color:var(--text2);margin-bottom:14px"></p>
+    <div id="parc-modal-body" style="overflow-x:auto"></div>
+    <div id="parc-modal-erro" style="display:none;margin-top:10px" class="upload-erro"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Nome do layout <span class="form-hint">opcional — p/ reuso</span></label>
+        <input type="text" id="parc-modal-nome" placeholder='ex: "SETPAR", "Construtora X"' style="width:100%"/>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text2);margin-top:18px;cursor:pointer">
+        <input type="checkbox" id="parc-modal-lembrar" checked style="width:14px;height:14px;accent-color:var(--accent)">
+        Reconhecer este layout automaticamente da próxima vez
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="calc-btn" style="flex:1;justify-content:center" onclick="confirmarMapeamentoParc()">Confirmar mapeamento</button>
+      <button class="clear-btn" style="flex:1" onclick="fecharModalMapeamentoParc()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal — Série de Parcelas (fora do left-panel para position:fixed funcionar) -->
 <div id="atl-modal-serie" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
