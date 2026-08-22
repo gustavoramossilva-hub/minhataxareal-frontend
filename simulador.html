@@ -852,6 +852,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="tab-btn" id="tab-auditar" onclick="switchTab('auditar')">Extrato</button>
       <button class="tab-btn" id="tab-inadimplencia" onclick="switchTab('inadimplencia')">Inadimpl.</button>
       <button class="tab-btn" id="tab-atualizacao" onclick="switchTab('atualizacao')"><span class="aba-texto-completo">Atualização</span><span class="aba-texto-curto">Atual.</span></button>
+      <button class="tab-btn" id="tab-indices" onclick="switchTab('indices')"><span class="aba-texto-completo">Índices</span><span class="aba-texto-curto">Índ.</span></button>
     </div>
 
     <!-- toggle comparação BCB -->
@@ -1936,6 +1937,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="calc-btn" onclick="calcular()">▶ Calcular Agora</button>
       <button class="clear-btn" onclick="limpar()">↺ Limpar campos</button>
     </div>
+
+    <!-- ══ MODO: ÍNDICES ECONÔMICOS (consulta — liberada a todos os planos) ══ -->
+    <div id="mode-indices" style="display:none">
+      <p class="panel-title" style="margin-bottom:10px">Índices Econômicos</p>
+      <div id="indices-status-box" style="background:rgba(163,230,53,0.06);border:1px solid rgba(163,230,53,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;font-size:11.5px;line-height:1.6">
+        <div id="indices-status-linha" style="color:var(--text2)">Carregando…</div>
+        <div style="color:var(--text3);margin-top:4px">Fonte: Banco Central do Brasil — Sistema Gerenciador de Séries Temporais (SGS)</div>
+        <button class="clear-btn" style="width:100%;margin-top:10px;font-size:11px" onclick="initPainelIndices(true)">↻ Atualizar agora</button>
+      </div>
+      <div class="metodo-info-box">
+        Consulta rápida dos índices que o sistema utiliza, com a <strong>competência do dado mais recente publicado</strong> pelo BCB — cite a série SGS e a competência no laudo. A consulta é liberada a todos os planos; os cálculos que usam os índices seguem conforme o plano contratado.
+      </div>
+      <div class="disclaimer" style="font-size:10.5px">
+        Os índices são obtidos diretamente da API pública do Banco Central do Brasil (SGS). A competência indicada corresponde ao dado mais recente publicado pelo órgão na data da consulta. Índices de divulgação mensal podem apresentar defasagem em relação ao mês corrente.
+      </div>
+    </div>
   </div>
 
   <!-- ══ PAINEL DIREITO (resultados) ══ -->
@@ -2089,6 +2106,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- ÁREA DE RESULTADOS INADIMPLÊNCIA -->
     <div id="inad-results-area" style="display:none;padding-bottom:40px"></div>
+
+    <!-- ÁREA DE RESULTADOS — PAINEL DE ÍNDICES -->
+    <div id="indices-results-area" style="display:none;padding-bottom:40px"></div>
 
     <!-- Upsell Premium — exibido quando userPremium === false na aba Inadimplência -->
     <div id="inad-upsell" style="display:none;padding:40px 0">
@@ -2365,6 +2385,279 @@ async function forcarAtualizacaoBacen() {
   updateBacenRefAud();
 }
 
+// ═════════════════════════════════════════════════════════
+//  PAINEL DE ÍNDICES ECONÔMICOS — catálogo, busca com cache e render
+//  Consulta pública (todos os planos). Reaproveita as MESMAS séries já
+//  configuradas nos cálculos (SGS_CODIGOS / SGS_INDICES / SGS_IPCA_E).
+// ═════════════════════════════════════════════════════════
+const CATALOGO_INDICES = {
+  correcao: {
+    titulo: 'Índices de correção monetária',
+    series: [
+      { cod: 433,   nome: 'IPCA',   desc: 'IBGE — variação mensal', unidade: '% a.m.', freq: 'mensal', acum12m: true },
+      { cod: 10764, nome: 'IPCA-E', desc: 'IBGE — variação mensal', unidade: '% a.m.', freq: 'mensal', acum12m: true },
+      { cod: 188,   nome: 'INPC',   desc: 'IBGE — variação mensal', unidade: '% a.m.', freq: 'mensal', acum12m: true },
+      { cod: 189,   nome: 'IGP-M',  desc: 'FGV — variação mensal',  unidade: '% a.m.', freq: 'mensal', acum12m: true },
+      { cod: 226,   nome: 'TR',     desc: 'BCB — taxa referencial (diária, período de 1 mês)', unidade: '% período', freq: 'diaria', acum12m: false }
+    ]
+  },
+  juros: {
+    titulo: 'Taxas de juros e referência',
+    series: [
+      { cod: 4390, nome: 'SELIC mensal', desc: 'BCB — acumulada no mês', unidade: '% a.m.', freq: 'mensal', acum12m: true },
+      // Nota: a série 11 publica a taxa DIÁRIA (~0,05% a.d.), não a meta anualizada
+      { cod: 11,   nome: 'SELIC diária', desc: 'BCB — taxa por dia útil', unidade: '% a.d.', freq: 'diaria', acum12m: false }
+    ]
+  },
+  credito: {
+    titulo: 'Taxas médias de crédito (BCB)',
+    series: [
+      { cod: 25464, nome: 'Crédito pessoal',            modalidade: 'pessoal',        unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 25471, nome: 'Financiamento de veículos',  modalidade: 'veiculo',        unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 25468, nome: 'Crédito habitacional',       modalidade: 'habitacional',   unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 25467, nome: 'Capital de giro',            modalidade: 'capital',        unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 25469, nome: 'Crédito consignado',         modalidade: 'consignado',     unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 20719, nome: 'Consignado INSS',            modalidade: 'consignadoINSS', unidade: '% a.a.', freq: 'mensal', acum12m: false },
+      { cod: 20756, nome: 'Cheque especial',            modalidade: 'cheque',         unidade: '% a.m.', freq: 'mensal', acum12m: false },
+      { cod: 20754, nome: 'Cartão de crédito',          modalidade: 'cartao',         unidade: '% a.m.', freq: 'mensal', acum12m: false }
+    ]
+  }
+};
+
+function calcularAcumulado12m(historico) {
+  if (!historico || historico.length < 12) return null;
+  const ultimos12 = historico.slice(-12);
+  let fator = 1;
+  for (const d of ultimos12) {
+    if (d.valor == null || isNaN(d.valor)) return null;
+    fator *= (1 + d.valor / 100);
+  }
+  return (fator - 1) * 100;
+}
+
+// Busca todas as séries do catálogo com cache de 12h.
+// IMPORTANTE: usa o endpoint por INTERVALO (dataInicial/dataFinal), não o
+// /ultimos/N — verificado ao vivo que /ultimos/N>1 retorna dados DEFASADOS
+// para algumas séries (4390 e 254xx devolviam competências de 2025 enquanto
+// o intervalo devolve o dado atual). O intervalo é o mesmo endpoint que os
+// cálculos do app já usam. Throttle de 100ms entre chamadas (respeito à API).
+async function buscarIndicesPainel(forcarAtualizacao = false) {
+  const CACHE_KEY = 'mtr_indices_painel';
+  const CACHE_TTL_HORAS = 12;
+
+  if (!forcarAtualizacao) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(CACHE_KEY));
+      if (cache && cache.timestamp && cache.series) {
+        const horas = (Date.now() - cache.timestamp) / 3600000;
+        if (horas < CACHE_TTL_HORAS) return cache;
+      }
+    } catch (e) { /* cache inválido — segue para busca */ }
+  }
+
+  const resultado = { timestamp: Date.now(), series: {}, errosBusca: [] };
+  const todasSeries = [
+    ...CATALOGO_INDICES.correcao.series,
+    ...CATALOGO_INDICES.juros.series,
+    ...CATALOGO_INDICES.credito.series
+  ];
+
+  const hoje = new Date();
+  const ini = new Date(hoje);
+  ini.setMonth(ini.getMonth() - 15);
+  const p2 = (n) => String(n).padStart(2, '0');
+  const dataInicial = '01/' + p2(ini.getMonth() + 1) + '/' + ini.getFullYear();
+  const dataFinal = p2(hoje.getDate()) + '/' + p2(hoje.getMonth() + 1) + '/' + hoje.getFullYear();
+
+  for (const s of todasSeries) {
+    try {
+      const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + s.cod +
+        '/dados?formato=json&dataInicial=' + dataInicial + '&dataFinal=' + dataFinal;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const dados = await resp.json();
+      if (!Array.isArray(dados) || !dados.length) throw new Error('sem dados');
+
+      const historico = dados.slice(-13).map(d => ({
+        data: d.data,
+        valor: parseFloat(String(d.valor).replace(',', '.'))
+      }));
+      const ultimo = historico[historico.length - 1];
+      resultado.series[s.cod] = {
+        valorAtual: ultimo.valor,
+        competencia: ultimo.data,
+        historico,
+        acumulado12m: s.acum12m ? calcularAcumulado12m(historico) : null
+      };
+    } catch (erro) {
+      resultado.errosBusca.push({ cod: s.cod, nome: s.nome, erro: erro.message });
+      resultado.series[s.cod] = null;
+    }
+    await new Promise(r => setTimeout(r, 100)); // throttle
+  }
+
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(resultado)); } catch (_) {}
+  return resultado;
+}
+
+const MESES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+function _competenciaFmt(serieDef, dataStr) {
+  const p = (dataStr || '').split('/');
+  if (p.length !== 3) return dataStr || '—';
+  if (serieDef.freq === 'diaria') return dataStr;               // data completa
+  return MESES_ABREV[parseInt(p[1], 10) - 1] + '/' + p[2];      // mês/ano
+}
+
+function _defasagemDias(dataStr) {
+  const p = (dataStr || '').split('/');
+  if (p.length !== 3) return null;
+  const d = new Date(p[2] + '-' + p[1] + '-' + p[0] + 'T12:00:00');
+  return Math.round((Date.now() - d.getTime()) / 86400000);
+}
+
+function toggleHistoricoIndice(cod) {
+  const tr = document.getElementById('ind-hist-' + cod);
+  if (tr) tr.style.display = tr.style.display === 'none' ? '' : 'none';
+}
+
+function copiarSerieIndice(cod, nome) {
+  const cache = (() => { try { return JSON.parse(localStorage.getItem('mtr_indices_painel')); } catch (_) { return null; } })();
+  const s = cache && cache.series ? cache.series[cod] : null;
+  if (!s) return;
+  const texto = nome + ' (BCB/SGS ' + cod + ')\n' +
+    s.historico.map(h => h.data + '\t' + String(h.valor).replace('.', ',')).join('\n');
+  const feito = () => {
+    const btn = document.getElementById('ind-copy-' + cod);
+    if (btn) { const t = btn.textContent; btn.textContent = '✓ Copiado'; setTimeout(() => { btn.textContent = t; }, 1600); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(feito).catch(() => {});
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = texto; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); feito(); } catch (_) {}
+    ta.remove();
+  }
+}
+
+function renderPainelIndices(res) {
+  const area = document.getElementById('indices-results-area');
+  const statusLinha = document.getElementById('indices-status-linha');
+  const statusBox = document.getElementById('indices-status-box');
+  if (!area) return;
+
+  const dt = new Date(res.timestamp);
+  const p2 = (n) => String(n).padStart(2, '0');
+  const tsFmt = p2(dt.getDate()) + '/' + p2(dt.getMonth() + 1) + '/' + dt.getFullYear() + ', ' + p2(dt.getHours()) + ':' + p2(dt.getMinutes());
+  const horas = (Date.now() - res.timestamp) / 3600000;
+  const recente = horas < 12;
+  if (statusLinha) {
+    statusLinha.innerHTML = recente
+      ? '<span style="color:#a3e635">✓</span> <strong style="color:var(--text)">Atualizado em ' + tsFmt + '</strong>'
+      : '<span style="color:var(--amber,#f59e0b)">⚠</span> <strong style="color:var(--text)">Atualizado em ' + tsFmt + '</strong> — dados podem estar desatualizados, clique em Atualizar';
+  }
+  if (statusBox) {
+    statusBox.style.background = recente ? 'rgba(163,230,53,0.06)' : 'rgba(245,158,11,0.07)';
+    statusBox.style.borderColor = recente ? 'rgba(163,230,53,0.25)' : 'rgba(245,158,11,0.3)';
+  }
+
+  const grupoHtml = (grupo) => {
+    const linhas = grupo.series.map(s => {
+      const dado = res.series[s.cod];
+      if (!dado) {
+        return '<tr><td><strong>' + s.nome + '</strong><br><span style="font-size:9.5px;color:var(--text3)">' + (s.desc || '') + '</span></td>' +
+          '<td style="font-family:\'DM Mono\',monospace">' + s.cod + '</td>' +
+          '<td colspan="3" style="color:var(--amber,#f59e0b)">indisponível — falha na consulta ao BCB</td></tr>';
+      }
+      const defas = _defasagemDias(dado.competencia);
+      const compDestaque = defas != null && defas > 60;
+      const comp = _competenciaFmt(s, dado.competencia);
+      const hist6 = (i0, i1) => dado.historico.slice(-12).slice(i0, i1).map(h =>
+        '<div style="text-align:center;min-width:52px"><div style="color:var(--text3);font-size:9px">' + _competenciaFmt(s, h.data) + '</div><div>' + String(h.valor.toFixed(s.freq === 'diaria' ? 4 : 2)).replace('.', ',') + '%</div></div>').join('');
+      return '<tr onclick="toggleHistoricoIndice(' + s.cod + ')" style="cursor:pointer" title="Clique para ver o histórico">' +
+        '<td><strong>' + s.nome + '</strong><br><span style="font-size:9.5px;color:var(--text3)">' + (s.desc || 'BCB — taxa média da modalidade') + '</span></td>' +
+        '<td style="font-family:\'DM Mono\',monospace">' + s.cod + '</td>' +
+        '<td style="' + (compDestaque ? 'color:var(--amber,#f59e0b)' : '') + '"' + (compDestaque ? ' title="Defasagem de ' + defas + ' dias — o dado mais recente ainda não foi publicado pelo BCB"' : '') + '>' + comp + (compDestaque ? ' ⚠' : '') + '</td>' +
+        '<td style="text-align:right;font-family:\'DM Mono\',monospace">' + String(dado.valorAtual.toFixed(s.freq === 'diaria' ? 4 : 2)).replace('.', ',') + ' ' + s.unidade + '</td>' +
+        '<td style="text-align:right;font-family:\'DM Mono\',monospace">' + (dado.acumulado12m != null ? String(dado.acumulado12m.toFixed(2)).replace('.', ',') + '%' : '—') + '</td></tr>' +
+        '<tr id="ind-hist-' + s.cod + '" style="display:none"><td colspan="5" style="background:var(--surface2);padding:10px 12px">' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;font-family:\'DM Mono\',monospace;font-size:10px;margin-bottom:6px">' + hist6(0, 6) + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;font-family:\'DM Mono\',monospace;font-size:10px;margin-bottom:8px">' + hist6(6, 12) + '</div>' +
+        '<button id="ind-copy-' + s.cod + '" class="clear-btn" style="font-size:10px;padding:4px 12px" onclick="event.stopPropagation();copiarSerieIndice(' + s.cod + ', \'' + s.nome.replace(/'/g, '') + '\')">📋 Copiar série</button>' +
+        '</td></tr>';
+    }).join('');
+    return '<div class="section-heading" style="font-size:11px;margin-top:18px">' + grupo.titulo + '</div>' +
+      '<div style="overflow-x:auto"><table class="amort-table" style="width:100%;font-size:11px">' +
+      '<thead><tr><th>Índice</th><th>Série SGS</th><th>Competência</th><th style="text-align:right">No mês</th><th style="text-align:right">Acum. 12m</th></tr></thead>' +
+      '<tbody>' + linhas + '</tbody></table></div>';
+  };
+
+  area.innerHTML =
+    '<div class="section-heading">Índices Econômicos — BCB/SGS</div>' +
+    '<div style="background:' + (recente ? 'rgba(163,230,53,0.06)' : 'rgba(245,158,11,0.07)') + ';border:1px solid ' + (recente ? 'rgba(163,230,53,0.25)' : 'rgba(245,158,11,0.3)') + ';border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
+    '<div>' + (recente ? '<span style="color:#a3e635">✓</span>' : '<span style="color:var(--amber,#f59e0b)">⚠</span>') + ' <strong>Atualizado em ' + tsFmt + '</strong><br><span style="color:var(--text3);font-size:10.5px">Fonte: Banco Central do Brasil — Sistema Gerenciador de Séries Temporais (SGS)</span></div>' +
+    '<button class="clear-btn" style="font-size:11px" onclick="initPainelIndices(true)">↻ Atualizar</button></div>' +
+    (res.errosBusca && res.errosBusca.length ? '<div class="upload-aviso" style="margin-bottom:6px">⚠️ ' + res.errosBusca.length + ' série(s) indisponível(is) nesta consulta: ' + res.errosBusca.map(e => e.nome + ' (' + e.cod + ')').join(', ') + '</div>' : '') +
+    grupoHtml(CATALOGO_INDICES.correcao) +
+    grupoHtml(CATALOGO_INDICES.juros) +
+    grupoHtml(CATALOGO_INDICES.credito) +
+    '<div class="disclaimer" style="margin-top:16px">Os índices são obtidos diretamente da API pública do Banco Central do Brasil (SGS). A competência indicada corresponde ao dado mais recente publicado pelo órgão na data da consulta. Índices de divulgação mensal podem apresentar defasagem em relação ao mês corrente. · <a href="termos.html" style="color:inherit;text-decoration:underline">Termos de Uso</a></div>';
+}
+
+// Orquestra a aba Índices: cache → busca → render → indicador global
+async function initPainelIndices(forcarAtualizacao = false) {
+  const area = document.getElementById('indices-results-area');
+  const statusLinha = document.getElementById('indices-status-linha');
+  if (window.__indicesBuscando) return;
+  try {
+    // cache válido renderiza direto (sem rede); busca só se necessário
+    if (!forcarAtualizacao) {
+      try {
+        const cache = JSON.parse(localStorage.getItem('mtr_indices_painel'));
+        if (cache && cache.timestamp && cache.series && (Date.now() - cache.timestamp) / 3600000 < 12) {
+          renderPainelIndices(cache);
+          atualizarIndicadorGlobalIndices();
+          return;
+        }
+      } catch (_) {}
+    }
+    window.__indicesBuscando = true;
+    if (statusLinha) statusLinha.innerHTML = '<span class="ia-spinner" style="display:inline-block;vertical-align:middle"></span> Consultando BCB…';
+    if (area && !area.innerHTML) area.innerHTML = '<div class="upload-loading"><div class="ia-spinner"></div><span>Consultando as séries do BCB…</span></div>';
+    const res = await buscarIndicesPainel(forcarAtualizacao);
+    renderPainelIndices(res);
+    atualizarIndicadorGlobalIndices();
+  } catch (e) {
+    if (statusLinha) statusLinha.innerHTML = '<span style="color:var(--red,#ef4444)">✗</span> Falha ao consultar o BCB: ' + e.message;
+  } finally {
+    window.__indicesBuscando = false;
+  }
+}
+
+// Parte 4 — indicador global unificado no banner do topo (todas as abas):
+// usa o timestamp do MESMO cache do painel e leva à aba Índices ao clicar.
+function atualizarIndicadorGlobalIndices() {
+  const banner = document.getElementById('bacen-status-banner');
+  if (!banner) return;
+  banner.style.cursor = 'pointer';
+  banner.title = 'Ver painel de índices (competências e histórico)';
+  banner.onclick = () => switchTab('indices');
+  try {
+    const cache = JSON.parse(localStorage.getItem('mtr_indices_painel'));
+    if (cache && cache.timestamp) {
+      const dt = new Date(cache.timestamp);
+      const p2 = (n) => String(n).padStart(2, '0');
+      banner.style.display = '';
+      banner.style.background = 'var(--surface2)';
+      banner.style.color = 'var(--text2)';
+      banner.innerHTML = '✓ Índices atualizados — ' + p2(dt.getDate()) + '/' + p2(dt.getMonth() + 1) + ' ' +
+        p2(dt.getHours()) + ':' + p2(dt.getMinutes()) +
+        ' <span style="text-decoration:underline;margin-left:6px">ver</span>';
+    }
+  } catch (_) {}
+}
+
 // Estado global
 let state = {
   modo: 'simular',
@@ -2407,8 +2700,13 @@ function switchTab(tab) {
   document.getElementById('tab-auditar').classList.toggle('active', tab === 'auditar');
   document.getElementById('tab-inadimplencia').classList.toggle('active', tab === 'inadimplencia');
   document.getElementById('tab-atualizacao').classList.toggle('active', tab === 'atualizacao');
+  const tabInd = document.getElementById('tab-indices');
+  if (tabInd) tabInd.classList.toggle('active', tab === 'indices');
   document.getElementById('mode-simular').style.display = tab === 'simular' ? '' : 'none';
   document.getElementById('mode-auditar').style.display = tab === 'auditar' ? '' : 'none';
+  const modeInd = document.getElementById('mode-indices');
+  if (modeInd) modeInd.style.display = tab === 'indices' ? '' : 'none';
+  const indArea = document.getElementById('indices-results-area');
   if (tab === 'atualizacao') {
     document.getElementById('mode-atualizacao').style.display = '';
     const gate = document.getElementById('atl-premium-gate');
@@ -2434,6 +2732,7 @@ function switchTab(tab) {
   if (tab === 'inadimplencia') {
     document.getElementById('results-area').style.display = 'none';
     document.getElementById('inad-results-area').style.display = 'none';
+    if (indArea) indArea.style.display = 'none';
     const upsellEl = document.getElementById('inad-upsell');
     const formEl   = document.getElementById('mode-inadimplencia');
     if (window.userPremium === false) {
@@ -2450,8 +2749,16 @@ function switchTab(tab) {
         document.getElementById('empty-state').style.display = '';
       }
     }
+  } else if (tab === 'indices') {
+    // Painel de índices: consulta pública, liberada a todos os planos
+    document.getElementById('results-area').style.display = 'none';
+    document.getElementById('inad-results-area').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+    if (indArea) indArea.style.display = '';
+    if (typeof initPainelIndices === 'function') initPainelIndices();
   } else {
     document.getElementById('inad-results-area').style.display = 'none';
+    if (indArea) indArea.style.display = 'none';
     resetResultados();
   }
 }
@@ -7360,6 +7667,10 @@ window.addEventListener('DOMContentLoaded', () => {
   updateBacenRefAud();
   renderHistorico();
   atualizarBacen();
+  // Indicador global unificado: quando o painel de índices já tem cache,
+  // o banner do topo mostra o timestamp dele e leva à aba Índices ao clicar
+  // (aguarda o banner ser criado por exibirStatusBacen)
+  setTimeout(atualizarIndicadorGlobalIndices, 1800);
   // Data de apuração padrão = hoje
   const inadApur = document.getElementById('inad-apuracao');
   if (inadApur) inadApur.value = new Date().toISOString().slice(0, 10);
