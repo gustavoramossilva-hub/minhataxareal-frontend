@@ -879,6 +879,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="btn-upload-ia" type="button" onclick="document.getElementById('input-pdf-simulador').click()">📎 Selecionar contrato (PDF ou imagem)</button>
         <div id="status-upload-simulador" style="display:none"></div>
         <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        <p class="upload-ia-aviso" style="margin-top:4px"><a href="#" onclick="mapearColunasManualmente(&#39;simulador&#39;);return false" style="color:var(--text3);text-decoration:underline">O documento não foi reconhecido? Mapear colunas manualmente</a></p>
       </div>
       <div class="separador-ou">── ou preencha manualmente ──</div>
 
@@ -1318,6 +1319,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <button class="btn-upload-ia" onclick="document.getElementById('input-pdf-extrato').click()">📎 Selecionar contrato ou extrato</button>
           <div id="status-upload-extrato" style="display:none"></div>
           <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        <p class="upload-ia-aviso" style="margin-top:4px"><a href="#" onclick="mapearColunasManualmente(&#39;extrato&#39;);return false" style="color:var(--text3);text-decoration:underline">O documento não foi reconhecido? Mapear colunas manualmente</a></p>
         </div>
         <div class="separador-ou">── ou preencha manualmente ──</div>
 
@@ -1422,6 +1424,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="btn-upload-ia" type="button" onclick="document.getElementById('input-pdf-inadimplencia').click()">📎 Selecionar documento (PDF ou imagem)</button>
         <div id="status-upload-inadimplencia" style="display:none"></div>
         <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        <p class="upload-ia-aviso" style="margin-top:4px"><a href="#" onclick="mapearColunasManualmente(&#39;inadimplencia&#39;);return false" style="color:var(--text3);text-decoration:underline">O documento não foi reconhecido? Mapear colunas manualmente</a></p>
       </div>
       <div class="separador-ou">── ou preencha manualmente ──</div>
 
@@ -1714,6 +1717,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <button class="btn-upload-ia" onclick="document.getElementById('input-pdf-atualizacao').click()">📎 Selecionar documento</button>
           <div id="status-upload-atualizacao" style="display:none"></div>
           <p class="upload-ia-aviso">🔒 Processamento local — nenhum arquivo é enviado para servidores</p>
+        <p class="upload-ia-aviso" style="margin-top:4px"><a href="#" onclick="mapearColunasManualmente(&#39;atualizacao&#39;);return false" style="color:var(--text3);text-decoration:underline">O documento não foi reconhecido? Mapear colunas manualmente</a></p>
         </div>
         <div class="separador-ou">── ou adicione manualmente ──</div>
 
@@ -8419,13 +8423,26 @@ async function extrairTextoPDF(arquivo) {
   try {
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let textoCompleto = '';
+    // Itens POSICIONADOS (x/y/width) das primeiras páginas — usados pelo
+    // fallback de extração por proximidade espacial (layouts de formulário,
+    // onde rótulo e valor ficam em linhas/colunas separadas). Cap de 20
+    // páginas: formulários de contrato são curtos e o cap evita estourar
+    // memória em processos judiciais de milhares de páginas.
+    const itensPosicionados = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const pagina = await pdf.getPage(i);
       const conteudo = await pagina.getTextContent();
       textoCompleto += _montarTextoPorLinhas(conteudo.items) + '\n';
+      if (i <= 20) {
+        for (const it of conteudo.items) {
+          if (it.str && it.str.trim() && it.transform) {
+            itensPosicionados.push({ s: it.str.trim(), x: it.transform[4], y: it.transform[5], w: it.width || 0, p: i });
+          }
+        }
+      }
     }
     if (textoCompleto.trim().length > 100) {
-      return { texto: textoCompleto, metodo: 'digital' };
+      return { texto: textoCompleto, metodo: 'digital', itensPosicionados };
     }
   } catch(e) {
     console.log('PDF.js falhou, tentando OCR:', e.message);
@@ -8501,12 +8518,12 @@ function extrairDadosContrato(texto) {
 
   // Valor financiado — separador [:.\s]+ aceita pontilhado-líder ("VALOR....R$")
   const rxValor = [
-    /VALOR\s+(?:TOTAL\s+)?(?:FINANCIADO|DO\s+CR[EÉ]DITO|LIBERADO|L[IÍ]QUIDO)[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /VLR\.?\s+(?:TOTAL\s+)?FINANCIADO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PRINCIPAL[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /MONTANTE[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /CR[EÉ]DITO\s+CONCEDIDO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /VALOR\s+DO\s+EMPR[EÉ]STIMO[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /VALOR\s+(?:TOTAL\s+)?(?:FINANCIADO|DO\s+CR[EÉ]DITO|LIBERADO|L[IÍ]QUIDO)[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /VLR\.?\s+(?:TOTAL\s+)?FINANCIADO[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /PRINCIPAL[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /MONTANTE[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /CR[EÉ]DITO\s+CONCEDIDO[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /VALOR\s+DO\s+EMPR[EÉ]STIMO[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxValor) {
     const m = T.match(rx);
@@ -8553,9 +8570,9 @@ function extrairDadosContrato(texto) {
 
   // Valor da parcela
   const rxPmt = [
-    /(?:VALOR\s+DA\s+)?PARCELA[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PRESTA[CÇ][AÃ]O[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PMT[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /(?:VALOR\s+DA\s+)?PARCELA[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /PRESTA[CÇ][AÃ]O[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /PMT[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxPmt) {
     const m = T.match(rx);
@@ -8607,8 +8624,8 @@ function extrairDadosContrato(texto) {
 
   // IOF
   const rxIOF = [
-    /\bIOF\b[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /IMPOSTO\s+(?:SOBRE\s+)?OPERA[CÇ][OÕ]ES[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /\bIOF\b[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
+    /IMPOSTO\s+(?:SOBRE\s+)?OPERA[CÇ][OÕ]ES[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxIOF) {
     const m = T.match(rx);
@@ -8616,9 +8633,11 @@ function extrairDadosContrato(texto) {
   }
 
   // Seguro
+  // Fix auditoria P1.4: o padrão anterior exigia espaço após "SEGURO", então
+  // "SEGURO:" (sem espaço) falhava. Separador agora é [:.\s]* e o padrão
+  // cobre Vlr./Prêmio/variações num regex só.
   const rxSeg = [
-    /SEGURO\s+(?:PRESTAMISTA|DE\s+VIDA|RESIDENCIAL)?[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
-    /PR[EÊ]MIO\s+(?:DE\s+SEGURO)?[:.\s]+R?\$?\s*([\d.]+,\d{2})/i,
+    /(?:VLR\.?\s*)?(?:PR[ÊE]MIO\s+(?:DE\s+)?)?SEGUROS?(?:\s+PRESTAMISTA|\s+DE\s+VIDA|\s+RESIDENCIAL|\s+PROTE[ÇC][ÃA]O)?[:.\s]*R?\$?\s*([\d.]+,\d{2})/i,
   ];
   for (const rx of rxSeg) {
     const m = T.match(rx);
@@ -8627,7 +8646,7 @@ function extrairDadosContrato(texto) {
 
   // CET mensal
   const rxCET = [
-    /CET\s+MENSAL[:.\s]+([\d,]+)\s*%/i,
+    /CET\s+MENSAL[:.\s]*([\d,]+)\s*%/i,
     /CUSTO\s+EFETIVO\s+TOTAL\s+MENSAL[:.\s]+([\d,]+)/i,
   ];
   for (const rx of rxCET) {
@@ -8686,6 +8705,166 @@ function extrairDadosContrato(texto) {
   if (bancoAchado) dados.nome_banco = bancoAchado;
 
   return dados;
+}
+
+// ═════════════════════════════════════════════════════════
+//  EXTRAÇÃO POR PROXIMIDADE ESPACIAL — layouts de FORMULÁRIO
+//  Rótulo numa linha e valor em outra (ou em coluna distante) zeram os
+//  parsers por linha. Aqui usamos os ITENS POSICIONADOS do PDF.js: para cada
+//  rótulo conhecido, buscamos o valor MAIS PRÓXIMO do tipo esperado —
+//  1º na mesma linha à direita, 2º na linha logo abaixo, 3º na mesma coluna.
+//  Usada como FALLBACK (só quando o parser por linha extraiu < 3 campos).
+// ═════════════════════════════════════════════════════════
+const ROTULOS_CAMPOS = [
+  { campo: 'valorFinanciado', tipo: 'monetario',
+    padroes: [/valor\s+(?:total\s+)?financiado/i, /valor\s+do\s+cr[ée]dito/i,
+              /valor\s+liberado/i, /^principal\b/i, /vlr\.?\s*financiado/i,
+              /valor\s+da\s+opera[çc][ãa]o/i] },
+  { campo: 'valorLiquido', tipo: 'monetario',
+    padroes: [/valor\s+l[íi]quido/i, /l[íi]quido\s+creditado/i, /valor\s+creditado/i] },
+  { campo: 'taxaMensal', tipo: 'percentual',
+    padroes: [/taxa\s+(?:de\s+juros\s+)?(?:nominal\s+)?mensal/i,
+              /juros\s+(?:remunerat[óo]rios\s+)?(?:ao\s+m[êe]s|mensais)/i,
+              /taxa\s+a\.?\s*m\.?$/i] },
+  { campo: 'taxaAnual', tipo: 'percentual',
+    padroes: [/taxa\s+(?:de\s+juros\s+)?(?:nominal\s+)?anual/i, /taxa\s+a\.?\s*a\.?$/i] },
+  { campo: 'cetMensal', tipo: 'percentual',
+    padroes: [/^cet\b/i, /custo\s+efetivo\s+total/i] },
+  { campo: 'numParcelas', tipo: 'inteiro',
+    padroes: [/(?:n[úu]mero\s+de\s+|qtd\.?\s*|quantidade\s+de\s+)?parcelas/i,
+              /presta[çc][õo]es/i, /^prazo\b/i] },
+  { campo: 'valorParcela', tipo: 'monetario',
+    padroes: [/valor\s+d[ae]\s+(?:cada\s+)?parcela/i, /^presta[çc][ãa]o\b/i, /^pmt\b/i] },
+  { campo: 'dataContrato', tipo: 'data',
+    padroes: [/data\s+(?:d[eoa]\s+)?(?:contrato|assinatura|opera[çc][ãa]o|emiss[ãa]o)/i] },
+  { campo: 'dataLiberacao', tipo: 'data',
+    padroes: [/data\s+(?:d[ae]\s+)?libera[çc][ãa]o/i, /liberado\s+em/i] },
+  { campo: 'primeiroVencimento', tipo: 'data',
+    padroes: [/(?:1[ºo°]|primeiro)\s+vencimento/i, /venc\.?\s*1[ªa]\s*parc/i] },
+  { campo: 'iof', tipo: 'monetario',
+    padroes: [/^iof\b/i, /imposto\s+sobre\s+opera/i] },
+  { campo: 'seguro', tipo: 'monetario',
+    padroes: [/^seguro/i, /pr[êe]mio/i] },
+  { campo: 'tac', tipo: 'monetario',
+    padroes: [/^tac\b/i, /tarifa\s+de\s+(?:abertura|cadastro)/i, /^tec\b/i] },
+];
+
+function _tipoDoItemProx(s) {
+  const t = (s || '').trim();
+  if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(t)) return 'data';
+  if (/^R?\$?\s*[\d.]{1,12},\d{2}$/.test(t)) return 'monetario';
+  if (/^[\d.,]+\s*%(\s*a\.?\s*[ma]\.?.*)?$/i.test(t)) return 'percentual';
+  if (/^\d{1,3}$/.test(t)) return 'inteiro';
+  return null;
+}
+
+function _valorDoItemProx(s, tipo) {
+  const t = (s || '').trim();
+  if (tipo === 'monetario') return parseMoeda(t);
+  if (tipo === 'percentual') { const m = t.match(/([\d.,]+)\s*%/); return m ? parseMoeda(m[1]) : null; }
+  if (tipo === 'inteiro') return parseInt(t, 10);
+  if (tipo === 'data') return normalizarDataParc(t);
+  return null;
+}
+
+function extrairPorProximidade(itens) {
+  if (!itens || !itens.length) return { campos: {}, conflitos: [] };
+  const encontrados = {};   // campo → {valor, dist, valorIdx}
+  const usoValor = {};      // idx do item-valor → {campo, dist}
+  const conflitos = [];
+
+  for (let i = 0; i < itens.length; i++) {
+    const it = itens[i];
+    // um item que já contenha o valor embutido no próprio rótulo é coberto
+    // pelo parser por linha; aqui interessa o rótulo "puro"
+    let rotDef = null;
+    for (const r of ROTULOS_CAMPOS) {
+      if (r.padroes.some(rx => rx.test(it.s))) { rotDef = r; break; }
+    }
+    if (!rotDef || encontrados[rotDef.campo]) continue;
+
+    // valor embutido no mesmo item? ("Valor financiado R$ 50.000,00")
+    const embutido = it.s.match(/R?\$?\s*([\d.]{1,12},\d{2})\s*%?\s*$/);
+    if (embutido && _tipoDoItemProx(embutido[0].trim())) {
+      const v = _valorDoItemProx(embutido[0], rotDef.tipo);
+      if (v != null) { encontrados[rotDef.campo] = { valor: v, dist: 0 }; continue; }
+    }
+
+    const xFim = it.x + (it.w || 0);
+    let melhor = null; // {idx, dist, nivel}
+    for (let j = 0; j < itens.length; j++) {
+      if (i === j) continue;
+      const cand = itens[j];
+      if (cand.p !== it.p) continue;
+      if (_tipoDoItemProx(cand.s) !== rotDef.tipo) continue;
+      const dy = it.y - cand.y;          // >0 = candidato ABAIXO (Y do PDF cresce p/ cima)
+      const dxDir = cand.x - xFim;       // >0 = à direita do fim do rótulo
+      let nivel = null, dist = null;
+      if (Math.abs(dy) <= 3 && dxDir > -2) {           // 1º: mesma linha, à direita
+        nivel = 1; dist = dxDir;
+      } else if (dy > 3 && dy <= 25 &&                 // 2º: linha logo abaixo,
+        (Math.abs(cand.x - it.x) <= 40 ||             //     alinhado à esquerda
+         Math.abs((cand.x + (cand.w || 0)) - xFim) <= 40)) { // ou à direita
+        nivel = 2; dist = 100 + dy + Math.abs(cand.x - it.x) / 10;
+      } else if (Math.abs(cand.x - it.x) <= 15 && dy > 3 && dy <= 60) { // 3º: mesma coluna
+        nivel = 3; dist = 300 + dy;
+      }
+      if (nivel != null && (melhor == null || dist < melhor.dist)) melhor = { idx: j, dist, nivel };
+    }
+    if (!melhor) continue;
+
+    // dois rótulos disputando o mesmo valor → fica o mais próximo
+    const dono = usoValor[melhor.idx];
+    if (dono && dono.dist <= melhor.dist) {
+      conflitos.push({ campo: rotDef.campo, perdeuPara: dono.campo, valor: itens[melhor.idx].s });
+      continue;
+    }
+    if (dono) {
+      conflitos.push({ campo: dono.campo, perdeuPara: rotDef.campo, valor: itens[melhor.idx].s });
+      delete encontrados[dono.campo];
+    }
+    const v = _valorDoItemProx(itens[melhor.idx].s, rotDef.tipo);
+    if (v == null) continue;
+    usoValor[melhor.idx] = { campo: rotDef.campo, dist: melhor.dist };
+    encontrados[rotDef.campo] = { valor: v, dist: melhor.dist, nivel: melhor.nivel };
+  }
+  const campos = {};
+  Object.entries(encontrados).forEach(([c, e]) => { campos[c] = e.valor; });
+  return { campos, conflitos };
+}
+
+// Orquestrador: parser por linha primeiro; se extraiu < 3 campos, tenta a
+// proximidade espacial e MESCLA (o método por linha tem precedência).
+function extrairContratoCompleto(resultado) {
+  const dc = extrairDadosContrato(resultado.texto);
+  const chaves = ['valor_financiado', 'taxa_nominal_mensal', 'taxa_nominal_anual', 'num_parcelas',
+    'valor_parcela', 'data_assinatura', 'data_liberacao', 'data_primeiro_vencimento',
+    'sistema_amortizacao', 'iof', 'seguro_prestamista', 'cet_mensal', 'nome_banco'];
+  const extraidosLinha = chaves.filter(k => dc[k] != null).length;
+  if (extraidosLinha >= 3 || !resultado.itensPosicionados || !resultado.itensPosicionados.length) {
+    return dc;
+  }
+  const prox = extrairPorProximidade(resultado.itensPosicionados);
+  const mapa = {
+    valorFinanciado: 'valor_financiado', taxaMensal: 'taxa_nominal_mensal',
+    taxaAnual: 'taxa_nominal_anual', cetMensal: 'cet_mensal',
+    numParcelas: 'num_parcelas', valorParcela: 'valor_parcela',
+    dataContrato: 'data_assinatura', dataLiberacao: 'data_liberacao',
+    primeiroVencimento: 'data_primeiro_vencimento', iof: 'iof', seguro: 'seguro_prestamista'
+  };
+  const viaProximidade = [];
+  for (const [de, para] of Object.entries(mapa)) {
+    if (dc[para] == null && prox.campos[de] != null) {
+      dc[para] = prox.campos[de];
+      viaProximidade.push(para);
+    }
+  }
+  if (viaProximidade.length || prox.conflitos.length) {
+    console.log('[PROX] Fallback por proximidade espacial:', JSON.stringify({
+      extraidosPorLinha: extraidosLinha, viaProximidade, conflitos: prox.conflitos
+    }));
+  }
+  return dc;
 }
 
 // ─── EXTRAÇÃO DE LINHAS DE EXTRATO (formato carnê MM/AAAA) ───────────────
@@ -8752,12 +8931,21 @@ function detectarTipoDocumento(texto) {
     return 'extrato_operacao';
   }
 
-  // Tabela de parcelamento direto (incorporadora/loteadora) — detecção por
-  // ESTRUTURA (numeração N/M repetida com denominador consistente), não por
-  // marca de construtora. Usa o texto CRU (linhas preservadas). Vem DEPOIS de
-  // extrato_operacao, que também tem padrão de parcelas mas marcadores próprios.
+  // Tabela de parcelamento/demonstrativo de evolução — detecção por
+  // ESTRUTURA, não por marca. Modo 'nm' (N/M com denominador consistente)
+  // decide sozinho. Modo 'ampliado' (sem N/M — demonstrativos BM/Ficsa) só
+  // vence quando os sinais de conta corrente são FRACOS ou quando há
+  // marcador explícito de demonstrativo — um extrato bancário comum também
+  // tem datas + valores e não pode ser engolido por este tipo.
   const detParc = detectarTabelaParcelamento(texto || '');
-  if (detParc.ehTabelaParcelamento) return 'tabela_parcelamento';
+  if (detParc.ehTabelaParcelamento && detParc.modo === 'nm') return 'tabela_parcelamento';
+  const marcadorDemonstrativo = /DEMONSTRATIVO\s+DE\s+(EVOLU[ÇC][ÃA]O|OPERA[ÇC][OÕ]ES|D[ÉE]BITO)|EVOLU[ÇC][ÃA]O\s+D[OA]\s+(SALDO|FINANCIAMENTO|D[ÍI]VIDA)|PLANILHA\s+DE\s+EVOLU[ÇC][ÃA]O/.test(t);
+  const _sinaisContaPre = ['SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL', 'EXTRATO DE CONTA', 'CONTA CORRENTE', 'LANÇAMENTOS', 'LANCAMENTOS', 'AGÊNCIA', 'AGENCIA'];
+  const _pontosContaPre = _sinaisContaPre.filter(s => t.includes(s)).length;
+  if (detParc.ehTabelaParcelamento && detParc.modo === 'ampliado' &&
+      (marcadorDemonstrativo || _pontosContaPre < 2)) {
+    return 'tabela_parcelamento';
+  }
 
   const sinaisContaCorrente = [
     'SALDO ANTERIOR', 'SALDO DO DIA', 'SALDO ATUAL',
@@ -9608,17 +9796,64 @@ function detectarTabelaParcelamento(texto) {
     .sort((a, b) => b[1] - a[1])[0];
   const domCount = denominadorDominante ? denominadorDominante[1] : 0;
 
-  // Critério 3: repetição estrutural. Exigimos SEMPRE o padrão N/M com
+  // Critério 3: repetição estrutural. Modo 'nm' exige o padrão N/M com
   // denominador consistente — linhas data+valor sozinhas descreveriam
   // qualquer extrato bancário longo (falso positivo com conta_corrente).
-  const temTabela = (linhasComNM.length >= 10 && domCount >= 8) ||
+  const temTabelaNM = (linhasComNM.length >= 10 && domCount >= 8) ||
     (linhasComNM.length >= 5 && domCount >= 4 && linhasDataValor.length >= 15);
 
+  // Modo 'ampliado' (P1 — demonstrativos de evolução BM/Ficsa e similares):
+  // sem N/M, reconhece pela ESTRUTURA: ≥10 linhas com data + ≥2 valores
+  // monetários E (numeração simples crescente OU datas mensais sequenciais).
+  // Quem decide se este modo pode vencer conta_corrente é o chamador
+  // (detectarTipoDocumento) — extratos bancários também têm data+valores.
+  let modoAmpliado = false;
+  let motivoAmpliado = null;
+  if (!temTabelaNM) {
+    const candidatas2 = [];
+    for (const l of linhas) {
+      const mData = l.match(/\b(\d{2}\/\d{2}\/\d{2,4})\b/);
+      const monet = (l.match(/[\d.]{1,12},\d{2}/g) || []).length;
+      if (mData && monet >= 2) candidatas2.push({ l, data: mData[1] });
+    }
+    if (candidatas2.length >= 10) {
+      // numeração simples crescente no 1º token?
+      let crescentes = 0, comNum = 0, anterior = null;
+      for (const c of candidatas2) {
+        const m1 = c.l.trim().match(/^(\d{1,3})\b(?!\/)/);
+        if (m1) {
+          comNum++;
+          const n = parseInt(m1[1], 10);
+          if (anterior != null && n === anterior + 1) crescentes++;
+          anterior = n;
+        }
+      }
+      const numSimples = comNum >= candidatas2.length * 0.7 && crescentes >= comNum * 0.6;
+      // datas mensais sequenciais? (diferenças de 25–35 dias após ordenar)
+      const datas = candidatas2.map(c => normalizarDataParc(c.data)).filter(Boolean)
+        .map(d => parseDataBR(d).getTime()).sort((a, b) => a - b);
+      let mensais = 0;
+      for (let i = 1; i < datas.length; i++) {
+        const dias = (datas[i] - datas[i - 1]) / 86400000;
+        if (dias >= 25 && dias <= 35) mensais++;
+      }
+      const datasMensais = datas.length >= 10 && mensais >= (datas.length - 1) * 0.6;
+      if (numSimples || datasMensais) {
+        modoAmpliado = true;
+        motivoAmpliado = numSimples ? 'numeracao_simples' : 'datas_mensais';
+      }
+    }
+  }
+
+  const temTabela = temTabelaNM || modoAmpliado;
   return {
     ehTabelaParcelamento: temTabela,
+    modo: temTabelaNM ? 'nm' : (modoAmpliado ? 'ampliado' : null),
+    motivoAmpliado,
     totalParcelasInferido: denominadorDominante ? parseInt(denominadorDominante[0], 10) : null,
     linhasCandidatas: linhasComNM.length,
-    confianca: temTabela ? (linhasComNM.length >= 20 ? 'alta' : 'media') : 'baixa'
+    linhasDataValor: linhasDataValor.length,
+    confianca: temTabelaNM ? (linhasComNM.length >= 20 ? 'alta' : 'media') : (modoAmpliado ? 'media' : 'baixa')
   };
 }
 
@@ -9679,6 +9914,7 @@ function classificarTipoColuna(amostras) {
 
   if (contaSe(a => /^\d{1,3}\/\d{1,3}$/.test((a || '').trim())) > 0.7) return 'parcela_num';
   if (contaSe(a => /^\d{2}\/\d{2}\/\d{2,4}$/.test((a || '').trim())) > 0.7) return 'data';
+  if (contaSe(a => /^[\d.,]+\s*%$/.test((a || '').trim())) > 0.7) return 'percentual';
   if (contaSe(a => /^-?[\d.]+,\d{2}$/.test((a || '').trim().replace(/^R\$\s*/, ''))) > 0.7) return 'monetario';
   if (contaSe(a => /^[SNsn]$/.test((a || '').trim())) > 0.7) return 'flag';
   if (contaSe(a => /^\d{1,4}$/.test((a || '').trim())) > 0.7) return 'inteiro';
@@ -9709,7 +9945,9 @@ function inferirColunas(linhasTabela) {
       todosZero: amostras.length > 0 && amostras.every(a => parseMoeda(a) === 0),
       temVazios: amostras.length < tokensPorLinha.filter(t => t.length === numColunas).length,
       mediaValor: calcularMediaMonetaria(amostras),
-      crescente: verificarSequenciaCrescente(amostras)
+      crescente: verificarSequenciaCrescente(amostras),
+      // série numérica (até 80 valores) p/ as heurísticas de demonstrativo
+      valoresNum: amostras.map(a => parseMoeda(a)).filter(v => v != null).slice(0, 80)
     });
   }
   return { numColunas, tiposColuna, tokensPorLinha };
@@ -9721,7 +9959,13 @@ const ROTULOS_PARC = [
   { chave: /VENC/i, campo: 'dataVencimento' },
   { chave: /DT\.?\s*PGTO|DATA\s*PAG/i, campo: 'dataPagamento' },
   { chave: /VALOR\s*PAGO|PAGO/i, campo: 'valorPago' },
-  { chave: /VALOR\s*(BX|PREV|ORIG|PARCELA)|^VALOR$/i, campo: 'valorPrevisto' },
+  { chave: /VALOR\s*(BX|PREV|ORIG|PARCELA)|^VALOR$|PRESTA[ÇC][ÃA]O/i, campo: 'valorPrevisto' },
+  // Componentes de demonstrativo de evolução (P1): antes do rótulo genérico
+  // de encargos, senão "Juros" (componente da parcela) viraria mora
+  { chave: /AMORTIZA/i, campo: 'amortizacao' },
+  { chave: /^JUROS?$/i, campo: 'jurosComp' },
+  { chave: /^SEGURO/i, campo: 'seguroCol' },
+  { chave: /^TAXA\b/i, campo: 'taxaPeriodo' },
   { chave: /ENCARGO|JUROS|MORA|MULTA|ACRESC/i, campo: 'encargos' },
   { chave: /PARCELA|PREST|N[ºo°]/i, campo: 'numeroParcela' },
   { chave: /SALDO/i, campo: 'saldoDevedor' },
@@ -9755,6 +9999,49 @@ function inferirSemantica(tiposColuna, cabecalhoTokens) {
   const colFlag = tiposColuna.find(c => c.tipo === 'flag');
   if (colFlag) mapa.flagBaixa = colFlag.indice;
 
+  // REGRAS 4b (P1) — heurísticas de DEMONSTRATIVO DE EVOLUÇÃO:
+  const jaMapeada = (i) => Object.values(mapa).includes(i);
+  // 4b.1 — monetária DECRESCENTE monotônica (≥90% dos passos) → saldo devedor
+  for (const c of colsMonet) {
+    if (jaMapeada(c.indice) || !c.valoresNum || c.valoresNum.length < 5) continue;
+    let desc = 0;
+    for (let i = 1; i < c.valoresNum.length; i++) if (c.valoresNum[i] <= c.valoresNum[i - 1] + 0.01) desc++;
+    const amplitude = c.valoresNum[0] > 0 ? (c.valoresNum[0] - c.valoresNum[c.valoresNum.length - 1]) / c.valoresNum[0] : 0;
+    if (desc / (c.valoresNum.length - 1) >= 0.9 && amplitude > 0.05) { mapa.saldoDevedor = c.indice; break; }
+  }
+  // 4b.2 — A + B ≈ C (C = valor previsto/parcela) → A e B são componentes
+  // (amortização = a série mais estável; juros = a outra)
+  if (mapa.valorPrevisto != null) {
+    const alvo = tiposColuna[mapa.valorPrevisto];
+    const livres = colsMonet.filter(c => !jaMapeada(c.indice) && c.valoresNum && c.valoresNum.length >= 5);
+    outer:
+    for (let a = 0; a < livres.length; a++) {
+      for (let b = a + 1; b < livres.length; b++) {
+        const n = Math.min(livres[a].valoresNum.length, livres[b].valoresNum.length, alvo.valoresNum?.length || 0, 12);
+        if (n < 5) continue;
+        let bate = 0;
+        for (let i = 0; i < n; i++) {
+          if (Math.abs(livres[a].valoresNum[i] + livres[b].valoresNum[i] - alvo.valoresNum[i]) <= 0.05) bate++;
+        }
+        if (bate / n >= 0.8) {
+          const cv = (c) => {
+            const m = c.valoresNum.reduce((s, v) => s + v, 0) / c.valoresNum.length;
+            const dp = Math.sqrt(c.valoresNum.reduce((s, v) => s + (v - m) * (v - m), 0) / c.valoresNum.length);
+            return m > 0 ? dp / m : 1e9;
+          };
+          const estavel = cv(livres[a]) <= cv(livres[b]) ? livres[a] : livres[b];
+          const outra = estavel === livres[a] ? livres[b] : livres[a];
+          mapa.amortizacao = estavel.indice;
+          mapa.jurosComp = outra.indice;
+          break outer;
+        }
+      }
+    }
+  }
+  // 4b.3 — percentual (quase) constante → taxa aplicada no período
+  const colPct = tiposColuna.find(c => c.tipo === 'percentual' && !jaMapeada(c.indice));
+  if (colPct) mapa.taxaPeriodo = colPct.indice;
+
   // REGRA 5: rótulos do cabeçalho refinam o mapa (posição do rótulo = coluna)
   if (cabecalhoTokens && cabecalhoTokens.length) {
     cabecalhoTokens.forEach((rotulo, i) => {
@@ -9763,10 +10050,11 @@ function inferirSemantica(tiposColuna, cabecalhoTokens) {
         if (r.chave.test(rotulo)) {
           // não deixa o rótulo apontar campo de DADO para coluna de texto puro
           const tipoCol = tiposColuna[i].tipo;
-          const campoMonet = ['valorPrevisto', 'valorPago', 'encargos', 'saldoDevedor', 'correcao'].includes(r.campo);
+          const campoMonet = ['valorPrevisto', 'valorPago', 'encargos', 'saldoDevedor', 'correcao', 'amortizacao', 'jurosComp', 'seguroCol'].includes(r.campo);
           const campoData = ['dataVencimento', 'dataPagamento'].includes(r.campo);
           if (campoMonet && tipoCol !== 'monetario') break;
           if (campoData && tipoCol !== 'data') break;
+          if (r.campo === 'taxaPeriodo' && tipoCol !== 'percentual') break;
           // remove atribuição anterior do mesmo campo em outra coluna
           for (const k of Object.keys(mapa)) if (mapa[k] === i && k !== r.campo) delete mapa[k];
           mapa[r.campo] = i;
@@ -9795,7 +10083,10 @@ function montarRegistrosParcelamento(analise, mapa, denominadorDominante) {
   for (const tokens of analise.tokensPorLinha) {
     if (tokens.length !== num) continue;
     const pega = (campo) => (mapa[campo] != null ? tokens[mapa[campo]] : null);
-    const nm = /^(\d{1,3})\/(\d{1,3})$/.exec((pega('numeroParcela') || '').trim());
+    // numeração "N/M" OU simples "N" (demonstrativos sem denominador)
+    const numTok = (pega('numeroParcela') || '').trim();
+    const nm = /^(\d{1,3})\/(\d{1,3})$/.exec(numTok) ||
+      (/^\d{1,3}$/.test(numTok) ? [numTok, numTok, null] : null);
     const venc = normalizarDataParc(pega('dataVencimento'));
     if (!venc) continue;                                  // sem vencimento não é linha de dados
     const dtPgto = normalizarDataParc(pega('dataPagamento'));
@@ -9812,9 +10103,17 @@ function montarRegistrosParcelamento(analise, mapa, denominadorDominante) {
 
     registros.push({
       numerador: nm ? parseInt(nm[1], 10) : null,
-      denominador: nm ? parseInt(nm[2], 10) : null,
-      // 5.3 — denominador diferente do dominante = título avulso (sinal/acordo)
-      tituloAvulso: !!(nm && denominadorDominante && parseInt(nm[2], 10) !== denominadorDominante),
+      denominador: nm && nm[2] != null ? parseInt(nm[2], 10) : null,
+      // 5.3 — denominador diferente do dominante = título avulso (sinal/acordo);
+      // numeração simples (sem denominador) nunca é avulso por este critério
+      tituloAvulso: !!(nm && nm[2] != null && denominadorDominante && parseInt(nm[2], 10) !== denominadorDominante),
+      // campos de demonstrativo de evolução (quando mapeados)
+      saldoDevedor: mapa.saldoDevedor != null ? parseMoeda(pega('saldoDevedor')) : null,
+      amortizacao: mapa.amortizacao != null ? parseMoeda(pega('amortizacao')) : null,
+      jurosComp: mapa.jurosComp != null ? parseMoeda(pega('jurosComp')) : null,
+      correcao: mapa.correcao != null ? parseMoeda(pega('correcao')) : null,
+      seguroCol: mapa.seguroCol != null ? parseMoeda(pega('seguroCol')) : null,
+      taxaPeriodo: mapa.taxaPeriodo != null ? parseMoeda((pega('taxaPeriodo') || '').replace('%', '')) : null,
       vencimento: venc,
       vencimentoDate: parseDataBR(venc),
       dataPagamento: dtPgto,
@@ -10589,6 +10888,10 @@ const CAMPOS_PARC = [
   ['multa', 'Multa'],
   ['correcao', 'Correção monetária'],
   ['saldoDevedor', 'Saldo devedor'],
+  ['amortizacao', 'Amortização (componente)'],
+  ['jurosComp', 'Juros (componente da parcela)'],
+  ['seguroCol', 'Seguro'],
+  ['taxaPeriodo', 'Taxa do período (%)'],
   ['flagBaixa', 'Situação (S/N ou texto)'],
   ['tipoTitulo', 'Tipo de título'],
 ];
@@ -10609,6 +10912,39 @@ function onModalidadeParcChange() {
       tog.removeAttribute('disabled');
     }
   }
+}
+
+// P1 3.5 — escape manual: força o processamento do último documento enviado
+// como tabela de parcelamento, abrindo o modal de mapeamento mesmo quando a
+// detecção de tipo falhou. Nenhum documento tabular fica sem saída.
+function mapearColunasManualmente(aba) {
+  const ultimo = window.__ultimoUpload;
+  if (!ultimo || !ultimo.texto) {
+    const st = document.getElementById('status-upload-' + (aba === 'auditar' ? 'extrato' : aba));
+    if (st) { st.style.display = ''; st.className = 'upload-aviso'; st.innerHTML = '⚠️ Envie um documento primeiro — o mapeamento manual usa o último arquivo processado.'; }
+    return;
+  }
+  let abaDestino = aba;
+  if (aba === 'simulador' || aba === 'atualizacao') {
+    // tabela de parcelamento se aplica na aba Extrato — leva o usuário até lá
+    abaDestino = 'extrato';
+    switchTab('auditar');
+  }
+  let ext = extrairTabelaParcelamento(ultimo.texto);
+  if (!ext.analise || ext.analise.numColunas < 2) {
+    // detecção não achou linhas candidatas: analisa TODAS as linhas tabulares
+    const linhas = ultimo.texto.split('\n').filter(l => tokenizarLinhaParc(l).length >= 3);
+    if (!linhas.length) {
+      const st = document.getElementById('status-upload-' + abaDestino);
+      if (st) { st.style.display = ''; st.className = 'upload-aviso'; st.innerHTML = '⚠️ Nenhuma estrutura tabular encontrada no documento (linhas com 3+ colunas).<br><small>Preencha os campos manualmente.</small>'; }
+      return;
+    }
+    const analise = inferirColunas(linhas);
+    ext = { det: detectarTabelaParcelamento(ultimo.texto), analise, cabecalhoTokens: null, mapa: inferirSemantica(analise.tiposColuna, null), texto: ultimo.texto };
+  }
+  const st = document.getElementById('status-upload-' + abaDestino);
+  if (st) { st.style.display = ''; st.className = 'upload-loading'; st.innerHTML = '<div class="ia-spinner"></div><span>Confirme o significado das colunas na janela aberta...</span>'; }
+  abrirModalMapeamentoParc(ext, abaDestino, ultimo.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)', 'status-upload-' + abaDestino);
 }
 
 function abrirModalMapeamentoParc(ext, aba, metodo, statusId) {
@@ -10698,9 +11034,19 @@ function aplicarParcelamento(ext, mapa, aba, info) {
   window.__parcAtual = dados;
 
   if (!registros.length) {
+    // Mapa salvo que não extrai nada = layout mudou → reabre o modal para
+    // revisão em vez de deixar o usuário sem saída (P1 3.4)
+    if (info && info.mapaSalvo && info.statusId) {
+      if (status) {
+        status.className = 'upload-loading';
+        status.innerHTML = '<div class="ia-spinner"></div><span>O mapeamento salvo não extraiu linhas — confirme as colunas na janela aberta...</span>';
+      }
+      abrirModalMapeamentoParc(ext, aba, info.metodo, info.statusId);
+      return;
+    }
     if (status) {
       status.className = 'upload-aviso';
-      status.innerHTML = '⚠️ Tabela de parcelamento detectada, mas nenhuma linha pôde ser extraída com o mapeamento aplicado.<br><small>Reenvie o documento e revise o mapeamento das colunas.</small>';
+      status.innerHTML = '⚠️ Tabela de parcelamento detectada (' + (ext.analise?.tokensPorLinha?.length || 0) + ' linhas candidatas), mas nenhuma linha pôde ser extraída com o mapeamento aplicado.<br><small><a href="#" onclick="mapearColunasManualmente(\'' + aba + '\');return false" style="color:inherit;font-weight:700;text-decoration:underline">Mapear colunas manualmente</a> ou preencha à mão abaixo.</small>';
     }
     return;
   }
@@ -11061,6 +11407,9 @@ async function processarUploadDocumento(arquivo, aba) {
   status.innerHTML = '<div class="ia-spinner"></div><span>Lendo o documento...</span>';
   try {
     const resultado = await extrairTextoPDF(arquivo);
+    // Guarda o último documento processado por aba — permite ao usuário
+    // acionar "Mapear colunas manualmente" mesmo quando a detecção falha
+    window.__ultimoUpload = { aba, texto: resultado.texto, metodo: resultado.metodo };
     const metodo = resultado.metodo === 'ocr' ? ' (via OCR)' : ' (PDF digital)';
     const tipo = detectarTipoDocumento(resultado.texto);
     const avisar  = (msg) => { status.className = 'upload-aviso'; status.innerHTML = msg; };
@@ -11243,13 +11592,13 @@ async function processarUploadDocumento(arquivo, aba) {
     // contrato identificado sem essenciais ganha aviso próprio (preenchendo o
     // que achou, para conferência); "tipo não identificado" só quando a
     // detecção realmente não bateu em nenhum sinal.
-    const dc = extrairDadosContrato(resultado.texto);
+    const dc = extrairContratoCompleto(resultado);
     const avisoContratoIncompleto = (n) => avisar(`⚠️ Documento identificado como <strong>contrato</strong>, mas a leitura automática ficou incompleta — o essencial (valor financiado + taxa ou parcelas) não foi capturado${n > 0 ? `; ${n} campo(s) preenchido(s) para conferência` : ''}.<br><small>Confira o documento e complete os campos manualmente.</small>`);
     if (aba === 'simulador') {
       const n = preencherCamposSimulador(dc);
       if (n > 0 && _contratoTemEssenciais(dc)) sucesso(`✅ ${tipo === 'contrato' ? 'Contrato identificado' : 'Dados identificados'}${metodo} — ${n} campo(s) preenchido(s).<br><small>Campos destacados em verde — revise antes de calcular.</small>`);
       else if (tipo === 'contrato') avisoContratoIncompleto(n);
-      else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
+      else avisar('⚠️ <strong>Tipo de documento não identificado.</strong><br>Detectamos: ' + (detectarTabelaParcelamento(resultado.texto).linhasDataValor || 0) + ' linha(s) com data e valores.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente, fichas SISBR e tabelas de parcelamento.<br><small><a href="#" onclick="mapearColunasManualmente(\'' + aba + '\');return false" style="color:inherit;font-weight:700;text-decoration:underline">Mapear colunas manualmente</a> ou preencha à mão abaixo.</small>');
     } else if (aba === 'extrato') {
       const linhas = extrairLinhasExtrato(resultado.texto);
       const total = contarCamposPreenchidos({ dados_contrato: dc, extrato: linhas });
@@ -11259,13 +11608,13 @@ async function processarUploadDocumento(arquivo, aba) {
       } else if (tipo === 'contrato') {
         avisoContratoIncompleto(total);
       } else {
-        avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente e fichas SISBR.<br><small>Preencha manualmente abaixo.</small>');
+        avisar('⚠️ <strong>Tipo de documento não identificado.</strong><br>Detectamos: ' + (detectarTabelaParcelamento(resultado.texto).linhasDataValor || 0) + ' linha(s) com data e valores.<br><strong>Suportados:</strong> contratos (CCB), extratos de conta corrente, fichas SISBR e tabelas de parcelamento.<br><small><a href="#" onclick="mapearColunasManualmente(\'' + aba + '\');return false" style="color:inherit;font-weight:700;text-decoration:underline">Mapear colunas manualmente</a> ou preencha à mão abaixo.</small>');
       }
     } else {
       const n = preencherCamposInadContrato(dc);
       if (tipo === 'contrato' && n > 0 && _contratoTemEssenciais(dc)) sucesso(`✅ Contrato identificado${metodo} — ${n} campo(s) preenchido(s).<br><small>Complete as parcelas pagas/vencidas e calcule.</small>`);
       else if (tipo === 'contrato') avisoContratoIncompleto(n);
-      else avisar('⚠️ Tipo de documento não identificado.<br><strong>Suportados:</strong> ficha da operação (SISBR), extrato do financiamento ou contrato.<br><small>Preencha manualmente abaixo.</small>');
+      else avisar('⚠️ <strong>Tipo de documento não identificado.</strong><br>Detectamos: ' + (detectarTabelaParcelamento(resultado.texto).linhasDataValor || 0) + ' linha(s) com data e valores.<br><strong>Suportados:</strong> ficha da operação (SISBR), extrato do financiamento, tabela de parcelamento ou contrato.<br><small><a href="#" onclick="mapearColunasManualmente(\'inadimplencia\');return false" style="color:inherit;font-weight:700;text-decoration:underline">Mapear colunas manualmente</a> ou preencha à mão abaixo.</small>');
     }
   } catch (erro) {
     status.className = 'upload-erro';
