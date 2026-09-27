@@ -72,6 +72,9 @@ nav.scrolled{background:rgba(10,11,13,0.92);backdrop-filter:blur(16px);border-co
 .nav-links{display:flex;align-items:center;gap:28px}
 .nav-links a{font-size:13px;color:var(--text2);text-decoration:none;transition:color .15s}
 .nav-links a:hover{color:var(--text)}
+.nav-cta{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.06em;background:var(--accent);color:#0a0b0d;font-weight:500;padding:9px 22px;border-radius:99px;text-decoration:none;transition:all .2s;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.nav-cta:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,240,60,0.3)}
+.nav-cta .cta-short{display:none}
 
 main{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:110px 48px 60px}
 
@@ -155,10 +158,18 @@ footer{padding:36px 48px;border-top:1px solid var(--border);position:relative;z-
 @media(max-width:768px){
   nav{padding:16px 24px}
   .nav-links{display:none}
+  .nav-cta .cta-full{display:none}
+  .nav-cta .cta-short{display:inline}
+  .nav-cta{padding:8px 16px}
+  nav .logo-svg{width:140px;height:auto}
   main{padding:96px 24px 40px}
   footer{padding:32px 24px}
   .footer-inner{flex-direction:column;text-align:center}
   .footer-links{flex-wrap:wrap;justify-content:center;row-gap:10px}
+}
+@media(max-width:360px){
+  .nav-cta{font-size:10px;padding:7px 12px}
+  nav .logo-svg{width:118px}
 }
 @media(max-width:480px){
   .calc-grid{grid-template-columns:1fr}
@@ -178,12 +189,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- NAV -->
 <nav id="nav">
-  <a href="index.html" style="display:inline-flex;align-items:center;text-decoration:none;"><svg width="180" height="36" viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MinhaTaxaReal"><rect x="0" y="2" width="36" height="36" rx="9" fill="#3730A3"/><polyline points="6,32 13,22 20,26 26,16" fill="none" stroke="#A3E635" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="30,10 30,18 23,14" fill="#A3E635"/><text x="44" y="15" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#A3E635" letter-spacing="2.5">MINHA</text><text x="43" y="31" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#ffffff" letter-spacing="-0.5">TaxaReal</text></svg></a>
+  <a href="index.html" style="display:inline-flex;align-items:center;text-decoration:none;"><svg class="logo-svg" width="180" height="36" viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MinhaTaxaReal"><rect x="0" y="2" width="36" height="36" rx="9" fill="#3730A3"/><polyline points="6,32 13,22 20,26 26,16" fill="none" stroke="#A3E635" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="30,10 30,18 23,14" fill="#A3E635"/><text x="44" y="15" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#A3E635" letter-spacing="2.5">MINHA</text><text x="43" y="31" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#ffffff" letter-spacing="-0.5">TaxaReal</text></svg></a>
   <div class="nav-links">
     <a href="#calculadora">Calculadora</a>
     <a href="#entenda">Price × SAC</a>
-    <a href="index.html">Conhecer o MinhaTaxaReal</a>
   </div>
+  <a href="index.html" class="nav-cta" id="cta-header"><span class="cta-full">Conheça o MinhaTaxaReal completo →</span><span class="cta-short">Conhecer completo →</span></a>
 </nav>
 
 <main>
@@ -493,6 +504,14 @@ document.getElementById('cta-ferramentas').addEventListener('click', () => {
     event: 'clique_cta_calculadora',
     event_category: 'conversao',
     event_label: 'ver_ferramentas'
+  });
+});
+document.getElementById('cta-header').addEventListener('click', () => {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'clique_cta_calculadora',
+    event_category: 'conversao',
+    event_label: 'header_completo'
   });
 });
 
